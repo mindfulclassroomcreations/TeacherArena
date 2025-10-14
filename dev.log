@@ -1,0 +1,268 @@
+
+> tpt-product-idea-automation@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.33
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+ ✓ Ready in 4.2s
+ ○ Compiling / ...
+ ✓ Compiled / in 1503ms (461 modules)
+ GET / 200 in 1682ms
+ ✓ Compiled in 115ms (238 modules)
+ ○ Compiling /api/ideas ...
+ ✓ Compiled /api/ideas in 501ms (329 modules)
+ ⨯ Error: supabaseUrl is required.
+    at validateSupabaseUrl (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/lib/helpers.js:59:15)
+    at new SupabaseClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js:53:90)
+    at createClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/index.js:63:12)
+    at eval (webpack-internal:///(rsc)/./lib/supabase.ts:9:85)
+    at (rsc)/./lib/supabase.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:122:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./app/api/ideas/route.ts:9:71)
+    at (rsc)/./app/api/ideas/route.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:112:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!:15:122)
+    at (rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D! (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:102:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at __webpack_exec__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:132:39)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:192
+    at __webpack_require__.X (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:168:21)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:47
+    at Object.<anonymous> (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:136:3)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require.js:109:84)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:84
+    at async loadComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:26)
+    at async DevServer.findPageComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:714:36)
+    at async DevServer.findPageComponents (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1910:24)
+    at async DevServer.renderToResponseImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:818:17)
+    at async /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  page: '/api/ideas'
+}
+ ⨯ Error: supabaseUrl is required.
+    at validateSupabaseUrl (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/lib/helpers.js:59:15)
+    at new SupabaseClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js:53:90)
+    at createClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/index.js:63:12)
+    at eval (webpack-internal:///(rsc)/./lib/supabase.ts:9:85)
+    at (rsc)/./lib/supabase.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:122:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./app/api/ideas/route.ts:9:71)
+    at (rsc)/./app/api/ideas/route.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:112:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!:15:122)
+    at (rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D! (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:102:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at __webpack_exec__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:132:39)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:192
+    at __webpack_require__.X (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:168:21)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:47
+    at Object.<anonymous> (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:136:3)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require.js:109:84)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:84
+    at async loadComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:26)
+    at async DevServer.findPageComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:714:36)
+    at async DevServer.findPageComponents (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1910:24)
+    at async DevServer.renderToResponseImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:818:17)
+    at async /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  page: '/api/ideas'
+}
+ ✓ Compiled /_error in 449ms (780 modules)
+ GET /api/ideas 500 in 1121ms
+ GET /api/ideas 500 in 1132ms
+ ✓ Compiled /api/research in 346ms (495 modules)
+ ⨯ Error: supabaseUrl is required.
+    at validateSupabaseUrl (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/lib/helpers.js:59:15)
+    at new SupabaseClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js:53:90)
+    at createClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/index.js:63:12)
+    at eval (webpack-internal:///(rsc)/./lib/supabase.ts:9:85)
+    at (rsc)/./lib/supabase.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/research/route.js:192:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./app/api/research/route.ts:7:71)
+    at (rsc)/./app/api/research/route.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/research/route.js:182:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fresearch%2Froute&page=%2Fapi%2Fresearch%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fresearch%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!:15:125)
+    at (rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fresearch%2Froute&page=%2Fapi%2Fresearch%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fresearch%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D! (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/research/route.js:172:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at __webpack_exec__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/research/route.js:202:39)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/research/route.js:203:488
+    at __webpack_require__.X (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:168:21)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/research/route.js:203:47
+    at Object.<anonymous> (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/research/route.js:206:3)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require.js:109:84)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:84
+    at async loadComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:26)
+    at async DevServer.findPageComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:714:36)
+    at async DevServer.findPageComponents (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1910:24)
+    at async DevServer.renderToResponseImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:818:17)
+    at async /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  page: '/api/research'
+}
+ POST /api/research 500 in 410ms
+ GET / 200 in 199ms
+ ⨯ Error: supabaseUrl is required.
+    at validateSupabaseUrl (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/lib/helpers.js:59:15)
+    at new SupabaseClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js:53:90)
+    at createClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/index.js:63:12)
+    at eval (webpack-internal:///(rsc)/./lib/supabase.ts:9:85)
+    at (rsc)/./lib/supabase.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:122:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./app/api/ideas/route.ts:9:71)
+    at (rsc)/./app/api/ideas/route.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:112:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!:15:122)
+    at (rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D! (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:102:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at __webpack_exec__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:132:39)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:192
+    at __webpack_require__.X (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:168:21)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:47
+    at Object.<anonymous> (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:136:3)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require.js:109:84)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:84
+    at async loadComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:26)
+    at async DevServer.findPageComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:714:36)
+    at async DevServer.findPageComponents (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1910:24)
+    at async DevServer.renderToResponseImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:818:17)
+    at async /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  page: '/api/ideas'
+}
+ GET /api/ideas 500 in 39ms
+ ⨯ Error: supabaseUrl is required.
+    at validateSupabaseUrl (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/lib/helpers.js:59:15)
+    at new SupabaseClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js:53:90)
+    at createClient (webpack-internal:///(rsc)/./node_modules/@supabase/supabase-js/dist/module/index.js:63:12)
+    at eval (webpack-internal:///(rsc)/./lib/supabase.ts:9:85)
+    at (rsc)/./lib/supabase.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:122:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./app/api/ideas/route.ts:9:71)
+    at (rsc)/./app/api/ideas/route.ts (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:112:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!:15:122)
+    at (rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fapi%2Fideas%2Froute&page=%2Fapi%2Fideas%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fideas%2Froute.ts&appDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fsankalpa%2FDesktop%2FTPT%2F05_Super%20Base&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D! (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:102:1)
+    at __webpack_require__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:33:43)
+    at __webpack_exec__ (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:132:39)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:192
+    at __webpack_require__.X (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/webpack-runtime.js:168:21)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:133:47
+    at Object.<anonymous> (/Users/sankalpa/Desktop/TPT/05_Super Base/.next/server/app/api/ideas/route.js:136:3)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/require.js:109:84)
+    at /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:84
+    at async loadComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/load-components.js:103:26)
+    at async DevServer.findPageComponentsImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:714:36)
+    at async DevServer.findPageComponents (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1910:24)
+    at async DevServer.renderToResponseImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/base-server.js:818:17)
+    at async /Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/Users/sankalpa/Desktop/TPT/05_Super Base/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  page: '/api/ideas'
+}
+ GET /api/ideas 500 in 37ms
+   Reload env: .env.local
+ ✓ Compiled in 1367ms (686 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 873ms (675 modules)
+ GET /_next/static/webpack/603f8e2286256408.webpack.hot-update.json 404 in 928ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 21ms
+ ✓ Compiled /api/ideas in 271ms (370 modules)
+ GET /api/ideas 200 in 937ms
+ GET /api/ideas 200 in 1471ms
