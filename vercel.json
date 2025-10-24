@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd Researcher/researcher && npm run build",
+  "devCommand": "cd Researcher/researcher && npm run dev",
+  "installCommand": "cd Researcher/researcher && npm install",
+  "framework": "nextjs",
+  "outputDirectory": "Researcher/researcher/.next"
+}
