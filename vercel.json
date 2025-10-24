@@ -1,7 +1,15 @@
 {
-  "buildCommand": "cd Researcher/researcher && npm run build",
-  "devCommand": "cd Researcher/researcher && npm run dev",
-  "installCommand": "cd Researcher/researcher && npm install",
-  "framework": "nextjs",
-  "outputDirectory": "Researcher/researcher/.next"
+  "version": 2,
+  "builds": [
+    {
+      "src": "Researcher/researcher/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "Researcher/researcher/$1"
+    }
+  ]
 }
