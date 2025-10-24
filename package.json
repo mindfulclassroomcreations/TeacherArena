@@ -1,0 +1,15 @@
+{
+  "name": "teacher-arena",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd Researcher/researcher && npm run dev",
+    "build": "cd Researcher/researcher && npm run build",
+    "start": "cd Researcher/researcher && npm run start",
+    "lint": "cd Researcher/researcher && npm run lint",
+    "install:app": "cd Researcher/researcher && npm install"
+  },
+  "workspaces": [
+    "Researcher/researcher"
+  ]
+}
