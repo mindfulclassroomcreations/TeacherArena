@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Button from './Button'
 import Input from './Input'
@@ -101,10 +102,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, showSignupLink = true 
 
         {showSignupLink && (
           <div className="text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <a href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+            Don&apos;t have an account?{' '}
+            <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
               Sign up
-            </a>
+            </Link>
           </div>
         )}
 
