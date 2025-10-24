@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import Layout from '@/components/Layout'
 import Button from '@/components/Button'
 import Card from '@/components/Card'
 import Input from '@/components/Input'
@@ -226,12 +227,13 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-8 text-white">
-        <h1 className="text-4xl font-bold mb-4">🎓 AI Lesson Generator</h1>
-        <p className="text-xl text-blue-100 mb-6">
-          Create curriculum-aligned lessons powered by AI. Generate complete lesson plans in minutes!
+    <Layout>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+          <h1 className="text-4xl font-bold mb-4">🎓 AI Lesson Generator</h1>
+          <p className="text-xl text-blue-100 mb-6">
+            Create curriculum-aligned lessons powered by AI. Generate complete lesson plans in minutes!
         </p>
         <div className="flex gap-4">
           <Button 
@@ -517,6 +519,7 @@ export default function Home() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   )
 }
