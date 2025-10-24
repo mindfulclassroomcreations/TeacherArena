@@ -1,0 +1,157 @@
+<!-- 
+  Professional Email Confirmation Template for Supabase
+  Copy this entire template and paste it in:
+  Supabase Dashboard → Authentication → Email Templates → Confirm signup
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Your Email</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+          
+          <!-- Header with Brand -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
+                🎓 AI Lesson Generator
+              </h1>
+              <p style="margin: 10px 0 0 0; color: #e0e7ff; font-size: 16px; font-weight: 400;">
+                Teacher Arena Platform
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 50px 40px;">
+              <h2 style="margin: 0 0 20px 0; color: #1f2937; font-size: 28px; font-weight: 600;">
+                Welcome to Teacher Arena! 👋
+              </h2>
+              
+              <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 16px;">
+                Thank you for signing up. We're excited to have you on board!
+              </p>
+              
+              <p style="margin: 0 0 30px 0; color: #4b5563; font-size: 16px;">
+                To complete your registration and start creating AI-powered lesson plans, please confirm your email address by clicking the button below:
+              </p>
+              
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding: 10px 0 30px 0;">
+                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.3s;">
+                      ✓ Confirm Email Address
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                Or copy and paste this link into your browser:
+              </p>
+              
+              <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; word-break: break-all; margin: 0 0 30px 0;">
+                <a href="{{ .ConfirmationURL }}" style="color: #2563eb; font-size: 13px; text-decoration: none;">
+                  {{ .ConfirmationURL }}
+                </a>
+              </div>
+              
+              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 6px; margin: 0 0 30px 0;">
+                <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 500;">
+                  ⏰ <strong>Important:</strong> This link will expire in 24 hours
+                </p>
+              </div>
+              
+              <!-- Features Section -->
+              <div style="border-top: 1px solid #e5e7eb; padding-top: 30px; margin-top: 30px;">
+                <h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 18px; font-weight: 600;">
+                  What you can do with your account:
+                </h3>
+                
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td width="30" style="vertical-align: top; padding-top: 2px;">
+                      <span style="color: #10b981; font-size: 20px;">✓</span>
+                    </td>
+                    <td style="padding-bottom: 12px;">
+                      <p style="margin: 0; color: #4b5563; font-size: 15px;">
+                        <strong style="color: #1f2937;">Generate AI-powered lessons</strong> in minutes
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td width="30" style="vertical-align: top; padding-top: 2px;">
+                      <span style="color: #10b981; font-size: 20px;">✓</span>
+                    </td>
+                    <td style="padding-bottom: 12px;">
+                      <p style="margin: 0; color: #4b5563; font-size: 15px;">
+                        <strong style="color: #1f2937;">Align with curriculum frameworks</strong> automatically
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td width="30" style="vertical-align: top; padding-top: 2px;">
+                      <span style="color: #10b981; font-size: 20px;">✓</span>
+                    </td>
+                    <td style="padding-bottom: 12px;">
+                      <p style="margin: 0; color: #4b5563; font-size: 15px;">
+                        <strong style="color: #1f2937;">Save and organize</strong> all your lesson plans
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td width="30" style="vertical-align: top; padding-top: 2px;">
+                      <span style="color: #10b981; font-size: 20px;">✓</span>
+                    </td>
+                    <td>
+                      <p style="margin: 0; color: #4b5563; font-size: 15px;">
+                        <strong style="color: #1f2937;">Customize content</strong> for your students
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px 40px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 15px 0; color: #6b7280; font-size: 13px; line-height: 1.6;">
+                <strong style="color: #374151;">Didn't sign up for Teacher Arena?</strong><br>
+                You can safely ignore this email. If you're concerned, please contact our support team.
+              </p>
+              
+              <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 13px;">
+                Need help? Visit our <a href="https://www.teacherarena.asia/support" style="color: #2563eb; text-decoration: none;">Help Center</a> or reply to this email.
+              </p>
+              
+              <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px;">
+                <p style="margin: 0 0 10px 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                  © 2025 Teacher Arena. All rights reserved.
+                </p>
+                <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                  <a href="https://www.teacherarena.asia" style="color: #6b7280; text-decoration: none; margin: 0 8px;">Website</a> •
+                  <a href="https://www.teacherarena.asia/privacy" style="color: #6b7280; text-decoration: none; margin: 0 8px;">Privacy Policy</a> •
+                  <a href="https://www.teacherarena.asia/terms" style="color: #6b7280; text-decoration: none; margin: 0 8px;">Terms of Service</a>
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
