@@ -1,15 +1,32 @@
 {
-  "name": "teacher-arena",
+  "name": "ai-lesson-generator",
   "version": "1.0.0",
-  "private": true,
+  "description": "AI-powered lesson generator with curriculum framework integration",
   "scripts": {
-    "dev": "cd Researcher/researcher && npm run dev",
-    "build": "cd Researcher/researcher && npm run build",
-    "start": "cd Researcher/researcher && npm run start",
-    "lint": "cd Researcher/researcher && npm run lint",
-    "install:app": "cd Researcher/researcher && npm install"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
   },
-  "workspaces": [
-    "Researcher/researcher"
-  ]
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "axios": "^1.6.0",
+    "next": "^14.0.0",
+    "openai": "^4.28.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^8.50.0",
+    "eslint-config-next": "^14.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "typescript": "^5.0.0"
+  }
 }
