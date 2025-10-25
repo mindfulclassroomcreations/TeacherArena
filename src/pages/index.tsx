@@ -331,9 +331,20 @@ export default function Home() {
     }
   }
 
+  // Smoothly scroll viewport to Step 6 after selection
+  const scrollToStep6 = () => {
+    if (typeof window !== 'undefined') {
+      const el = document.getElementById('step-6')
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+      }
+    }
+  }
+
   const handleSelectCurriculumSection = (section: any) => {
     setSelectedCurriculumSection(section)
     setCurrentStep(5)
+    scrollToStep6()
   }
 
   const handleSelectGrade = (grade: Item) => {
@@ -675,7 +686,7 @@ export default function Home() {
 
       {/* NEW Step 5: Browse Curriculum Standards Sections */}
       {currentStep >= 4 && selectedFramework && (
-        <div className="mb-8">
+        <div id="step-5" className="mb-8">
           <div className="mb-6">
             <h2 className="text-3xl font-bold text-gray-900 mb-1">📚 Step 5: Browse Curriculum Standards</h2>
             <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
@@ -741,6 +752,11 @@ export default function Home() {
                         {section.description && (
                           <p className="mt-3 text-xs text-gray-600 italic">{section.description}</p>
                         )}
+                        <div className="mt-4">
+                          <Button onClick={() => handleSelectCurriculumSection(section)} size="sm" variant="primary">
+                            Analyze this in Step 6
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -759,7 +775,7 @@ export default function Home() {
 
       {/* Step 6: Analyze Selected Standard */}
       {currentStep >= 5 && selectedCurriculumSection && selectedGrade && selectedFramework && strands.length === 0 && (
-        <div className="mb-8">
+        <div id="step-6" className="mb-8">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               � Step 6: Analyze Selected Standard
