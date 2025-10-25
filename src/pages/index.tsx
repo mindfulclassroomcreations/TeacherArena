@@ -47,6 +47,7 @@ export default function Home() {
   const [selectedFramework, setSelectedFramework] = useState<Item | null>(null)
   const [selectedGrade, setSelectedGrade] = useState<Item | null>(null)
   const [selectedStrand, setSelectedStrand] = useState<Strand | null>(null)
+  const [selectedStrands, setSelectedStrands] = useState<Strand[]>([])
   
   const [context, setContext] = useState('')
   const [totalLessonCount, setTotalLessonCount] = useState('45')
@@ -242,6 +243,62 @@ export default function Home() {
       }
     } catch (err) {
       setError('Failed to generate lessons. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Multi-select (Step 6) helpers
+  const toggleStrandSelection = (strand: Strand) => {
+    setSelectedStrands((prev) => {
+      const exists = prev.some(s => s.strand_code === strand.strand_code)
+      return exists ? prev.filter(s => s.strand_code !== strand.strand_code) : [...prev, strand]
+    })
+  }
+
+  const toggleSelectAllStrands = () => {
+    if (selectedStrands.length === strands.length) {
+      setSelectedStrands([])
+    } else {
+      setSelectedStrands(strands)
+    }
+  }
+
+  const handleGenerateLessonsForSelected = async () => {
+    if (selectedStrands.length === 0) return
+    setIsLoading(true)
+    setError(null)
+    setSelectedStrand(selectedStrands[0] || null)
+    const allLessons: any[] = []
+    try {
+      for (const strand of selectedStrands) {
+        try {
+          const response = await generateContent({
+            type: 'lesson-generation-by-strand',
+            subject: selectedSubject?.name || '',
+            framework: selectedFramework?.name || '',
+            grade: selectedGrade?.name || '',
+            strandCode: strand.strand_code,
+            strandName: strand.strand_name,
+            targetLessonCount: strand.target_lesson_count,
+            keyTopics: strand.key_topics,
+            performanceExpectations: strand.performance_expectations
+          })
+          if (response.items) {
+            allLessons.push(...response.items)
+          }
+        } catch (e) {
+          // continue with next strand
+        }
+      }
+      if (allLessons.length > 0) {
+        setLessons(allLessons)
+        setCurrentStep(6)
+        setSuccess(`Generated ${allLessons.length} lessons across ${selectedStrands.length} strands!`)
+        setTimeout(() => setSuccess(null), 3000)
+      } else {
+        setError('No lessons were generated. Please try again.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -899,19 +956,61 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Strands Controls */}
+          <div className="flex items-center justify-between mb-4">
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={selectedStrands.length === strands.length && strands.length > 0}
+                onChange={toggleSelectAllStrands}
+              />
+              Select all strands
+            </label>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">{selectedStrands.length} selected</span>
+              <Button
+                onClick={handleGenerateLessonsForSelected}
+                variant="primary"
+                size="sm"
+                disabled={selectedStrands.length === 0 || isLoading}
+              >
+                Generate lessons for selected
+              </Button>
+            </div>
+          </div>
+
           {/* Strands Cards - simplified design to match Step 5 */}
           <div className="space-y-4 mb-6">
             {strands.map((strand, index) => (
-              <div key={index} className="bg-white border-2 border-transparent hover:border-blue-300 rounded-lg overflow-hidden transition-all">
+              <div
+                key={index}
+                className={`bg-white border-2 rounded-lg overflow-hidden transition-all ${
+                  selectedStrands.some(s => s.strand_code === strand.strand_code)
+                    ? 'border-blue-600 ring-2 ring-blue-100 shadow-md'
+                    : 'border-transparent hover:border-blue-300'
+                }`}
+              >
                 {/* Strand Header - simplified */}
                 <div className="p-4 border-b border-gray-200 flex items-start justify-between">
                   <div>
                     <h3 className="font-semibold text-gray-900 text-base">{strand.strand_code}</h3>
                     <p className="text-gray-600 text-sm mt-1">{strand.strand_name}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-gray-900">{strand.target_lesson_count}</p>
-                    <p className="text-gray-500 text-xs">Lessons</p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-gray-900">{strand.target_lesson_count}</p>
+                      <p className="text-gray-500 text-xs">Lessons</p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedStrands.some(s => s.strand_code === strand.strand_code)}
+                        onChange={() => toggleStrandSelection(strand)}
+                      />
+                      {selectedStrands.some(s => s.strand_code === strand.strand_code) ? 'Selected' : 'Select'}
+                    </label>
                   </div>
                 </div>
 
