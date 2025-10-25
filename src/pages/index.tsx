@@ -333,6 +333,7 @@ export default function Home() {
 
   const handleSelectCurriculumSection = (section: any) => {
     setSelectedCurriculumSection(section)
+    setCurrentStep(5)
   }
 
   const handleSelectGrade = (grade: Item) => {
@@ -756,15 +757,15 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 6: Discover Strands */}
-      {currentStep >= 5 && selectedGrade && selectedFramework && strands.length === 0 && (
+      {/* Step 6: Analyze Selected Standard */}
+      {currentStep >= 5 && selectedCurriculumSection && selectedGrade && selectedFramework && strands.length === 0 && (
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              📊 Step 6: Discover Curriculum Strands
+              � Step 6: Analyze Selected Standard
             </h2>
             <p className="text-gray-600 mb-6">
-              Analyze the curriculum structure and discover major strands/domains for lesson generation.
+              Analyze the selected standard and discover major strands/domains for lesson generation.
             </p>
             <div className="max-w-xs mx-auto mb-6">
               <Input
@@ -791,7 +792,7 @@ export default function Home() {
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6 mb-6">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-3xl font-bold mb-2">📊 Step 7: Curriculum Strands</h2>
+                <h2 className="text-3xl font-bold mb-2">📊 Step 7: Curriculum Strands & Lessons</h2>
                 <p className="text-indigo-100">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
               </div>
               <div className="text-right">
