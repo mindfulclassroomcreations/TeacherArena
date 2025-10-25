@@ -40,6 +40,7 @@ export default function Home() {
   const [lessons, setLessons] = useState<Item[]>([])
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
   const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
+  const [selectedCurriculumSections, setSelectedCurriculumSections] = useState<any[]>([])
   
   const [selectedSubject, setSelectedSubject] = useState<Item | null>(null)
   const [selectedStateCurriculum, setSelectedStateCurriculum] = useState<any | null>(null)
@@ -342,9 +343,34 @@ export default function Home() {
   }
 
   const handleSelectCurriculumSection = (section: any) => {
-    setSelectedCurriculumSection(section)
-    setCurrentStep(5)
-    scrollToStep6()
+    // Used to expand/collapse details for a single section
+    const same = (selectedCurriculumSection?.id && section.id && selectedCurriculumSection.id === section.id) ||
+      ((selectedCurriculumSection?.name || selectedCurriculumSection?.title) && (section.name || section.title) &&
+        (selectedCurriculumSection?.name || selectedCurriculumSection?.title) === (section.name || section.title))
+    setSelectedCurriculumSection(same ? null : section)
+  }
+
+  const toggleSectionSelection = (section: any) => {
+    setSelectedCurriculumSections((prev) => {
+      const exists = prev.some((s) =>
+        (s.id && section.id && s.id === section.id) ||
+        ((s.name || s.title) && (section.name || section.title) && (s.name || s.title) === (section.name || section.title))
+      )
+      if (exists) {
+        return prev.filter((s) => !(
+          (s.id && section.id && s.id === section.id) ||
+          ((s.name || s.title) && (section.name || section.title) && (s.name || s.title) === (section.name || section.title))
+        ))
+      }
+      return [...prev, section]
+    })
+  }
+
+  const proceedToStep6 = () => {
+    if (selectedCurriculumSections.length > 0) {
+      setCurrentStep(5)
+      scrollToStep6()
+    }
   }
 
   const handleSelectGrade = (grade: Item) => {
@@ -708,12 +734,10 @@ export default function Home() {
             <>
               <div className="space-y-3">
                 {curriculumSections.map((section, index) => {
-                  const selectedId = selectedCurriculumSection?.id
-                  const selectedLabel = selectedCurriculumSection?.name || selectedCurriculumSection?.title
-                  const sectionLabel = section.name || section.title
-                  const idMatch = Boolean(selectedId && section.id && selectedId === section.id)
-                  const labelMatch = Boolean(selectedLabel && sectionLabel && selectedLabel === sectionLabel)
-                  const isSelected = idMatch || labelMatch
+                  const isSelected = selectedCurriculumSections.some((s) =>
+                    (s.id && section.id && s.id === section.id) ||
+                    ((s.name || s.title) && (section.name || section.title) && (s.name || s.title) === (section.name || section.title))
+                  )
                   return (
                   <div
                     key={section.id || index}
@@ -738,17 +762,15 @@ export default function Home() {
                         )}
                       </div>
                       <div className="flex items-center gap-3 ml-4">
-                        {isSelected ? (
-                          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Selected ✓</span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={(e) => { e.stopPropagation(); handleSelectCurriculumSection(section) }}
-                          >
-                            Select Section
-                          </Button>
-                        )}
+                        <label className="inline-flex items-center gap-2 text-sm text-gray-700" onClick={(e)=> e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            checked={isSelected}
+                            onChange={() => toggleSectionSelection(section)}
+                          />
+                          {isSelected ? 'Selected' : 'Select'}
+                        </label>
                         <span className="text-gray-400">
                           {isSelected ? '▼' : '▶'}
                         </span>
@@ -756,7 +778,7 @@ export default function Home() {
                     </div>
 
                     {/* Expanded Standards Table */}
-                    {isSelected && (
+              {isSelected && (
                       <div className="border-t border-gray-200 bg-gray-50 p-4">
                         <table className="w-full text-sm">
                           <thead>
@@ -775,15 +797,23 @@ export default function Home() {
                         {section.description && (
                           <p className="mt-3 text-xs text-gray-600 italic">{section.description}</p>
                         )}
-                        <div className="mt-4">
-                          <Button onClick={() => handleSelectCurriculumSection(section)} size="sm" variant="primary">
-                            Analyze this in Step 6
-                          </Button>
-                        </div>
+                         <div className="mt-4 text-right">
+                           <Button onClick={(e) => { e.stopPropagation(); toggleSectionSelection(section) }} size="sm" variant={isSelected ? 'outline' : 'primary'}>
+                             {isSelected ? 'Remove from selection' : 'Add to selection'}
+                           </Button>
+                         </div>
                       </div>
                     )}
                   </div>
                 )})}
+              </div>
+              <div className="flex justify-between items-center mt-6">
+                <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="outline" size="sm">
+                  Regenerate Standards
+                </Button>
+                <Button onClick={proceedToStep6} variant="primary" size="md" disabled={selectedCurriculumSections.length === 0}>
+                  Continue to Step 6 ({selectedCurriculumSections.length} selected)
+                </Button>
               </div>
               
               <div className="flex justify-end mt-6">
@@ -797,7 +827,7 @@ export default function Home() {
       )}
 
       {/* Step 6: Curriculum Strands & Lessons */}
-      {currentStep >= 5 && selectedCurriculumSection && selectedGrade && selectedFramework && (
+      {currentStep >= 5 && selectedCurriculumSections.length > 0 && selectedGrade && selectedFramework && (
         <div id="step-6" className="mb-8">
           {/* Header Section - simplified to match Step 5 style */}
           <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
@@ -811,14 +841,7 @@ export default function Home() {
                 <p className="text-gray-500 text-sm">Lessons Planned</p>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2">
-              <Button onClick={() => setCurrentStep(4)} variant="outline" size="sm">
-                ← Browse Units (Step 4)
-              </Button>
-              <Button onClick={() => setCurrentStep(5)} variant="outline" size="sm">
-                ← Browse Curriculum Standards (Step 5)
-              </Button>
-            </div>
+            {/* Navigation buttons removed as requested */}
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-600">Framework Analysis: {strands.length} major strands with {strands.reduce((sum, s) => sum + s.target_lesson_count, 0)} total lessons planned.</p>
             </div>
