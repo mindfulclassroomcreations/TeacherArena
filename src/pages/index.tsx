@@ -17,6 +17,12 @@ interface Item {
   name: string
   title?: string
   description: string
+  standards?: Standard[]
+}
+
+interface Standard {
+  code: string
+  title: string
 }
 
 interface Strand {
@@ -136,7 +142,7 @@ export default function Home() {
   }
 
   const handleGenerateFrameworks = async () => {
-    if (!selectedSubject) return
+    if (!selectedSubject || !selectedGrade || !selectedStateCurriculum) return
     
     // Don't reload if already have data
     if (frameworks.length > 0) return
@@ -148,15 +154,17 @@ export default function Home() {
         type: 'frameworks',
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
+        grade: selectedGrade.name,
+        framework: selectedStateCurriculum.curriculum_name,
         context: context
       })
       if (response.items) {
         setFrameworks(response.items)
-        setSuccess(`Generated ${response.items.length} frameworks!`)
+        setSuccess(`Generated ${response.items.length} curriculum sections with standards!`)
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
-      setError('Failed to generate frameworks. Please try again.')
+      setError('Failed to generate curriculum standards. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -614,43 +622,86 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <div className="space-y-4 mb-6">
+              <div className="space-y-6 mb-6">
                 {frameworks.map((framework, index) => (
-                  <div key={framework.id || index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    {/* Unit Title with Code in Format: TITLE (CODE) */}
-                    <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-5">
-                      <h3 className="text-lg font-bold">
-                        {framework.title || framework.name}
-                        {framework.id && (
-                          <span className="ml-3 font-mono text-sm bg-indigo-700 px-3 py-1 rounded inline-block">
-                            ({framework.id})
+                  <div 
+                    key={framework.id || index} 
+                    className={`bg-white border-2 rounded-lg overflow-hidden shadow-sm transition-all cursor-pointer ${
+                      selectedFramework?.name === framework.name 
+                        ? 'border-indigo-600 shadow-lg' 
+                        : 'border-gray-200 hover:border-indigo-400 hover:shadow-md'
+                    }`}
+                    onClick={() => handleSelectFramework(framework)}
+                  >
+                    {/* Section Title with Code */}
+                    <div className={`p-5 ${
+                      selectedFramework?.name === framework.name
+                        ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white'
+                        : 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold uppercase">
+                          {framework.name}
+                        </h3>
+                        {selectedFramework?.name === framework.name && (
+                          <span className="text-sm bg-white text-indigo-600 px-3 py-1 rounded font-semibold">
+                            ✓ Selected
                           </span>
                         )}
-                      </h3>
+                      </div>
+                      {framework.description && (
+                        <p className="text-sm text-indigo-100 mt-2">{framework.description}</p>
+                      )}
                     </div>
                     
-                    {/* Unit Description */}
-                    {framework.description && (
-                      <div className="bg-blue-50 px-5 py-3 border-b border-gray-200">
-                        <p className="text-sm text-gray-700">{framework.description}</p>
+                    {/* Standards Table */}
+                    {framework.standards && framework.standards.length > 0 && (
+                      <div className="p-5">
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b-2 border-gray-300">
+                                <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-sm w-32">
+                                  Standard
+                                </th>
+                                <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-sm">
+                                  Title
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {framework.standards.map((standard, stdIndex) => (
+                                <tr 
+                                  key={stdIndex}
+                                  className="border-b border-gray-200 hover:bg-blue-50 transition-colors"
+                                >
+                                  <td className="py-3 px-4 font-mono font-semibold text-indigo-700 text-sm">
+                                    {standard.code}
+                                  </td>
+                                  <td className="py-3 px-4 text-gray-800 text-sm">
+                                    {standard.title}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                     
-                    {/* Select Button */}
-                    <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex gap-2">
-                      <Button 
-                        onClick={() => handleSelectFramework(framework)}
-                        variant={selectedFramework?.name === framework.name ? "primary" : "outline"}
-                        size="sm"
-                        className="flex-1"
-                      >
-                        {selectedFramework?.name === framework.name ? "✓ Selected" : "Select Unit"}
-                      </Button>
+                    {/* Standards count badge */}
+                    <div className="px-5 py-3 bg-gray-50 border-t border-gray-200">
+                      <p className="text-sm text-gray-600">
+                        <span className="font-semibold">{framework.standards?.length || 0}</span> standards in this section
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  Click on a section to select it for lesson generation
+                </p>
                 <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
                   Generate More Units
                 </Button>

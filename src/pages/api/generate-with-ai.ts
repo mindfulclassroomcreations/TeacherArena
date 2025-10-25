@@ -79,9 +79,38 @@ Respond with ONLY a JSON array of objects with "name" and "description" fields.`
         break
 
       case 'frameworks':
-        userPrompt = `Generate educational frameworks for the subject: "${subject}" relevant to ${country} curriculum.
+        userPrompt = `Generate curriculum standards organized by sections for:
+- Subject: "${subject}"
+- Grade: "${grade}"
+- Curriculum: "${framework}"
+- Country: ${country}
 ${context || ''}
-Respond with ONLY a JSON array of objects with "name" and "description" fields.`
+
+IMPORTANT: Generate comprehensive curriculum sections with individual standards.
+
+Example format for NGSS Grade 8 Life Science:
+[
+  {
+    "id": "MS-LS1",
+    "name": "FROM MOLECULES TO ORGANISMS: STRUCTURES AND PROCESSES (MS-LS1)",
+    "description": "Understanding how living systems function at various scales",
+    "standards": [
+      {"code": "MS-LS1-1", "title": "Cell Structure and Function – Model how cells and their organelles work together to support life processes."},
+      {"code": "MS-LS1-2", "title": "From Cells to Organ Systems – Explain how cells form tissues, organs, and systems that carry out body functions."}
+    ]
+  },
+  {
+    "id": "MS-LS2", 
+    "name": "ECOSYSTEMS: INTERACTIONS, ENERGY, AND DYNAMICS (MS-LS2)",
+    "description": "Understanding ecosystem relationships and energy flow",
+    "standards": [
+      {"code": "MS-LS2-1", "title": "Population Dynamics and Resource Availability – Analyze how resource availability affects organisms and populations."}
+    ]
+  }
+]
+
+Generate 3-6 major curriculum sections, each with 3-8 standards.
+Respond with ONLY a JSON array following this exact structure with "id", "name", "description", and "standards" fields.`
         break
 
       case 'grades':
