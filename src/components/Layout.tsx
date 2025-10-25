@@ -24,7 +24,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
               <span className="text-3xl">🎓</span>
-              <h1 className="text-2xl font-bold text-gray-900">AI Lesson Generator</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Teacher Arena Lesson Generator</h1>
             </Link>
             <div className="flex items-center space-x-4">
               {user ? (
