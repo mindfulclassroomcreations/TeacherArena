@@ -42,7 +42,7 @@ export default function SelectionStep({
       {items.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 mb-4">{emptyStateText}</p>
-          <Button onClick={onGenerate} isLoading={isLoading}>
+          <Button onClick={onGenerate} isLoading={isLoading} variant="primary">
             {generateButtonText}
           </Button>
         </div>
@@ -65,7 +65,7 @@ export default function SelectionStep({
             ))}
           </div>
           <div className="flex justify-end">
-            <Button onClick={onGenerate} isLoading={isLoading} variant="outline">
+            <Button onClick={onGenerate} isLoading={isLoading} variant="primary">
               {generateButtonText}
             </Button>
           </div>

@@ -286,7 +286,7 @@ export default function Home() {
               undefined,
               undefined
             )}
-            variant="outline"
+            variant="success"
             size="sm"
           />
         </div>
@@ -317,7 +317,7 @@ export default function Home() {
               undefined,
               undefined
             )}
-            variant="outline"
+            variant="success"
             size="sm"
           />
         </div>
@@ -348,7 +348,7 @@ export default function Home() {
               selectedFramework?.name,
               undefined
             )}
-            variant="outline"
+            variant="success"
             size="sm"
           />
         </div>
@@ -467,7 +467,7 @@ export default function Home() {
                 selectedFramework?.name,
                 selectedGrade?.name
               )}
-              variant="secondary"
+              variant="success"
             />
             <Button variant="outline" onClick={() => setCurrentStep(3)}>
               ← Back to Strands
