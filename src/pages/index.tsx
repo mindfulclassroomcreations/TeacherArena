@@ -301,7 +301,6 @@ export default function Home() {
     setLessons([])
     setCurriculumSections([])
     setSelectedCurriculumSection(null)
-    setSelectedGrade(null)
   }
 
   const handleGenerateCurriculumSections = async () => {
@@ -613,30 +612,8 @@ export default function Home() {
       {currentStep >= 4 && selectedSubject && selectedStateCurriculum && selectedGrade && (
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">📋 Step 4: Browse Standards and Units</h2>
-            <p className="text-gray-600 mb-4">Select the curriculum units and standards you want to work with.</p>
-            
-            {/* Context Display */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
-                  <p className="text-sm text-blue-800">{selectedSubject.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
-                  <p className="text-sm text-blue-800">{selectedStateCurriculum.curriculum_name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade Level</p>
-                  <p className="text-sm text-blue-800">{selectedGrade.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Units</p>
-                  <p className="text-sm text-blue-800">{frameworks.length} available</p>
-                </div>
-              </div>
-            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-1">📋 Step 4: Browse Standards and Units</h2>
+            <p className="text-gray-600 text-sm">Select curriculum units for your lesson plan</p>
           </div>
 
           {isLoading ? (
@@ -645,52 +622,49 @@ export default function Home() {
               <p className="text-gray-600 mt-2">Loading standards & units...</p>
             </div>
           ) : frameworks.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">No standards & units available. Click below to generate curriculum units for this selection.</p>
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-gray-600 mb-4">No standards & units available for this selection</p>
               <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
                 Generate Units & Standards
               </Button>
             </div>
           ) : (
             <>
-              <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {frameworks.map((framework, index) => (
-                  <div key={framework.id || index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    {/* Unit Title with Code in Format: TITLE (CODE) */}
-                    <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-5">
-                      <h3 className="text-lg font-bold">
+                  <div 
+                    key={framework.id || index} 
+                    onClick={() => handleSelectFramework(framework)}
+                    className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                      selectedFramework?.name === framework.name
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900 flex-1">
                         {framework.title || framework.name}
-                        {framework.id && (
-                          <span className="ml-3 font-mono text-sm bg-indigo-700 px-3 py-1 rounded inline-block">
-                            ({framework.id})
-                          </span>
-                        )}
                       </h3>
+                      {selectedFramework?.name === framework.name && (
+                        <span className="text-blue-600 text-xl ml-2">✓</span>
+                      )}
                     </div>
                     
-                    {/* Unit Description */}
-                    {framework.description && (
-                      <div className="bg-blue-50 px-5 py-3 border-b border-gray-200">
-                        <p className="text-sm text-gray-700">{framework.description}</p>
-                      </div>
+                    {framework.id && (
+                      <p className="text-xs font-mono text-blue-600 mb-2 bg-blue-100 w-fit px-2 py-1 rounded">
+                        {framework.id}
+                      </p>
                     )}
                     
-                    {/* Select Button */}
-                    <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex gap-2">
-                      <Button 
-                        onClick={() => handleSelectFramework(framework)}
-                        variant={selectedFramework?.name === framework.name ? "primary" : "outline"}
-                        size="sm"
-                        className="flex-1"
-                      >
-                        {selectedFramework?.name === framework.name ? "✓ Selected" : "Select Unit"}
-                      </Button>
-                    </div>
+                    {framework.description && (
+                      <p className="text-sm text-gray-600 line-clamp-2">{framework.description}</p>
+                    )}
                   </div>
                 ))}
               </div>
-              <div className="flex justify-end">
-                <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
+              
+              <div className="flex justify-end mt-6">
+                <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="outline" size="sm">
                   Generate More Units
                 </Button>
               </div>
@@ -699,50 +673,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Export Frameworks Button */}
-      {currentStep >= 4 && frameworks.length > 0 && selectedFramework && (
-        <div className="mb-8 flex justify-end">
-          <ExportButton
-            onClick={() => downloadLessonsAsExcel(
-              frameworks.map(f => ({ name: f.name, description: f.description, title: f.name })),
-              selectedSubject?.name,
-              undefined,
-              undefined
-            )}
-            variant="success"
-            size="sm"
-          />
-        </div>
-      )}
-
       {/* NEW Step 5: Browse Curriculum Standards Sections */}
       {currentStep >= 4 && selectedFramework && (
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">📚 Step 5: Browse Curriculum Standards</h2>
-            <p className="text-gray-600 mb-4">Select curriculum standard sections to review and explore.</p>
-            
-            {/* Context Display */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
-                  <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Framework</p>
-                  <p className="text-sm text-blue-800">{selectedFramework.title || selectedFramework.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade Level</p>
-                  <p className="text-sm text-blue-800">{selectedGrade?.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Standards</p>
-                  <p className="text-sm text-blue-800">{curriculumSections.length} sections available</p>
-                </div>
-              </div>
-            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-1">📚 Step 5: Browse Curriculum Standards</h2>
+            <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
           </div>
 
           {isLoading ? (
@@ -751,78 +687,68 @@ export default function Home() {
               <p className="text-gray-600 mt-2">Loading curriculum standards...</p>
             </div>
           ) : curriculumSections.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">Click below to generate detailed curriculum standards sections.</p>
-              <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="primary" size="lg">
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-gray-600 mb-4">Generate standards sections to explore curriculum details</p>
+              <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="primary">
                 Generate Standards Sections
               </Button>
             </div>
           ) : (
             <>
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3">
                 {curriculumSections.map((section, index) => (
-                  <div
-                    key={section.id || index}
-                    onClick={() => handleSelectCurriculumSection(section)}
-                    className={`bg-white border-2 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer ${
-                      selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
-                        ? 'border-indigo-600 bg-indigo-50'
-                        : 'border-gray-200 hover:border-indigo-400'
-                    }`}
-                  >
-                    {/* Section Header */}
-                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-grow">
-                          <h3 className="text-lg font-bold">
-                            {section.title || section.name}
-                            {section.id && (
-                              <span className="ml-3 font-mono text-sm bg-purple-700 px-2 py-1 rounded">
-                                {section.id}
-                              </span>
-                            )}
-                          </h3>
-                        </div>
-                        <div className="text-2xl">
-                          {selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name ? '✓' : '▶'}
-                        </div>
+                  <div key={section.id || index} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    {/* Section Header - Clickable */}
+                    <button
+                      onClick={() => handleSelectCurriculumSection(section)}
+                      className={`w-full p-4 flex items-center justify-between transition-colors ${
+                        selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
+                          ? 'bg-blue-50'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="text-left flex-1">
+                        <h3 className="font-semibold text-gray-900">{section.title || section.name}</h3>
+                        {section.id && (
+                          <p className="text-xs text-blue-600 font-mono mt-1">{section.id}</p>
+                        )}
                       </div>
-                    </div>
-
-                    {/* Section Description */}
-                    {section.description && (
-                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                        <p className="text-sm text-gray-700">{section.description}</p>
+                      <div className="text-gray-400 ml-4">
+                        {selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
+                          ? '▼'
+                          : '▶'
+                        }
                       </div>
-                    )}
+                    </button>
 
-                    {/* Expanded Content - Show Standards when selected */}
+                    {/* Expanded Standards Table */}
                     {(selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name) && (
-                      <div className="p-4 bg-white">
-                        <div className="mb-4">
-                          <h4 className="text-sm font-semibold text-gray-600 uppercase mb-3">Standards in this section</h4>
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="border-b-2 border-indigo-200">
-                                <th className="text-left py-2 px-3 text-xs font-bold text-indigo-900 uppercase">Standard</th>
-                                <th className="text-left py-2 px-3 text-xs font-bold text-indigo-900 uppercase">Title</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr className="border-b border-gray-100 hover:bg-blue-50">
-                                <td className="py-2 px-3 text-sm font-mono text-indigo-700">{section.id || 'N/A'}</td>
-                                <td className="py-2 px-3 text-sm text-gray-700">{section.title || section.name}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
+                      <div className="border-t border-gray-200 bg-gray-50 p-4">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-300">
+                              <th className="text-left py-2 px-3 font-bold text-gray-700">Standard</th>
+                              <th className="text-left py-2 px-3 font-bold text-gray-700">Title</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-gray-200 hover:bg-white">
+                              <td className="py-2 px-3 font-mono text-blue-600 text-xs">{section.id || '—'}</td>
+                              <td className="py-2 px-3 text-gray-700">{section.title || section.name}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        {section.description && (
+                          <p className="mt-3 text-xs text-gray-600 italic">{section.description}</p>
+                        )}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-              <div className="flex justify-end gap-2">
-                <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="outline">
+              
+              <div className="flex justify-end mt-6">
+                <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="outline" size="sm">
                   Regenerate Standards
                 </Button>
               </div>
