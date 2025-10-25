@@ -5,14 +5,14 @@ interface ExportButtonProps {
   onClick: () => void
   disabled?: boolean
   size?: 'sm' | 'md' | 'lg'
-  variant?: 'primary' | 'secondary' | 'outline'
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'success'
 }
 
 const ExportButton: React.FC<ExportButtonProps> = ({
   onClick,
   disabled = false,
   size = 'md',
-  variant = 'secondary',
+  variant = 'success',
 }) => {
   return (
     <Button
