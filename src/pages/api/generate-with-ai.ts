@@ -78,16 +78,6 @@ These should align with ${country}'s national curriculum standards.
 Respond with ONLY a JSON array of objects with "name" and "description" fields.`
         break
 
-      case 'sub-subjects':
-        userPrompt = `Generate sub-categories, domains, or strands for the subject: "${subject}" in ${country} curriculum.
-${context || ''}
-
-These should represent the major categories or domains within this subject (e.g., for Science: Physical Sciences, Life Sciences, Earth and Space Sciences, Engineering Design).
-If the subject doesn't have natural sub-categories, return the main subject as a single category.
-Generate 3-8 sub-categories.
-Respond with ONLY a JSON array of objects with "name" and "description" fields.`
-        break
-
       case 'frameworks':
         userPrompt = `Generate educational frameworks for the subject: "${subject}" relevant to ${country} curriculum.
 ${context || ''}

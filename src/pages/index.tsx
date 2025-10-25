@@ -35,14 +35,12 @@ export default function Home() {
   const [subjects, setSubjects] = useState<Item[]>([])
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
-  const [subSubjects, setSubSubjects] = useState<Item[]>([])
   const [grades, setGrades] = useState<Item[]>([])
   const [strands, setStrands] = useState<Strand[]>([])
   const [lessons, setLessons] = useState<Item[]>([])
   
   const [selectedSubject, setSelectedSubject] = useState<Item | null>(null)
   const [selectedStateCurriculum, setSelectedStateCurriculum] = useState<any | null>(null)
-  const [selectedSubSubject, setSelectedSubSubject] = useState<Item | null>(null)
   const [selectedFramework, setSelectedFramework] = useState<Item | null>(null)
   const [selectedGrade, setSelectedGrade] = useState<Item | null>(null)
   const [selectedStrand, setSelectedStrand] = useState<Strand | null>(null)
@@ -102,33 +100,6 @@ export default function Home() {
       }
     } catch (err) {
       setError('Failed to generate subjects. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleGenerateSubSubjects = async () => {
-    if (!selectedSubject) return
-    
-    // Don't reload if already have data
-    if (subSubjects.length > 0) return
-    
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await generateContent({
-        type: 'sub-subjects',
-        country: selectedCountry || undefined,
-        subject: selectedSubject.name,
-        context: context
-      })
-      if (response.items) {
-        setSubSubjects(response.items)
-        setSuccess(`Generated ${response.items.length} sub-categories!`)
-        setTimeout(() => setSuccess(null), 3000)
-      }
-    } catch (err) {
-      setError('Failed to generate sub-categories. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -329,20 +300,6 @@ export default function Home() {
     setSelectedGrade(null)
   }
 
-  const handleSelectSubSubject = (subSubject: Item) => {
-    setSelectedSubSubject(subSubject)
-    setFrameworks([])
-    setGrades([])
-    setSelectedFramework(null)
-    setSelectedGrade(null)
-  }
-
-  const handleClearSubSubject = () => {
-    setSelectedSubSubject(null)
-    setFrameworks([])
-    setSelectedFramework(null)
-  }
-
   const handleSelectGrade = (grade: Item) => {
     setSelectedGrade(grade)
     setCurrentStep(5)
@@ -356,13 +313,13 @@ export default function Home() {
     setSubjects([])
     setStateCurricula([])
     setFrameworks([])
-    setSubSubjects([])
+
     setGrades([])
     setStrands([])
     setLessons([])
     setSelectedSubject(null)
     setSelectedStateCurriculum(null)
-    setSelectedSubSubject(null)
+
     setSelectedFramework(null)
     setSelectedGrade(null)
     setSelectedStrand(null)
@@ -612,11 +569,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 4: Select Sub-Categories/Domains */}
-      {currentStep >= 4 && selectedSubject && selectedStateCurriculum && selectedGrade && !selectedSubSubject && (
+
+      {/* Step 4: Browse Standards & Units */}
+      {currentStep >= 4 && selectedSubject && selectedStateCurriculum && selectedGrade && (
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">� Step 4: Browse Standards & Units</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">📋 Step 4: Browse Standards and Units</h2>
             <p className="text-gray-600 mb-4">Select the curriculum units and standards you want to work with.</p>
             
             {/* Context Display */}
@@ -635,91 +593,10 @@ export default function Home() {
                   <p className="text-sm text-blue-800">{selectedGrade.name}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Categories</p>
-                  <p className="text-sm text-blue-800">{subSubjects.length} available</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin">⌛</div>
-              <p className="text-gray-600 mt-2">Loading sub-categories...</p>
-            </div>
-          ) : subSubjects.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">Click below to discover sub-categories for this subject.</p>
-              <Button onClick={handleGenerateSubSubjects} isLoading={isLoading} variant="primary">
-                Generate Sub-Categories
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {subSubjects.map((subSubject, index) => {
-                  const isSelected = selectedSubSubject !== null && (selectedSubSubject as Item).name === subSubject.name
-                  return (
-                    <Card
-                      key={subSubject.id || index}
-                      onClick={() => handleSelectSubSubject(subSubject)}
-                      hoverable
-                      isSelected={isSelected}
-                    >
-                      <h3 className="font-bold text-lg text-gray-900 mb-2">{subSubject.name}</h3>
-                      <p className="text-gray-600 text-sm line-clamp-3">{subSubject.description}</p>
-                    </Card>
-                  )
-                })}
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={handleGenerateSubSubjects} isLoading={isLoading} variant="primary">
-                  Generate More Categories
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Step 4b: Browse Standards & Units (after sub-category selected) */}
-      {currentStep >= 4 && selectedSubject && selectedStateCurriculum && selectedGrade && selectedSubSubject && (
-        <div className="mb-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">� Step 4b: Browse Standards and Units</h2>
-            <p className="text-gray-600 mb-4">Select the curriculum units and standards you want to work with under {selectedSubSubject.name}.</p>
-            
-            {/* Context Display */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
-                  <p className="text-sm text-blue-800">{selectedSubject.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Category</p>
-                  <p className="text-sm text-blue-800">{selectedSubSubject.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade Level</p>
-                  <p className="text-sm text-blue-800">{selectedGrade.name}</p>
-                </div>
-                <div>
                   <p className="text-xs font-semibold text-blue-900 uppercase">Units</p>
                   <p className="text-sm text-blue-800">{frameworks.length} available</p>
                 </div>
               </div>
-            </div>
-
-            {/* Change Sub-Category Button */}
-            <div className="mb-4">
-              <Button 
-                onClick={handleClearSubSubject}
-                variant="outline"
-                size="sm"
-              >
-                ← Change Sub-Category
-              </Button>
             </div>
           </div>
 
@@ -737,45 +614,35 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <div className="space-y-6 mb-6">
+              <div className="space-y-4 mb-6">
                 {frameworks.map((framework, index) => (
                   <div key={framework.id || index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    {/* Unit Title with Code */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
-                      <div className="flex gap-3 items-start">
-                        <div className="flex-shrink-0 bg-blue-500 px-3 py-2 rounded font-mono font-bold text-sm">
-                          {framework.id || `STD-${index + 1}`}
-                        </div>
-                        <div className="flex-grow">
-                          <h3 className="text-lg font-bold">{framework.title || framework.name}</h3>
-                        </div>
-                      </div>
+                    {/* Unit Title with Code in Format: TITLE (CODE) */}
+                    <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-5">
+                      <h3 className="text-lg font-bold">
+                        {framework.title || framework.name}
+                        {framework.id && (
+                          <span className="ml-3 font-mono text-sm bg-indigo-700 px-3 py-1 rounded inline-block">
+                            ({framework.id})
+                          </span>
+                        )}
+                      </h3>
                     </div>
                     
                     {/* Unit Description */}
                     {framework.description && (
-                      <div className="bg-blue-50 px-4 py-3 border-b border-gray-200">
+                      <div className="bg-blue-50 px-5 py-3 border-b border-gray-200">
                         <p className="text-sm text-gray-700">{framework.description}</p>
                       </div>
                     )}
                     
-                    {/* Standards List */}
-                    <div className="p-4">
-                      <div className="space-y-3">
-                        <div className="text-xs font-semibold text-gray-600 uppercase mb-3">Curriculum Code</div>
-                        <div className="font-mono text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
-                          {framework.id || `STD-${index + 1}`}
-                        </div>
-                      </div>
-                    </div>
-                    
                     {/* Select Button */}
-                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                    <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex gap-2">
                       <Button 
                         onClick={() => handleSelectFramework(framework)}
                         variant={selectedFramework?.name === framework.name ? "primary" : "outline"}
                         size="sm"
-                        className="w-full"
+                        className="flex-1"
                       >
                         {selectedFramework?.name === framework.name ? "✓ Selected" : "Select Unit"}
                       </Button>
@@ -794,7 +661,7 @@ export default function Home() {
       )}
 
       {/* Export Frameworks Button */}
-      {currentStep >= 4 && frameworks.length > 0 && (
+      {currentStep >= 4 && frameworks.length > 0 && selectedFramework && (
         <div className="mb-8 flex justify-end">
           <ExportButton
             onClick={() => downloadLessonsAsExcel(

@@ -44,7 +44,7 @@ export interface Lesson {
 }
 
 export interface AIGenerationRequest {
-  type: 'subjects' | 'sub-subjects' | 'frameworks' | 'grades' | 'lessons' | 'lesson-discovery' | 'lesson-generation-by-strand' | 'state-curricula'
+  type: 'subjects' | 'frameworks' | 'grades' | 'lessons' | 'lesson-discovery' | 'lesson-generation-by-strand' | 'state-curricula'
   country?: string
   subject?: string
   framework?: string
