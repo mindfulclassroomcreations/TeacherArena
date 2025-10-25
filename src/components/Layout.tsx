@@ -123,7 +123,7 @@ export default function Layout({ children }: LayoutProps) {
       <footer className="bg-white border-t border-gray-200 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <p>© 2025 AI Lesson Generator. Built with Next.js, OpenAI, and Supabase.</p>
+            <p>© 2025 Teacher Arena Lesson Generator</p>
             <div className="flex space-x-6">
               <a href="/docs" className="hover:text-gray-900 transition-colors">Documentation</a>
               <a href="/about" className="hover:text-gray-900 transition-colors">About</a>
