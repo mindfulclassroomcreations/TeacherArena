@@ -616,7 +616,7 @@ export default function Home() {
             <p className="text-gray-600 text-sm">Select curriculum units for your lesson plan</p>
           </div>
 
-          {isLoading ? (
+          {isLoading && frameworks.length === 0 ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin">⌛</div>
               <p className="text-gray-600 mt-2">Loading standards & units...</p>
@@ -681,7 +681,7 @@ export default function Home() {
             <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
           </div>
 
-          {isLoading ? (
+          {isLoading && curriculumSections.length === 0 ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin">⌛</div>
               <p className="text-gray-600 mt-2">Loading curriculum standards...</p>
