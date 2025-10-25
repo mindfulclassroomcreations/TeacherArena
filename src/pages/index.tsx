@@ -708,7 +708,12 @@ export default function Home() {
             <>
               <div className="space-y-3">
                 {curriculumSections.map((section, index) => {
-                  const isSelected = selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
+                  const selectedId = selectedCurriculumSection?.id
+                  const selectedLabel = selectedCurriculumSection?.name || selectedCurriculumSection?.title
+                  const sectionLabel = section.name || section.title
+                  const idMatch = Boolean(selectedId && section.id && selectedId === section.id)
+                  const labelMatch = Boolean(selectedLabel && sectionLabel && selectedLabel === sectionLabel)
+                  const isSelected = idMatch || labelMatch
                   return (
                   <div
                     key={section.id || index}
@@ -794,16 +799,16 @@ export default function Home() {
       {/* Step 6: Curriculum Strands & Lessons */}
       {currentStep >= 5 && selectedCurriculumSection && selectedGrade && selectedFramework && (
         <div id="step-6" className="mb-8">
-          {/* Header Section */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6 mb-6">
+          {/* Header Section - simplified to match Step 5 style */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-3xl font-bold mb-2">📊 Step 6: Curriculum Strands & Lessons</h2>
-                <p className="text-indigo-100">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">📊 Step 6: Curriculum Strands & Lessons</h2>
+                <p className="text-gray-600">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold">{strands.reduce((sum, s) => sum + s.target_lesson_count, 0)}</p>
-                <p className="text-indigo-100 text-sm">Lessons Planned</p>
+                <p className="text-2xl font-bold text-gray-900">{strands.reduce((sum, s) => sum + s.target_lesson_count, 0)}</p>
+                <p className="text-gray-500 text-sm">Lessons Planned</p>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-2">
@@ -814,8 +819,8 @@ export default function Home() {
                 ← Browse Curriculum Standards (Step 5)
               </Button>
             </div>
-            <div className="mt-4 pt-4 border-t border-indigo-400">
-              <p className="text-sm text-indigo-100">Framework Analysis: {strands.length} major strands with {strands.reduce((sum, s) => sum + s.target_lesson_count, 0)} total lessons planned.</p>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-600">Framework Analysis: {strands.length} major strands with {strands.reduce((sum, s) => sum + s.target_lesson_count, 0)} total lessons planned.</p>
             </div>
           </div>
 
@@ -871,21 +876,19 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Strands Cards */}
+          {/* Strands Cards - simplified design to match Step 5 */}
           <div className="space-y-4 mb-6">
             {strands.map((strand, index) => (
-              <div key={index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
-                {/* Strand Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-lg">{strand.strand_code}</h3>
-                      <p className="text-blue-100 text-sm mt-1">{strand.strand_name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">{strand.target_lesson_count}</p>
-                      <p className="text-blue-100 text-xs">Lessons</p>
-                    </div>
+              <div key={index} className="bg-white border-2 border-transparent hover:border-blue-300 rounded-lg overflow-hidden transition-all">
+                {/* Strand Header - simplified */}
+                <div className="p-4 border-b border-gray-200 flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-base">{strand.strand_code}</h3>
+                    <p className="text-gray-600 text-sm mt-1">{strand.strand_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-gray-900">{strand.target_lesson_count}</p>
+                    <p className="text-gray-500 text-xs">Lessons</p>
                   </div>
                 </div>
 
