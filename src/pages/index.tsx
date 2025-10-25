@@ -31,6 +31,7 @@ interface Strand {
 export default function Home() {
   // State management
   const [currentStep, setCurrentStep] = useState(0)
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
   const [subjects, setSubjects] = useState<Item[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
   const [grades, setGrades] = useState<Item[]>([])
@@ -52,13 +53,22 @@ export default function Home() {
   const [showLessonModal, setShowLessonModal] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState<Item | null>(null)
 
+  // Country list
+  const countries = [
+    { name: 'USA', description: 'United States of America' },
+    { name: 'Canada', description: 'Canada' },
+    { name: 'Australia', description: 'Australia' },
+    { name: 'UK', description: 'United Kingdom' }
+  ]
+
   // Progress steps
   const steps = [
-    { label: 'Subject', completed: currentStep > 0, active: currentStep === 0 },
-    { label: 'Framework', completed: currentStep > 1, active: currentStep === 1 },
-    { label: 'Grade', completed: currentStep > 2, active: currentStep === 2 },
-    { label: 'Strands', completed: currentStep > 3, active: currentStep === 3 },
-    { label: 'Lessons', completed: false, active: currentStep === 4 },
+    { label: 'Country', completed: currentStep > 0, active: currentStep === 0 },
+    { label: 'Subject', completed: currentStep > 1, active: currentStep === 1 },
+    { label: 'Framework', completed: currentStep > 2, active: currentStep === 2 },
+    { label: 'Grade', completed: currentStep > 3, active: currentStep === 3 },
+    { label: 'Strands', completed: currentStep > 4, active: currentStep === 4 },
+    { label: 'Lessons', completed: false, active: currentStep === 5 },
   ]
 
   // API handlers
@@ -145,7 +155,7 @@ export default function Home() {
       })
       if (response.items && response.items[0]?.major_parts) {
         setStrands(response.items[0].major_parts)
-        setCurrentStep(3)
+        setCurrentStep(4)
         setSuccess(`Discovered ${response.items[0].major_parts.length} strands!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -174,7 +184,7 @@ export default function Home() {
       })
       if (response.items) {
         setLessons(response.items)
-        setCurrentStep(4)
+        setCurrentStep(5)
         setSuccess(`Generated ${response.items.length} lessons!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -188,7 +198,7 @@ export default function Home() {
   // Selection handlers
   const handleSelectSubject = (subject: Item) => {
     setSelectedSubject(subject)
-    setCurrentStep(1)
+    setCurrentStep(2)
     setFrameworks([])
     setGrades([])
     setStrands([])
@@ -199,7 +209,7 @@ export default function Home() {
 
   const handleSelectFramework = (framework: Item) => {
     setSelectedFramework(framework)
-    setCurrentStep(2)
+    setCurrentStep(3)
     setGrades([])
     setStrands([])
     setLessons([])
@@ -208,12 +218,14 @@ export default function Home() {
 
   const handleSelectGrade = (grade: Item) => {
     setSelectedGrade(grade)
+    setCurrentStep(3)
     setStrands([])
     setLessons([])
   }
 
   const handleReset = () => {
     setCurrentStep(0)
+    setSelectedCountry(null)
     setSubjects([])
     setFrameworks([])
     setGrades([])
@@ -261,8 +273,33 @@ export default function Home() {
       {/* Progress Indicator */}
       <ProgressIndicator steps={steps} />
 
+      {/* Step 0: Select Country */}
+      {currentStep === 0 && !selectedCountry && (
+        <div className="mb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">🌍 Select a Country</h2>
+            <p className="text-gray-600">Choose a country to customize the curriculum standards.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {countries.map((country) => (
+              <Card
+                key={country.name}
+                onClick={() => {
+                  setSelectedCountry(country.name)
+                  setCurrentStep(1)
+                }}
+                hoverable
+              >
+                <h3 className="font-bold text-lg text-gray-900 mb-2">{country.name}</h3>
+                <p className="text-gray-600 text-sm">{country.description}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Step 1: Subjects */}
-      {currentStep >= 0 && (
+      {currentStep >= 1 && selectedCountry && (
         <SelectionStep
           title="📚 Step 1: Select a Subject"
           description="Choose an educational subject to start building your curriculum."
@@ -277,7 +314,7 @@ export default function Home() {
       )}
 
       {/* Export Subjects Button */}
-      {currentStep >= 0 && subjects.length > 0 && (
+      {currentStep >= 1 && subjects.length > 0 && (
         <div className="mb-8 flex justify-end">
           <ExportButton
             onClick={() => downloadLessonsAsExcel(
@@ -293,7 +330,7 @@ export default function Home() {
       )}
 
       {/* Step 2: Frameworks */}
-      {currentStep >= 1 && selectedSubject && (
+      {currentStep >= 2 && selectedSubject && (
         <SelectionStep
           title="📋 Step 2: Select a Framework"
           description={`Choose a curriculum framework for ${selectedSubject.name}.`}
@@ -308,7 +345,7 @@ export default function Home() {
       )}
 
       {/* Export Frameworks Button */}
-      {currentStep >= 1 && frameworks.length > 0 && (
+      {currentStep >= 2 && frameworks.length > 0 && (
         <div className="mb-8 flex justify-end">
           <ExportButton
             onClick={() => downloadLessonsAsExcel(
@@ -324,7 +361,7 @@ export default function Home() {
       )}
 
       {/* Step 3: Grades */}
-      {currentStep >= 2 && selectedFramework && selectedSubject && (
+      {currentStep >= 3 && selectedFramework && selectedSubject && (
         <SelectionStep
           title="🎯 Step 3: Select a Grade Level"
           description={`Choose a grade level for ${selectedSubject.name} - ${selectedFramework.name}.`}
@@ -339,7 +376,7 @@ export default function Home() {
       )}
 
       {/* Export Grades Button */}
-      {currentStep >= 2 && grades.length > 0 && (
+      {currentStep >= 3 && grades.length > 0 && (
         <div className="mb-8 flex justify-end">
           <ExportButton
             onClick={() => downloadLessonsAsExcel(
@@ -355,11 +392,11 @@ export default function Home() {
       )}
 
       {/* Step 4: Discover Strands */}
-      {currentStep >= 2 && selectedGrade && strands.length === 0 && (
+      {currentStep >= 3 && selectedGrade && strands.length === 0 && (
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              � Step 4: Discover Curriculum Strands
+              📊 Step 4: Discover Curriculum Strands
             </h2>
             <p className="text-gray-600 mb-6">
               Analyze the curriculum structure and discover major strands/domains for lesson generation.
@@ -383,7 +420,7 @@ export default function Home() {
       )}
 
       {/* Step 5: Strands List */}
-      {currentStep >= 3 && strands.length > 0 && (
+      {currentStep >= 4 && strands.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             📊 Step 4: Curriculum Strands
@@ -428,7 +465,7 @@ export default function Home() {
       )}
 
       {/* Step 6: Lessons */}
-      {currentStep >= 4 && lessons.length > 0 && (
+      {currentStep >= 5 && lessons.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             ✨ Generated Lessons
