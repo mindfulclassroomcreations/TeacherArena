@@ -707,23 +707,23 @@ export default function Home() {
           ) : (
             <>
               <div className="space-y-3">
-                {curriculumSections.map((section, index) => (
+                {curriculumSections.map((section, index) => {
+                  const isSelected = selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
+                  return (
                   <div
                     key={section.id || index}
-                    className={`bg-white rounded-lg border-2 overflow-hidden transition-all ${
-                      (selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name)
-                        ? 'border-blue-600 ring-2 ring-blue-100 shadow-md'
-                        : 'border-gray-200 hover:border-blue-300'
+                    className={`bg-white rounded-lg overflow-hidden transition-all border-2 ${
+                      isSelected ? 'border-blue-600 ring-2 ring-blue-100 shadow-md' : 'border-transparent hover:border-blue-200'
                     }`}
                   >
                     {/* Section Header - Clickable */}
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleSelectCurriculumSection(section)}
-                      aria-pressed={(selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name) ? 'true' : 'false'}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectCurriculumSection(section) }}
                       className={`w-full p-4 flex items-center justify-between transition-colors ${
-                        selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
-                          ? 'bg-blue-50 border-l-4 border-blue-600'
-                          : 'hover:bg-gray-50'
+                        isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
                       }`}
                     >
                       <div className="text-left flex-1">
@@ -733,17 +733,25 @@ export default function Home() {
                         )}
                       </div>
                       <div className="flex items-center gap-3 ml-4">
-                        {(selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name) && (
-                          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Selected</span>
+                        {isSelected ? (
+                          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Selected ✓</span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={(e) => { e.stopPropagation(); handleSelectCurriculumSection(section) }}
+                          >
+                            Select Section
+                          </Button>
                         )}
                         <span className="text-gray-400">
-                          {selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name ? '▼' : '▶'}
+                          {isSelected ? '▼' : '▶'}
                         </span>
                       </div>
-                    </button>
+                    </div>
 
                     {/* Expanded Standards Table */}
-                    {(selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name) && (
+                    {isSelected && (
                       <div className="border-t border-gray-200 bg-gray-50 p-4">
                         <table className="w-full text-sm">
                           <thead>
@@ -770,7 +778,7 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                ))}
+                )})}
               </div>
               
               <div className="flex justify-end mt-6">
