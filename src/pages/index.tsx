@@ -33,16 +33,16 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
   const [subjects, setSubjects] = useState<Item[]>([])
-  const [nationalStrands, setNationalStrands] = useState<Item[]>([])
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
+  const [subSubjects, setSubSubjects] = useState<Item[]>([])
   const [grades, setGrades] = useState<Item[]>([])
   const [strands, setStrands] = useState<Strand[]>([])
   const [lessons, setLessons] = useState<Item[]>([])
   
   const [selectedSubject, setSelectedSubject] = useState<Item | null>(null)
-  const [selectedNationalStrand, setSelectedNationalStrand] = useState<Item | null>(null)
   const [selectedStateCurriculum, setSelectedStateCurriculum] = useState<any | null>(null)
+  const [selectedSubSubject, setSelectedSubSubject] = useState<Item | null>(null)
   const [selectedFramework, setSelectedFramework] = useState<Item | null>(null)
   const [selectedGrade, setSelectedGrade] = useState<Item | null>(null)
   const [selectedStrand, setSelectedStrand] = useState<Strand | null>(null)
@@ -69,12 +69,11 @@ export default function Home() {
   const steps = [
     { label: 'Country', completed: currentStep > 0, active: currentStep === 0 },
     { label: 'Subject', completed: currentStep > 1, active: currentStep === 1 },
-    { label: 'National Strands', completed: currentStep > 2, active: currentStep === 2 },
-    { label: 'State Curriculum', completed: currentStep > 3, active: currentStep === 3 },
+    { label: 'State Curriculum', completed: currentStep > 2, active: currentStep === 2 },
+    { label: 'Grade', completed: currentStep > 3, active: currentStep === 3 },
     { label: 'Framework', completed: currentStep > 4, active: currentStep === 4 },
-    { label: 'Grade', completed: currentStep > 5, active: currentStep === 5 },
-    { label: 'Strands', completed: currentStep > 6, active: currentStep === 6 },
-    { label: 'Lessons', completed: false, active: currentStep === 7 },
+    { label: 'Strands', completed: currentStep > 5, active: currentStep === 5 },
+    { label: 'Lessons', completed: false, active: currentStep === 6 },
   ]
 
   // API handlers
@@ -84,6 +83,10 @@ export default function Home() {
       setError('Please select a country first.')
       return
     }
+    
+    // Don't reload if already have data for this country
+    if (subjects.length > 0 && selectedCountry === country) return
+    
     setIsLoading(true)
     setError(null)
     try {
@@ -104,25 +107,28 @@ export default function Home() {
     }
   }
 
-  const handleGenerateNationalStrands = async () => {
-    if (!selectedCountry || !selectedSubject) return
+  const handleGenerateSubSubjects = async () => {
+    if (!selectedSubject) return
+    
+    // Don't reload if already have data
+    if (subSubjects.length > 0) return
+    
     setIsLoading(true)
     setError(null)
     try {
       const response = await generateContent({
-        type: 'national-strands',
-        country: selectedCountry,
+        type: 'sub-subjects',
+        country: selectedCountry || undefined,
         subject: selectedSubject.name,
-        context: context || ''
+        context: context
       })
       if (response.items) {
-        setNationalStrands(response.items)
-        setCurrentStep(3)
-        setSuccess(`Retrieved ${response.items.length} national curriculum strands!`)
+        setSubSubjects(response.items)
+        setSuccess(`Generated ${response.items.length} sub-categories!`)
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
-      setError('Failed to retrieve national strands. Please try again.')
+      setError('Failed to generate sub-categories. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -130,6 +136,12 @@ export default function Home() {
 
   const handleGenerateStateCurricula = async () => {
     if (!selectedCountry || !selectedSubject) return
+    
+    // Don't reload if already have data
+    if (stateCurricula.length > 0) {
+      return
+    }
+    
     setIsLoading(true)
     setError(null)
     try {
@@ -141,7 +153,7 @@ export default function Home() {
       })
       if (response.items) {
         setStateCurricula(response.items)
-        setCurrentStep(4)
+        setCurrentStep(3)
         setSuccess(`Retrieved state curricula!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -154,6 +166,10 @@ export default function Home() {
 
   const handleGenerateFrameworks = async () => {
     if (!selectedSubject) return
+    
+    // Don't reload if already have data
+    if (frameworks.length > 0) return
+    
     setIsLoading(true)
     setError(null)
     try {
@@ -176,7 +192,11 @@ export default function Home() {
   }
 
   const handleGenerateGrades = async () => {
-    if (!selectedSubject || !selectedFramework) return
+    if (!selectedSubject) return
+    
+    // Don't reload if already have data
+    if (grades.length > 0) return
+    
     setIsLoading(true)
     setError(null)
     try {
@@ -184,7 +204,7 @@ export default function Home() {
         type: 'grades',
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
-        framework: selectedFramework.name,
+        framework: selectedFramework?.name,
         context: context
       })
       if (response.items) {
@@ -242,7 +262,7 @@ export default function Home() {
       })
       if (response.items) {
         setLessons(response.items)
-        setCurrentStep(7)
+        setCurrentStep(6)
         setSuccess(`Generated ${response.items.length} lessons!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -257,32 +277,75 @@ export default function Home() {
   const handleSelectSubject = (subject: Item) => {
     setSelectedSubject(subject)
     setCurrentStep(2)
-    setNationalStrands([])
     setStateCurricula([])
     setFrameworks([])
     setGrades([])
     setStrands([])
     setLessons([])
-    setSelectedNationalStrand(null)
     setSelectedStateCurriculum(null)
     setSelectedFramework(null)
     setSelectedGrade(null)
-    // Auto-generate national strands
-    setTimeout(() => handleGenerateNationalStrands(), 100)
+  }
+
+  const handleSelectStateCurriculum = (curriculum: any) => {
+    setSelectedStateCurriculum(curriculum)
+    setCurrentStep(3)
+    setGrades([])
+    setFrameworks([])
+    setStrands([])
+    setLessons([])
+    setSelectedGrade(null)
+    setSelectedFramework(null)
+  }
+
+  const handleRefreshStateCurricula = async () => {
+    if (!selectedCountry || !selectedSubject) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await generateContent({
+        type: 'state-curricula',
+        country: selectedCountry,
+        subject: selectedSubject.name,
+        context: context || ''
+      })
+      if (response.items) {
+        setStateCurricula(response.items)
+        setSuccess(`State curricula refreshed!`)
+        setTimeout(() => setSuccess(null), 3000)
+      }
+    } catch (err) {
+      setError('Failed to refresh state curricula. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleSelectFramework = (framework: Item) => {
     setSelectedFramework(framework)
-    setCurrentStep(5)
-    setGrades([])
+    setCurrentStep(4)
     setStrands([])
     setLessons([])
     setSelectedGrade(null)
   }
 
+  const handleSelectSubSubject = (subSubject: Item) => {
+    setSelectedSubSubject(subSubject)
+    setFrameworks([])
+    setGrades([])
+    setSelectedFramework(null)
+    setSelectedGrade(null)
+  }
+
+  const handleClearSubSubject = () => {
+    setSelectedSubSubject(null)
+    setFrameworks([])
+    setSelectedFramework(null)
+  }
+
   const handleSelectGrade = (grade: Item) => {
     setSelectedGrade(grade)
-    setCurrentStep(6)
+    setCurrentStep(5)
     setStrands([])
     setLessons([])
   }
@@ -291,15 +354,15 @@ export default function Home() {
     setCurrentStep(0)
     setSelectedCountry(null)
     setSubjects([])
-    setNationalStrands([])
     setStateCurricula([])
     setFrameworks([])
+    setSubSubjects([])
     setGrades([])
     setStrands([])
     setLessons([])
     setSelectedSubject(null)
-    setSelectedNationalStrand(null)
     setSelectedStateCurriculum(null)
+    setSelectedSubSubject(null)
     setSelectedFramework(null)
     setSelectedGrade(null)
     setSelectedStrand(null)
@@ -317,13 +380,6 @@ export default function Home() {
             Create curriculum-aligned lessons powered by AI. Generate complete lesson plans in minutes!
         </p>
         <div className="flex gap-4">
-          <Button 
-            variant="outline" 
-            className="bg-white text-blue-600 hover:bg-blue-50 border-white"
-            onClick={() => setShowContextModal(true)}
-          >
-            Set Context
-          </Button>
           <Button 
             variant="outline" 
             className="bg-transparent text-white border-white hover:bg-blue-700"
@@ -399,34 +455,32 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 2: National Curriculum Strands */}
+      {/* Step 2: State/Provincial Curriculum */}
       {currentStep >= 2 && selectedSubject && (
-        <SelectionStep
-          title="📖 Step 2: Select National Curriculum Strand"
-          description={`National curriculum strands for ${selectedSubject.name} in ${selectedCountry}.`}
-          items={nationalStrands}
-          selectedItem={selectedNationalStrand}
-          onSelect={(strand) => {
-            setSelectedNationalStrand(strand)
-            setCurrentStep(3)
-            setStateCurricula([])
-            setTimeout(() => handleGenerateStateCurricula(), 100)
-          }}
-          onGenerate={handleGenerateNationalStrands}
-          isLoading={isLoading}
-          generateButtonText={nationalStrands.length > 0 ? "Refresh Strands" : "Load National Strands"}
-          emptyStateText="No national strands found. Click below to load curriculum strands."
-        />
-      )}
-
-      {/* Step 3: State/Provincial Curriculum */}
-      {currentStep >= 3 && selectedSubject && selectedNationalStrand && (
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">🗺️ Step 3: Select State/Provincial Curriculum</h2>
-            <p className="text-gray-600">Choose the state curriculum standards you want to follow.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">🗺️ Step 2: Select State/Provincial Curriculum</h2>
+            <p className="text-gray-600 mb-4">Choose the state curriculum standards you want to follow.</p>
+            
+            {/* Context Display */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Country</p>
+                  <p className="text-sm text-blue-800">{selectedCountry}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Curricula</p>
+                  <p className="text-sm text-blue-800">{stateCurricula.length} available</p>
+                </div>
+              </div>
+            </div>
           </div>
-          {isLoading ? (
+          {isLoading && stateCurricula.length === 0 ? (
             <div className="text-center py-8">
               <div className="inline-block animate-spin">⌛</div>
               <p className="text-gray-600 mt-2">Loading state curricula...</p>
@@ -439,50 +493,304 @@ export default function Home() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {stateCurricula.map((curriculum, index) => (
-                <Card
-                  key={index}
-                  onClick={() => {
-                    setSelectedStateCurriculum(curriculum)
-                    setCurrentStep(4)
-                  }}
-                  hoverable
+            <>
+              <div className="mb-4 flex justify-between items-center">
+                <p className="text-sm text-gray-600">{stateCurricula.length} curricula available</p>
+                <Button 
+                  onClick={handleRefreshStateCurricula} 
+                  variant="outline" 
+                  size="sm"
+                  isLoading={isLoading}
                 >
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">{curriculum.curriculum_name}</h3>
-                  <p className="text-gray-600 text-sm mb-3">{curriculum.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(curriculum.states || []).slice(0, 5).map((state: string, i: number) => (
-                      <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                        {state}
-                      </span>
-                    ))}
-                    {(curriculum.states || []).length > 5 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                        +{(curriculum.states || []).length - 5} more
-                      </span>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
+                  🔄 Refresh
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stateCurricula.map((curriculum, index) => (
+                  <Card
+                    key={index}
+                    onClick={() => handleSelectStateCurriculum(curriculum)}
+                    hoverable
+                    isSelected={selectedStateCurriculum?.curriculum_name === curriculum.curriculum_name}
+                  >
+                    <h3 className="font-bold text-lg text-gray-900 mb-2">{curriculum.curriculum_name}</h3>
+                    <p className="text-gray-600 text-sm mb-3">{curriculum.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(curriculum.states || []).slice(0, 5).map((state: string, i: number) => (
+                        <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          {state}
+                        </span>
+                      ))}
+                      {(curriculum.states || []).length > 5 && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
+                          +{(curriculum.states || []).length - 5} more
+                        </span>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
 
-      {/* Step 4: Frameworks */}
-      {currentStep >= 4 && selectedSubject && selectedStateCurriculum && (
-        <SelectionStep
-          title="📋 Step 4: Select a Framework"
-          description={`Choose a curriculum framework for ${selectedSubject.name} under ${selectedStateCurriculum.curriculum_name}.`}
-          items={frameworks}
-          selectedItem={selectedFramework}
-          onSelect={handleSelectFramework}
-          onGenerate={handleGenerateFrameworks}
-          isLoading={isLoading}
-          generateButtonText={frameworks.length > 0 ? "Generate More Frameworks" : "Generate Frameworks"}
-          emptyStateText="Click below to generate curriculum frameworks for this subject."
-        />
+      {/* Step 3: Grades */}
+      {currentStep >= 3 && selectedSubject && selectedStateCurriculum && (
+        <div className="mb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">🎯 Step 3: Select a Grade Level</h2>
+            <p className="text-gray-600 mb-4">Choose a grade level for {selectedSubject.name}.</p>
+            
+            {/* Context Display */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
+                  <p className="text-sm text-blue-800">{selectedStateCurriculum.curriculum_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grades</p>
+                  <p className="text-sm text-blue-800">{grades.length} available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {grades.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">Click below to generate grade levels for this subject.</p>
+              <Button onClick={handleGenerateGrades} isLoading={isLoading} variant="primary">
+                Generate Grades
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {grades.map((grade, index) => (
+                  <Card
+                    key={grade.id || index}
+                    isSelected={selectedGrade?.name === grade.name}
+                    onClick={() => handleSelectGrade(grade)}
+                  >
+                    <h3 className="font-bold text-lg text-gray-900 mb-2">
+                      {grade.title || grade.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm line-clamp-3">
+                      {grade.description}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleGenerateGrades} isLoading={isLoading} variant="primary">
+                  Generate More Grades
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Export Grades Button */}
+      {currentStep >= 3 && grades.length > 0 && (
+        <div className="mb-8 flex justify-end">
+          <ExportButton
+            onClick={() => downloadLessonsAsExcel(
+              grades.map(g => ({ name: g.name, description: g.description, title: g.name })),
+              selectedSubject?.name,
+              undefined,
+              undefined
+            )}
+            variant="success"
+            size="sm"
+          />
+        </div>
+      )}
+
+      {/* Step 4: Select Sub-Categories/Domains */}
+      {currentStep >= 4 && selectedSubject && selectedStateCurriculum && selectedGrade && !selectedSubSubject && (
+        <div className="mb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">� Step 4: Browse Standards & Units</h2>
+            <p className="text-gray-600 mb-4">Select the curriculum units and standards you want to work with.</p>
+            
+            {/* Context Display */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
+                  <p className="text-sm text-blue-800">{selectedStateCurriculum.curriculum_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade Level</p>
+                  <p className="text-sm text-blue-800">{selectedGrade.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Categories</p>
+                  <p className="text-sm text-blue-800">{subSubjects.length} available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin">⌛</div>
+              <p className="text-gray-600 mt-2">Loading sub-categories...</p>
+            </div>
+          ) : subSubjects.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">Click below to discover sub-categories for this subject.</p>
+              <Button onClick={handleGenerateSubSubjects} isLoading={isLoading} variant="primary">
+                Generate Sub-Categories
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {subSubjects.map((subSubject, index) => {
+                  const isSelected = selectedSubSubject !== null && (selectedSubSubject as Item).name === subSubject.name
+                  return (
+                    <Card
+                      key={subSubject.id || index}
+                      onClick={() => handleSelectSubSubject(subSubject)}
+                      hoverable
+                      isSelected={isSelected}
+                    >
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">{subSubject.name}</h3>
+                      <p className="text-gray-600 text-sm line-clamp-3">{subSubject.description}</p>
+                    </Card>
+                  )
+                })}
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleGenerateSubSubjects} isLoading={isLoading} variant="primary">
+                  Generate More Categories
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Step 4b: Browse Standards & Units (after sub-category selected) */}
+      {currentStep >= 4 && selectedSubject && selectedStateCurriculum && selectedGrade && selectedSubSubject && (
+        <div className="mb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">� Step 4b: Browse Standards and Units</h2>
+            <p className="text-gray-600 mb-4">Select the curriculum units and standards you want to work with under {selectedSubSubject.name}.</p>
+            
+            {/* Context Display */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Category</p>
+                  <p className="text-sm text-blue-800">{selectedSubSubject.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade Level</p>
+                  <p className="text-sm text-blue-800">{selectedGrade.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Units</p>
+                  <p className="text-sm text-blue-800">{frameworks.length} available</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Change Sub-Category Button */}
+            <div className="mb-4">
+              <Button 
+                onClick={handleClearSubSubject}
+                variant="outline"
+                size="sm"
+              >
+                ← Change Sub-Category
+              </Button>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin">⌛</div>
+              <p className="text-gray-600 mt-2">Loading standards & units...</p>
+            </div>
+          ) : frameworks.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No standards & units available. Click below to generate curriculum units for this selection.</p>
+              <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
+                Generate Units & Standards
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-6 mb-6">
+                {frameworks.map((framework, index) => (
+                  <div key={framework.id || index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    {/* Unit Title with Code */}
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
+                      <div className="flex gap-3 items-start">
+                        <div className="flex-shrink-0 bg-blue-500 px-3 py-2 rounded font-mono font-bold text-sm">
+                          {framework.id || `STD-${index + 1}`}
+                        </div>
+                        <div className="flex-grow">
+                          <h3 className="text-lg font-bold">{framework.title || framework.name}</h3>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Unit Description */}
+                    {framework.description && (
+                      <div className="bg-blue-50 px-4 py-3 border-b border-gray-200">
+                        <p className="text-sm text-gray-700">{framework.description}</p>
+                      </div>
+                    )}
+                    
+                    {/* Standards List */}
+                    <div className="p-4">
+                      <div className="space-y-3">
+                        <div className="text-xs font-semibold text-gray-600 uppercase mb-3">Curriculum Code</div>
+                        <div className="font-mono text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
+                          {framework.id || `STD-${index + 1}`}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Select Button */}
+                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                      <Button 
+                        onClick={() => handleSelectFramework(framework)}
+                        variant={selectedFramework?.name === framework.name ? "primary" : "outline"}
+                        size="sm"
+                        className="w-full"
+                      >
+                        {selectedFramework?.name === framework.name ? "✓ Selected" : "Select Unit"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
+                  Generate More Units
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       )}
 
       {/* Export Frameworks Button */}
@@ -501,43 +809,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 5: Grades */}
-      {currentStep >= 5 && selectedFramework && selectedSubject && (
-        <SelectionStep
-          title="🎯 Step 5: Select a Grade Level"
-          description={`Choose a grade level for ${selectedSubject.name} - ${selectedFramework.name}.`}
-          items={grades}
-          selectedItem={selectedGrade}
-          onSelect={handleSelectGrade}
-          onGenerate={handleGenerateGrades}
-          isLoading={isLoading}
-          generateButtonText={grades.length > 0 ? "Generate More Grades" : "Generate Grades"}
-          emptyStateText="Click below to generate grade levels for this framework."
-        />
-      )}
-
-      {/* Export Grades Button */}
-      {currentStep >= 5 && grades.length > 0 && (
-        <div className="mb-8 flex justify-end">
-          <ExportButton
-            onClick={() => downloadLessonsAsExcel(
-              grades.map(g => ({ name: g.name, description: g.description, title: g.name })),
-              selectedSubject?.name,
-              selectedFramework?.name,
-              undefined
-            )}
-            variant="success"
-            size="sm"
-          />
-        </div>
-      )}
-
-      {/* Step 6: Discover Strands */}
-      {currentStep >= 5 && selectedGrade && strands.length === 0 && (
+      {/* Step 5: Discover Strands */}
+      {currentStep >= 4 && selectedGrade && selectedFramework && strands.length === 0 && (
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              📊 Step 6: Discover Curriculum Strands
+              📊 Step 5: Discover Curriculum Strands
             </h2>
             <p className="text-gray-600 mb-6">
               Analyze the curriculum structure and discover major strands/domains for lesson generation.
@@ -560,53 +837,152 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 7: Strands List */}
-      {currentStep >= 6 && strands.length > 0 && (
+      {/* Step 6: Strands List - Improved Framework Analysis */}
+      {currentStep >= 5 && strands.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            📊 Step 6: Curriculum Strands
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Select a strand to generate detailed lesson plans.
-          </p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6 mb-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">📊 Step 6: Curriculum Strands</h2>
+                <p className="text-indigo-100">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold">{strands.reduce((sum, s) => sum + s.target_lesson_count, 0)}</p>
+                <p className="text-indigo-100 text-sm">Lessons Planned</p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-indigo-400">
+              <p className="text-sm text-indigo-100">Framework Analysis: {strands.length} major strands with {strands.reduce((sum, s) => sum + s.target_lesson_count, 0)} total lessons planned.</p>
+            </div>
+          </div>
+
+          {/* Analysis Summary */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-bold text-gray-900 mb-3">📚 Framework Overview</h3>
+                <p className="text-sm text-gray-700 mb-2">
+                  <strong>Total Strands:</strong> {strands.length}
+                </p>
+                <p className="text-sm text-gray-700 mb-2">
+                  <strong>Total Standards:</strong> {strands.reduce((sum, s) => sum + s.num_standards, 0)}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>Total Lessons:</strong> {strands.reduce((sum, s) => sum + s.target_lesson_count, 0)}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 mb-3">✅ Progress</h3>
+                <p className="text-sm text-gray-700">
+                  Progress: 0 of {strands.length} strands generated
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Strands will be automatically saved when you approve lessons
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Strands Cards */}
+          <div className="space-y-4 mb-6">
             {strands.map((strand, index) => (
-              <Card key={index} hoverable>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900">
-                      {strand.strand_code}: {strand.strand_name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {strand.num_standards} standards • {strand.target_lesson_count} lessons planned
-                    </p>
+              <div key={index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
+                {/* Strand Header */}
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-lg">{strand.strand_code}</h3>
+                      <p className="text-blue-100 text-sm mt-1">{strand.strand_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold">{strand.target_lesson_count}</p>
+                      <p className="text-blue-100 text-xs">Lessons</p>
+                    </div>
                   </div>
                 </div>
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Key Topics:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {strand.key_topics.slice(0, 4).map((topic, i) => (
-                      <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        {topic}
-                      </span>
-                    ))}
+
+                {/* Strand Content */}
+                <div className="p-4">
+                  {/* Standards Info */}
+                  <div className="mb-4 pb-4 border-b border-gray-200">
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Standards</p>
+                    <p className="text-sm text-gray-700">{strand.num_standards} standards • {strand.target_lesson_count} lessons planned</p>
                   </div>
+
+                  {/* Key Topics */}
+                  {strand.key_topics && strand.key_topics.length > 0 && (
+                    <div className="mb-4 pb-4 border-b border-gray-200">
+                      <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Key Topics:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {strand.key_topics.map((topic, i) => (
+                          <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {topic}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Performance Expectations */}
+                  {strand.performance_expectations && strand.performance_expectations.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Performance Expectations:</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {strand.performance_expectations.map((expectation, i) => (
+                          <p key={i} className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                            {expectation}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <Button
-                  onClick={() => handleGenerateLessons(strand)}
-                  isLoading={isLoading && selectedStrand?.strand_code === strand.strand_code}
-                  className="w-full"
-                >
-                  Generate Lessons
-                </Button>
-              </Card>
+
+                {/* Action Button */}
+                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                  <Button
+                    onClick={() => handleGenerateLessons(strand)}
+                    isLoading={isLoading && selectedStrand?.strand_code === strand.strand_code}
+                    className="w-full"
+                    variant="primary"
+                  >
+                    Generate Lessons for {strand.strand_code}
+                  </Button>
+                </div>
+              </div>
             ))}
+          </div>
+
+          {/* Saved Lessons Section */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 className="font-bold text-lg text-gray-900 mb-4">💾 Saved Lessons ({lessons.length})</h3>
+            {lessons.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No lessons yet. Generate or add one above.</p>
+            ) : (
+              <div className="space-y-2">
+                {lessons.map((lesson, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div className="flex-grow">
+                      <p className="font-medium text-gray-900">{lesson.title || lesson.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{lesson.description}</p>
+                    </div>
+                    <button onClick={() => {
+                      setSelectedLesson(lesson)
+                      setShowLessonModal(true)
+                    }} className="ml-4 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                      View
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Step 8: Lessons */}
-      {currentStep >= 7 && lessons.length > 0 && (
+      {/* Step 7: Lessons */}
+      {currentStep >= 6 && lessons.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             ✨ Generated Lessons
@@ -726,35 +1102,7 @@ export default function Home() {
         )}
       </Modal>
 
-      {/* Getting Started Guide */}
-      {subjects.length === 0 && (
-        <div className="mt-12 bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🚀 Getting Started</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-4xl mb-3">1️⃣</div>
-              <h3 className="font-bold text-lg mb-2">Set Your Context</h3>
-              <p className="text-gray-600 text-sm">
-                Define your educational goals and subject areas to help AI generate relevant content.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl mb-3">2️⃣</div>
-              <h3 className="font-bold text-lg mb-2">Navigate the Steps</h3>
-              <p className="text-gray-600 text-sm">
-                Follow the guided process through subjects, frameworks, grades, and strands.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl mb-3">3️⃣</div>
-              <h3 className="font-bold text-lg mb-2">Generate Lessons</h3>
-              <p className="text-gray-600 text-sm">
-                Create comprehensive, standards-aligned lesson plans instantly with AI.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Getting Started Guide - Removed */}
       </div>
     </Layout>
   )

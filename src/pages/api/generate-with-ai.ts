@@ -78,6 +78,16 @@ These should align with ${country}'s national curriculum standards.
 Respond with ONLY a JSON array of objects with "name" and "description" fields.`
         break
 
+      case 'sub-subjects':
+        userPrompt = `Generate sub-categories, domains, or strands for the subject: "${subject}" in ${country} curriculum.
+${context || ''}
+
+These should represent the major categories or domains within this subject (e.g., for Science: Physical Sciences, Life Sciences, Earth and Space Sciences, Engineering Design).
+If the subject doesn't have natural sub-categories, return the main subject as a single category.
+Generate 3-8 sub-categories.
+Respond with ONLY a JSON array of objects with "name" and "description" fields.`
+        break
+
       case 'frameworks':
         userPrompt = `Generate educational frameworks for the subject: "${subject}" relevant to ${country} curriculum.
 ${context || ''}
@@ -165,15 +175,6 @@ REQUIREMENTS:
 - Align with the performance expectations provided`
         break
 
-      case 'national-strands':
-        userPrompt = `List the major national curriculum strands/standards for ${subject} in ${country}.
-These are the main domains or topics that form the basis of ${country}'s national curriculum framework for ${subject}.
-
-Provide 5-8 main strands/domains.
-Respond with ONLY a JSON array of objects with "name" and "description" fields.
-Each name should be the strand name, and description should explain what topics this strand covers.`
-        break
-
       case 'state-curricula':
         userPrompt = `For the subject "${subject}" in ${country}, provide information about state/provincial/regional curriculum standards.
 List the major states or provinces and their curriculum names (e.g., Common Core, state-specific standards, etc.).
@@ -259,25 +260,6 @@ Respond with ONLY a JSON array of such objects.`
       items = items.map((item, index) => ({
         name: item.title || item.name || `Lesson ${index + 1}`,
         title: item.title,
-        description: item.description || '',
-      }))
-
-      return res.status(200).json({
-        success: true,
-        items,
-        count: items.length
-      })
-    }
-
-    if (type === 'national-strands') {
-      let items = parsedData
-      if (!Array.isArray(items)) {
-        return res.status(500).json({ error: 'AI did not return an array of strands' })
-      }
-
-      items = items.map((item, index) => ({
-        name: item.name || `Strand ${index + 1}`,
-        title: item.name,
         description: item.description || '',
       }))
 
