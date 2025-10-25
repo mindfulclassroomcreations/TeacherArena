@@ -708,13 +708,21 @@ export default function Home() {
             <>
               <div className="space-y-3">
                 {curriculumSections.map((section, index) => (
-                  <div key={section.id || index} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div
+                    key={section.id || index}
+                    className={`bg-white rounded-lg border-2 overflow-hidden transition-all ${
+                      (selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name)
+                        ? 'border-blue-600 ring-2 ring-blue-100 shadow-md'
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
                     {/* Section Header - Clickable */}
                     <button
                       onClick={() => handleSelectCurriculumSection(section)}
+                      aria-pressed={(selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name) ? 'true' : 'false'}
                       className={`w-full p-4 flex items-center justify-between transition-colors ${
                         selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
-                          ? 'bg-blue-50'
+                          ? 'bg-blue-50 border-l-4 border-blue-600'
                           : 'hover:bg-gray-50'
                       }`}
                     >
@@ -724,11 +732,13 @@ export default function Home() {
                           <p className="text-xs text-blue-600 font-mono mt-1">{section.id}</p>
                         )}
                       </div>
-                      <div className="text-gray-400 ml-4">
-                        {selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
-                          ? '▼'
-                          : '▶'
-                        }
+                      <div className="flex items-center gap-3 ml-4">
+                        {(selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name) && (
+                          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Selected</span>
+                        )}
+                        <span className="text-gray-400">
+                          {selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name ? '▼' : '▶'}
+                        </span>
                       </div>
                     </button>
 
@@ -773,42 +783,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 6: Analyze Selected Standard */}
-      {currentStep >= 5 && selectedCurriculumSection && selectedGrade && selectedFramework && strands.length === 0 && (
+      {/* Step 6: Curriculum Strands & Lessons */}
+      {currentStep >= 5 && selectedCurriculumSection && selectedGrade && selectedFramework && (
         <div id="step-6" className="mb-8">
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              � Step 6: Analyze Selected Standard
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Analyze the selected standard and discover major strands/domains for lesson generation.
-            </p>
-            <div className="max-w-xs mx-auto mb-6">
-              <Input
-                type="number"
-                label="Target Total Lesson Count"
-                value={totalLessonCount}
-                onChange={(e) => setTotalLessonCount(e.target.value)}
-                placeholder="45"
-                min="1"
-                max="200"
-              />
-            </div>
-            <Button onClick={handleDiscoverStrands} isLoading={isLoading} size="lg">
-              Discover Strands
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 7: Strands List - Improved Framework Analysis */}
-      {currentStep >= 6 && strands.length > 0 && (
-        <div className="mb-8">
           {/* Header Section */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6 mb-6">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-3xl font-bold mb-2">📊 Step 7: Curriculum Strands & Lessons</h2>
+                <h2 className="text-3xl font-bold mb-2">📊 Step 6: Curriculum Strands & Lessons</h2>
                 <p className="text-indigo-100">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
               </div>
               <div className="text-right">
@@ -816,16 +798,43 @@ export default function Home() {
                 <p className="text-indigo-100 text-sm">Lessons Planned</p>
               </div>
             </div>
-            {/* Link back to Step 5: Browse Curriculum Standards */}
-            <div className="mt-4">
+            <div className="mt-4 flex items-center gap-2">
+              <Button onClick={() => setCurrentStep(4)} variant="outline" size="sm">
+                ← Browse Units (Step 4)
+              </Button>
               <Button onClick={() => setCurrentStep(5)} variant="outline" size="sm">
-                ← Browse Curriculum Standards
+                ← Browse Curriculum Standards (Step 5)
               </Button>
             </div>
             <div className="mt-4 pt-4 border-t border-indigo-400">
               <p className="text-sm text-indigo-100">Framework Analysis: {strands.length} major strands with {strands.reduce((sum, s) => sum + s.target_lesson_count, 0)} total lessons planned.</p>
             </div>
           </div>
+
+          {/* If no strands yet, show Discover Strands panel */}
+          {strands.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+              <p className="text-gray-700 mb-6">
+                Select a target number of lessons and discover strands/domains for the selected standard.
+              </p>
+              <div className="max-w-xs mx-auto mb-6">
+                <Input
+                  type="number"
+                  label="Target Total Lesson Count"
+                  value={totalLessonCount}
+                  onChange={(e) => setTotalLessonCount(e.target.value)}
+                  placeholder="45"
+                  min="1"
+                  max="200"
+                />
+              </div>
+              <Button onClick={handleDiscoverStrands} isLoading={isLoading} size="lg">
+                Discover Strands
+              </Button>
+            </div>
+          ) : (
+            <></>
+          )}
 
           {/* Analysis Summary */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
