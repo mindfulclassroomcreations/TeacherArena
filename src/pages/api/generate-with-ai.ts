@@ -127,6 +127,42 @@ Respond with ONLY a JSON object:
 }`
         break
 
+      case 'lesson-generation-by-strand':
+        const { strandCode, strandName, targetLessonCount, keyTopics, performanceExpectations } = req.body
+        
+        userPrompt = `ROLE: You are an expert lesson plan creator.
+
+INPUTS
+- Subject: "${subject}"
+- Framework: "${framework}"
+- Grade Level: "${grade}"
+- Strand Code: "${strandCode}"
+- Strand Name: "${strandName}"
+- Target Lesson Count: ${targetLessonCount || 5}
+- Key Topics: ${JSON.stringify(keyTopics || [])}
+- Performance Expectations: ${JSON.stringify(performanceExpectations || [])}
+
+GOAL
+Generate ${targetLessonCount || 5} detailed lesson plans for this strand that align with the performance expectations.
+
+OUTPUT FORMAT
+Respond with ONLY a JSON array of lesson objects:
+[
+  {
+    "name": "Lesson Title",
+    "title": "Lesson Title",
+    "description": "Brief lesson description covering learning objectives, key activities, and assessment methods"
+  }
+]
+
+REQUIREMENTS:
+- Each lesson should be unique and build upon previous lessons
+- Include clear learning objectives
+- Suggest hands-on activities appropriate for the grade level
+- Include assessment strategies
+- Align with the performance expectations provided`
+        break
+
       default:
         return res.status(400).json({ error: 'Invalid type' })
     }
@@ -188,6 +224,25 @@ Respond with ONLY a JSON object:
       } else {
         return res.status(500).json({ error: 'AI did not return a valid discovery object' })
       }
+    }
+
+    if (type === 'lesson-generation-by-strand') {
+      let items = parsedData
+      if (!Array.isArray(items)) {
+        return res.status(500).json({ error: 'AI did not return an array of lessons' })
+      }
+
+      items = items.map((item, index) => ({
+        name: item.title || item.name || `Lesson ${index + 1}`,
+        title: item.title,
+        description: item.description || '',
+      }))
+
+      return res.status(200).json({
+        success: true,
+        items,
+        count: items.length
+      })
     }
 
     let items = parsedData
