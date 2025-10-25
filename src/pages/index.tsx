@@ -72,9 +72,10 @@ export default function Home() {
   ]
 
   // API handlers
-  const handleGenerateSubjects = async () => {
-    if (!context.trim()) {
-      setShowContextModal(true)
+  const handleGenerateSubjects = async (countryName?: string) => {
+    const country = countryName || selectedCountry
+    if (!country) {
+      setError('Please select a country first.')
       return
     }
     setIsLoading(true)
@@ -82,11 +83,12 @@ export default function Home() {
     try {
       const response = await generateContent({
         type: 'subjects',
-        context: context
+        country: country,
+        context: context || ''
       })
       if (response.items) {
         setSubjects(response.items)
-        setSuccess(`Generated ${response.items.length} subjects!`)
+        setSuccess(`Generated ${response.items.length} subjects for ${country}!`)
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
@@ -103,6 +105,7 @@ export default function Home() {
     try {
       const response = await generateContent({
         type: 'frameworks',
+        country: selectedCountry || undefined,
         subject: selectedSubject.name,
         context: context
       })
@@ -125,6 +128,7 @@ export default function Home() {
     try {
       const response = await generateContent({
         type: 'grades',
+        country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework.name,
         context: context
@@ -284,9 +288,11 @@ export default function Home() {
             {countries.map((country) => (
               <Card
                 key={country.name}
-                onClick={() => {
+                onClick={async () => {
                   setSelectedCountry(country.name)
                   setCurrentStep(1)
+                  // Auto-generate subjects for the selected country
+                  setTimeout(() => handleGenerateSubjects(country.name), 100)
                 }}
                 hoverable
               >

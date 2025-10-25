@@ -49,14 +49,14 @@ export default async function handler(
   }
 
   try {
-    const { type, subject, framework, grade, context, totalLessonCount } = req.body
+    const { type, country, subject, framework, grade, context, totalLessonCount } = req.body
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
     }
 
-    if (type === 'subjects' && !context) {
-      return res.status(400).json({ error: 'Missing required field: context (for subject generation)' })
+    if (type === 'subjects' && !country) {
+      return res.status(400).json({ error: 'Missing required field: country (for subject generation)' })
     }
 
     if (type !== 'subjects' && !subject) {
@@ -71,14 +71,15 @@ export default async function handler(
 
     switch (type) {
       case 'subjects':
-        userPrompt = `Generate educational subjects based on the following context: ${context}
+        userPrompt = `Generate educational subjects relevant to ${country} curriculum standards based on the following context: ${context || 'General educational subjects'}
 
-Generate 5-8 relevant subjects that span different disciplines.
+Generate 6-10 relevant subjects that are commonly taught in ${country} schools and span different disciplines.
+These should align with ${country}'s national curriculum standards.
 Respond with ONLY a JSON array of objects with "name" and "description" fields.`
         break
 
       case 'frameworks':
-        userPrompt = `Generate educational frameworks for the subject: "${subject}".
+        userPrompt = `Generate educational frameworks for the subject: "${subject}" relevant to ${country} curriculum.
 ${context || ''}
 Respond with ONLY a JSON array of objects with "name" and "description" fields.`
         break
@@ -87,10 +88,11 @@ Respond with ONLY a JSON array of objects with "name" and "description" fields.`
         userPrompt = `Generate individual grade levels for:
 - Subject: "${subject}"
 - Framework: "${framework}"
+- Country: "${country}"
 ${context || ''}
 
-IMPORTANT: Generate INDIVIDUAL grades ONLY (e.g., "Grade 1", "Grade 2", "Grade 3", etc.)
-Generate 8-12 individual grades.
+IMPORTANT: Generate INDIVIDUAL grades ONLY (e.g., "Grade 1", "Grade 2", "Grade 3", etc.) as used in ${country}.
+Generate 8-12 individual grades appropriate for ${country}.
 Respond with ONLY a JSON array of objects with "name" and "description" fields.`
         break
 
