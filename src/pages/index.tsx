@@ -321,7 +321,6 @@ export default function Home() {
       })
       if (response.items) {
         setCurriculumSections(response.items)
-        setCurrentStep(5)
         setSuccess(`Generated ${response.items.length} curriculum sections!`)
         setTimeout(() => setSuccess(null), 3000)
       }
