@@ -800,6 +800,12 @@ export default function Home() {
                 <p className="text-indigo-100 text-sm">Lessons Planned</p>
               </div>
             </div>
+            {/* Link back to Step 5: Browse Curriculum Standards */}
+            <div className="mt-4">
+              <Button onClick={() => setCurrentStep(5)} variant="outline" size="sm">
+                ← Browse Curriculum Standards
+              </Button>
+            </div>
             <div className="mt-4 pt-4 border-t border-indigo-400">
               <p className="text-sm text-indigo-100">Framework Analysis: {strands.length} major strands with {strands.reduce((sum, s) => sum + s.target_lesson_count, 0)} total lessons planned.</p>
             </div>
