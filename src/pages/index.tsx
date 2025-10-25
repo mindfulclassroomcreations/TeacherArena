@@ -231,7 +231,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-8 text-white">
-          <h1 className="text-4xl font-bold mb-4">🎓 AI Lesson Generator</h1>
+          <h1 className="text-4xl font-bold mb-4">🎓 Teacher Arena Lesson Generator</h1>
           <p className="text-xl text-blue-100 mb-6">
             Create curriculum-aligned lessons powered by AI. Generate complete lesson plans in minutes!
         </p>
