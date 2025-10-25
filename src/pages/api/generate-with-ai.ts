@@ -165,6 +165,28 @@ REQUIREMENTS:
 - Align with the performance expectations provided`
         break
 
+      case 'national-strands':
+        userPrompt = `List the major national curriculum strands/standards for ${subject} in ${country}.
+These are the main domains or topics that form the basis of ${country}'s national curriculum framework for ${subject}.
+
+Provide 5-8 main strands/domains.
+Respond with ONLY a JSON array of objects with "name" and "description" fields.
+Each name should be the strand name, and description should explain what topics this strand covers.`
+        break
+
+      case 'state-curricula':
+        userPrompt = `For the subject "${subject}" in ${country}, provide information about state/provincial/regional curriculum standards.
+List the major states or provinces and their curriculum names (e.g., Common Core, state-specific standards, etc.).
+If multiple states share the same curriculum, group them together.
+
+Format the response as a JSON array where each object has:
+- "curriculum_name": the name of the curriculum standard (e.g., "Common Core", "Texas TEKS", etc.)
+- "states": an array of state/province names that use this curriculum
+- "description": brief description of what this curriculum covers
+
+Respond with ONLY a JSON array of such objects.`
+        break
+
       default:
         return res.status(400).json({ error: 'Invalid type' })
     }
@@ -240,6 +262,39 @@ REQUIREMENTS:
         description: item.description || '',
       }))
 
+      return res.status(200).json({
+        success: true,
+        items,
+        count: items.length
+      })
+    }
+
+    if (type === 'national-strands') {
+      let items = parsedData
+      if (!Array.isArray(items)) {
+        return res.status(500).json({ error: 'AI did not return an array of strands' })
+      }
+
+      items = items.map((item, index) => ({
+        name: item.name || `Strand ${index + 1}`,
+        title: item.name,
+        description: item.description || '',
+      }))
+
+      return res.status(200).json({
+        success: true,
+        items,
+        count: items.length
+      })
+    }
+
+    if (type === 'state-curricula') {
+      let items = parsedData
+      if (!Array.isArray(items)) {
+        return res.status(500).json({ error: 'AI did not return an array of state curricula' })
+      }
+
+      // items already have curriculum_name, states, and description
       return res.status(200).json({
         success: true,
         items,
