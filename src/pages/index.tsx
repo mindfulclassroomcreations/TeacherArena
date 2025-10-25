@@ -17,12 +17,6 @@ interface Item {
   name: string
   title?: string
   description: string
-  standards?: Standard[]
-}
-
-interface Standard {
-  code: string
-  title: string
 }
 
 interface Strand {
@@ -44,6 +38,8 @@ export default function Home() {
   const [grades, setGrades] = useState<Item[]>([])
   const [strands, setStrands] = useState<Strand[]>([])
   const [lessons, setLessons] = useState<Item[]>([])
+  const [curriculumSections, setCurriculumSections] = useState<any[]>([])
+  const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
   
   const [selectedSubject, setSelectedSubject] = useState<Item | null>(null)
   const [selectedStateCurriculum, setSelectedStateCurriculum] = useState<any | null>(null)
@@ -142,7 +138,7 @@ export default function Home() {
   }
 
   const handleGenerateFrameworks = async () => {
-    if (!selectedSubject || !selectedGrade || !selectedStateCurriculum) return
+    if (!selectedSubject) return
     
     // Don't reload if already have data
     if (frameworks.length > 0) return
@@ -154,17 +150,15 @@ export default function Home() {
         type: 'frameworks',
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
-        grade: selectedGrade.name,
-        framework: selectedStateCurriculum.curriculum_name,
         context: context
       })
       if (response.items) {
         setFrameworks(response.items)
-        setSuccess(`Generated ${response.items.length} curriculum sections with standards!`)
+        setSuccess(`Generated ${response.items.length} frameworks!`)
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
-      setError('Failed to generate curriculum standards. Please try again.')
+      setError('Failed to generate frameworks. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -305,7 +299,42 @@ export default function Home() {
     setCurrentStep(4)
     setStrands([])
     setLessons([])
+    setCurriculumSections([])
+    setSelectedCurriculumSection(null)
     setSelectedGrade(null)
+  }
+
+  const handleGenerateCurriculumSections = async () => {
+    if (!selectedFramework || !selectedSubject || !selectedGrade) return
+    
+    // Don't reload if already have data
+    if (curriculumSections.length > 0) return
+    
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await generateContent({
+        type: 'frameworks',
+        country: selectedCountry || undefined,
+        subject: selectedSubject.name,
+        framework: selectedFramework.name,
+        context: context
+      })
+      if (response.items) {
+        setCurriculumSections(response.items)
+        setCurrentStep(5)
+        setSuccess(`Generated ${response.items.length} curriculum sections!`)
+        setTimeout(() => setSuccess(null), 3000)
+      }
+    } catch (err) {
+      setError('Failed to generate curriculum sections. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSelectCurriculumSection = (section: any) => {
+    setSelectedCurriculumSection(section)
   }
 
   const handleSelectGrade = (grade: Item) => {
@@ -313,6 +342,8 @@ export default function Home() {
     setCurrentStep(5)
     setStrands([])
     setLessons([])
+    setCurriculumSections([])
+    setSelectedCurriculumSection(null)
   }
 
   const handleReset = () => {
@@ -622,86 +653,43 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <div className="space-y-6 mb-6">
+              <div className="space-y-4 mb-6">
                 {frameworks.map((framework, index) => (
-                  <div 
-                    key={framework.id || index} 
-                    className={`bg-white border-2 rounded-lg overflow-hidden shadow-sm transition-all cursor-pointer ${
-                      selectedFramework?.name === framework.name 
-                        ? 'border-indigo-600 shadow-lg' 
-                        : 'border-gray-200 hover:border-indigo-400 hover:shadow-md'
-                    }`}
-                    onClick={() => handleSelectFramework(framework)}
-                  >
-                    {/* Section Title with Code */}
-                    <div className={`p-5 ${
-                      selectedFramework?.name === framework.name
-                        ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white'
-                        : 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-bold uppercase">
-                          {framework.name}
-                        </h3>
-                        {selectedFramework?.name === framework.name && (
-                          <span className="text-sm bg-white text-indigo-600 px-3 py-1 rounded font-semibold">
-                            ✓ Selected
+                  <div key={framework.id || index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    {/* Unit Title with Code in Format: TITLE (CODE) */}
+                    <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-5">
+                      <h3 className="text-lg font-bold">
+                        {framework.title || framework.name}
+                        {framework.id && (
+                          <span className="ml-3 font-mono text-sm bg-indigo-700 px-3 py-1 rounded inline-block">
+                            ({framework.id})
                           </span>
                         )}
-                      </div>
-                      {framework.description && (
-                        <p className="text-sm text-indigo-100 mt-2">{framework.description}</p>
-                      )}
+                      </h3>
                     </div>
                     
-                    {/* Standards Table */}
-                    {framework.standards && framework.standards.length > 0 && (
-                      <div className="p-5">
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-b-2 border-gray-300">
-                                <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-sm w-32">
-                                  Standard
-                                </th>
-                                <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-sm">
-                                  Title
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {framework.standards.map((standard, stdIndex) => (
-                                <tr 
-                                  key={stdIndex}
-                                  className="border-b border-gray-200 hover:bg-blue-50 transition-colors"
-                                >
-                                  <td className="py-3 px-4 font-mono font-semibold text-indigo-700 text-sm">
-                                    {standard.code}
-                                  </td>
-                                  <td className="py-3 px-4 text-gray-800 text-sm">
-                                    {standard.title}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                    {/* Unit Description */}
+                    {framework.description && (
+                      <div className="bg-blue-50 px-5 py-3 border-b border-gray-200">
+                        <p className="text-sm text-gray-700">{framework.description}</p>
                       </div>
                     )}
                     
-                    {/* Standards count badge */}
-                    <div className="px-5 py-3 bg-gray-50 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold">{framework.standards?.length || 0}</span> standards in this section
-                      </p>
+                    {/* Select Button */}
+                    <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex gap-2">
+                      <Button 
+                        onClick={() => handleSelectFramework(framework)}
+                        variant={selectedFramework?.name === framework.name ? "primary" : "outline"}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        {selectedFramework?.name === framework.name ? "✓ Selected" : "Select Unit"}
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-600">
-                  Click on a section to select it for lesson generation
-                </p>
+              <div className="flex justify-end">
                 <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
                   Generate More Units
                 </Button>
@@ -727,12 +715,128 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 5: Discover Strands */}
-      {currentStep >= 4 && selectedGrade && selectedFramework && strands.length === 0 && (
+      {/* NEW Step 5: Browse Curriculum Standards Sections */}
+      {currentStep >= 4 && selectedFramework && (
+        <div className="mb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">📚 Step 5: Browse Curriculum Standards</h2>
+            <p className="text-gray-600 mb-4">Select curriculum standard sections to review and explore.</p>
+            
+            {/* Context Display */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Framework</p>
+                  <p className="text-sm text-blue-800">{selectedFramework.title || selectedFramework.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade Level</p>
+                  <p className="text-sm text-blue-800">{selectedGrade?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Standards</p>
+                  <p className="text-sm text-blue-800">{curriculumSections.length} sections available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin">⌛</div>
+              <p className="text-gray-600 mt-2">Loading curriculum standards...</p>
+            </div>
+          ) : curriculumSections.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">Click below to generate detailed curriculum standards sections.</p>
+              <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="primary" size="lg">
+                Generate Standards Sections
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 mb-6">
+                {curriculumSections.map((section, index) => (
+                  <div
+                    key={section.id || index}
+                    onClick={() => handleSelectCurriculumSection(section)}
+                    className={`bg-white border-2 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer ${
+                      selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name
+                        ? 'border-indigo-600 bg-indigo-50'
+                        : 'border-gray-200 hover:border-indigo-400'
+                    }`}
+                  >
+                    {/* Section Header */}
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-grow">
+                          <h3 className="text-lg font-bold">
+                            {section.title || section.name}
+                            {section.id && (
+                              <span className="ml-3 font-mono text-sm bg-purple-700 px-2 py-1 rounded">
+                                {section.id}
+                              </span>
+                            )}
+                          </h3>
+                        </div>
+                        <div className="text-2xl">
+                          {selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name ? '✓' : '▶'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section Description */}
+                    {section.description && (
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <p className="text-sm text-gray-700">{section.description}</p>
+                      </div>
+                    )}
+
+                    {/* Expanded Content - Show Standards when selected */}
+                    {(selectedCurriculumSection?.id === section.id || selectedCurriculumSection?.name === section.name) && (
+                      <div className="p-4 bg-white">
+                        <div className="mb-4">
+                          <h4 className="text-sm font-semibold text-gray-600 uppercase mb-3">Standards in this section</h4>
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="border-b-2 border-indigo-200">
+                                <th className="text-left py-2 px-3 text-xs font-bold text-indigo-900 uppercase">Standard</th>
+                                <th className="text-left py-2 px-3 text-xs font-bold text-indigo-900 uppercase">Title</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b border-gray-100 hover:bg-blue-50">
+                                <td className="py-2 px-3 text-sm font-mono text-indigo-700">{section.id || 'N/A'}</td>
+                                <td className="py-2 px-3 text-sm text-gray-700">{section.title || section.name}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="outline">
+                  Regenerate Standards
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Step 6: Discover Strands */}
+      {currentStep >= 5 && selectedGrade && selectedFramework && strands.length === 0 && (
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              📊 Step 5: Discover Curriculum Strands
+              📊 Step 6: Discover Curriculum Strands
             </h2>
             <p className="text-gray-600 mb-6">
               Analyze the curriculum structure and discover major strands/domains for lesson generation.
@@ -755,14 +859,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 6: Strands List - Improved Framework Analysis */}
-      {currentStep >= 5 && strands.length > 0 && (
+      {/* Step 7: Strands List - Improved Framework Analysis */}
+      {currentStep >= 6 && strands.length > 0 && (
         <div className="mb-8">
           {/* Header Section */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg p-6 mb-6">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-3xl font-bold mb-2">📊 Step 6: Curriculum Strands</h2>
+                <h2 className="text-3xl font-bold mb-2">📊 Step 7: Curriculum Strands</h2>
                 <p className="text-indigo-100">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
               </div>
               <div className="text-right">
