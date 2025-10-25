@@ -8,6 +8,8 @@ import Alert from '@/components/Alert'
 import Modal from '@/components/Modal'
 import SelectionStep from '@/components/SelectionStep'
 import ProgressIndicator from '@/components/ProgressIndicator'
+import ExportButton from '@/components/ExportButton'
+import { downloadLessonsAsExcel, downloadCompleteCurriculumAsExcel } from '@/lib/excelExport'
 import { generateContent } from '@/lib/api'
 
 interface Item {
@@ -274,6 +276,22 @@ export default function Home() {
         />
       )}
 
+      {/* Export Subjects Button */}
+      {currentStep >= 0 && subjects.length > 0 && (
+        <div className="mb-8 flex justify-end">
+          <ExportButton
+            onClick={() => downloadLessonsAsExcel(
+              subjects.map(s => ({ name: s.name, description: s.description, title: s.name })),
+              undefined,
+              undefined,
+              undefined
+            )}
+            variant="outline"
+            size="sm"
+          />
+        </div>
+      )}
+
       {/* Step 2: Frameworks */}
       {currentStep >= 1 && selectedSubject && (
         <SelectionStep
@@ -289,6 +307,22 @@ export default function Home() {
         />
       )}
 
+      {/* Export Frameworks Button */}
+      {currentStep >= 1 && frameworks.length > 0 && (
+        <div className="mb-8 flex justify-end">
+          <ExportButton
+            onClick={() => downloadLessonsAsExcel(
+              frameworks.map(f => ({ name: f.name, description: f.description, title: f.name })),
+              selectedSubject?.name,
+              undefined,
+              undefined
+            )}
+            variant="outline"
+            size="sm"
+          />
+        </div>
+      )}
+
       {/* Step 3: Grades */}
       {currentStep >= 2 && selectedFramework && selectedSubject && (
         <SelectionStep
@@ -302,6 +336,22 @@ export default function Home() {
           generateButtonText={grades.length > 0 ? "Generate More Grades" : "Generate Grades"}
           emptyStateText="Click below to generate grade levels for this framework."
         />
+      )}
+
+      {/* Export Grades Button */}
+      {currentStep >= 2 && grades.length > 0 && (
+        <div className="mb-8 flex justify-end">
+          <ExportButton
+            onClick={() => downloadLessonsAsExcel(
+              grades.map(g => ({ name: g.name, description: g.description, title: g.name })),
+              selectedSubject?.name,
+              selectedFramework?.name,
+              undefined
+            )}
+            variant="outline"
+            size="sm"
+          />
+        </div>
       )}
 
       {/* Step 4: Discover Strands */}
@@ -409,7 +459,16 @@ export default function Home() {
               </Card>
             ))}
           </div>
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex gap-4 justify-center">
+            <ExportButton
+              onClick={() => downloadLessonsAsExcel(
+                lessons,
+                selectedSubject?.name,
+                selectedFramework?.name,
+                selectedGrade?.name
+              )}
+              variant="secondary"
+            />
             <Button variant="outline" onClick={() => setCurrentStep(3)}>
               ← Back to Strands
             </Button>

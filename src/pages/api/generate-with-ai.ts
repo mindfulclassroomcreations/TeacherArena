@@ -10,20 +10,9 @@ export const config = {
   },
 }
 
-// Initialize OpenAI client lazily to avoid module-level errors
-let client: OpenAI | null = null
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY environment variable is not set')
-  }
-  if (!client) {
-    client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
-  }
-  return client
-}
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 const PROMPT_ID = 'pmpt_68fa404d58b08190a2e2c32770b4f59806857d16f04d704a'
 const LESSON_PROMPT_ID = 'pmpt_68fafd15edc08197806351f71c1b39cb086c40b5fe347771'
@@ -60,14 +49,6 @@ export default async function handler(
   }
 
   try {
-    // Check for API key first
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ 
-        error: 'OpenAI API key not configured',
-        details: 'Please set OPENAI_API_KEY environment variable in Vercel project settings'
-      })
-    }
-
     const { type, subject, framework, grade, context, totalLessonCount } = req.body
 
     if (!type) {
@@ -80,6 +61,10 @@ export default async function handler(
 
     if (type !== 'subjects' && !subject) {
       return res.status(400).json({ error: 'Missing required field: subject' })
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'OpenAI API key not configured' })
     }
 
     let userPrompt = ''
@@ -150,8 +135,7 @@ Respond with ONLY a JSON object:
       ? LESSON_PROMPT_ID 
       : PROMPT_ID
 
-    const openai = getOpenAIClient()
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4',
       messages: [
         {
