@@ -8,6 +8,26 @@ const ADMIN_API_KEY = process.env.ADMIN_API_KEY || ''
 
 const supabaseAdmin = createClient(url, serviceKey)
 
+async function bearerAdminAuthorized(req: NextApiRequest): Promise<boolean> {
+  try {
+    const auth = req.headers.authorization || ''
+    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : ''
+    if (!token) return false
+    const { data, error } = await supabaseAdmin.auth.getUser(token)
+    if (error || !data?.user?.id) return false
+    const userId = data.user.id
+    const { data: prof, error: selErr } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
+    if (selErr) return false
+    return String(prof?.role || '').toLowerCase() === 'admin'
+  } catch {
+    return false
+  }
+}
+
 function isAuthorized(req: NextApiRequest) {
   const key = req.headers['x-admin-key']
   return typeof key === 'string' && key.length > 0 && ADMIN_API_KEY && key === ADMIN_API_KEY
@@ -18,9 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('admin/users: missing SUPABASE_SERVICE_ROLE or NEXT_PUBLIC_SUPABASE_URL', { serviceKeyPresent: Boolean(serviceKey), urlPresent: Boolean(url) })
     return res.status(500).json({ error: 'Server not configured for admin actions' } as any)
   }
-  if (!isAuthorized(req)) {
-    console.warn('admin/users: unauthorized request - missing or invalid x-admin-key')
-    return res.status(403).json({ error: 'Unauthorized' } as any)
+  const headerAuthorized = isAuthorized(req)
+  const bearerAuthorized = await bearerAdminAuthorized(req)
+  if (!headerAuthorized && !bearerAuthorized) {
+    console.warn('admin/users: unauthorized request - provide valid x-admin-key or admin bearer token')
+    return res.status(403).json({ error: 'Unauthorized (admin key or admin account required)' } as any)
   }
 
   try {

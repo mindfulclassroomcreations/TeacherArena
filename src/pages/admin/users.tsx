@@ -3,17 +3,26 @@ import Layout from '@/components/Layout'
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import { UserProfile, UserRole } from '@/types'
+import { supabase } from '@/lib/supabase'
 
 async function api<T=any>(method: 'GET'|'POST'|'DELETE', body?: any): Promise<T> {
+  const { data } = await supabase.auth.getSession()
+  const token = data?.session?.access_token
+  const headers: Record<string,string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY
+  if (adminKey) headers['x-admin-key'] = adminKey
+
   const res = await fetch('/api/admin/users', {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || '',
-    },
+    headers,
     body: method === 'GET' ? undefined : JSON.stringify(body || {}),
   })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) {
+    let msg = 'Request failed'
+    try { const txt = await res.text(); msg = txt } catch {}
+    throw new Error(msg)
+  }
   return res.json()
 }
 
@@ -28,7 +37,8 @@ export default function AdminUsers() {
       const data = await api<{items: UserProfile[]}>('GET')
       setUsers(data.items || [])
     } catch (e: any) {
-      setError('Failed to load users')
+      const msg = String(e?.message || 'Failed to load users')
+      setError(msg.includes('Unauthorized') ? 'Unauthorized: Admin access required' : `Failed to load users: ${msg}`)
     } finally { setLoading(false) }
   }
 
