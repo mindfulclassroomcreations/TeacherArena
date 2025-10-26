@@ -236,7 +236,13 @@ export default function Home() {
         performanceExpectations: strand.performance_expectations
       })
       if (response.items) {
-        setLessons(response.items)
+        // Tag lessons with strand context for grouping later
+        const tagged = response.items.map((it: any) => ({
+          ...it,
+          strand_code: strand.strand_code,
+          strand_name: strand.strand_name
+        }))
+        setLessons(tagged)
         setCurrentStep(6)
         setSuccess(`Generated ${response.items.length} lessons!`)
         setTimeout(() => setSuccess(null), 3000)
@@ -285,7 +291,12 @@ export default function Home() {
             performanceExpectations: strand.performance_expectations
           })
           if (response.items) {
-            allLessons.push(...response.items)
+            const tagged = response.items.map((it: any) => ({
+              ...it,
+              strand_code: strand.strand_code,
+              strand_name: strand.strand_name
+            }))
+            allLessons.push(...tagged)
           }
         } catch (e) {
           // continue with next strand
@@ -1066,81 +1077,101 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Saved Lessons Section */}
+          {/* Saved Lessons Section - grouped by strand and key topics */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h3 className="font-bold text-lg text-gray-900 mb-4">💾 Saved Lessons ({lessons.length})</h3>
             {lessons.length === 0 ? (
               <p className="text-gray-500 text-center py-4">No lessons yet. Generate or add one above.</p>
             ) : (
-              <div className="space-y-2">
-                {lessons.map((lesson, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div className="flex-grow">
-                      <p className="font-medium text-gray-900">{lesson.title || lesson.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{lesson.description}</p>
-                    </div>
-                    <button onClick={() => {
-                      setSelectedLesson(lesson)
-                      setShowLessonModal(true)
-                    }} className="ml-4 text-blue-600 hover:text-blue-800 font-medium text-sm">
-                      View
-                    </button>
-                  </div>
-                ))}
+              <div className="space-y-6">
+                {(() => {
+                  // Build grouping by strand, then by key topics
+                  const strandMap = new Map<string, { name: string, topics: Map<string, any[]>, other: any[] }>()
+                  // Ensure all selected strands are represented
+                  const allStrands = selectedStrands.length > 0 ? selectedStrands : strands
+                  allStrands.forEach(s => {
+                    if (!strandMap.has(s.strand_code)) {
+                      strandMap.set(s.strand_code, { name: s.strand_name, topics: new Map<string, any[]>(), other: [] })
+                      s.key_topics.forEach(t => {
+                        strandMap.get(s.strand_code)!.topics.set(t, [])
+                      })
+                    }
+                  })
+                  lessons.forEach((lesson: any) => {
+                    const code = lesson.strand_code || selectedStrand?.strand_code || allStrands[0]?.strand_code
+                    const strandEntry = strandMap.get(code)
+                    if (!strandEntry) return
+                    // Try to assign to a topic by keyword match in title/description
+                    const title = (lesson.title || lesson.name || '').toLowerCase()
+                    const desc = (lesson.description || '').toLowerCase()
+                    let placed = false
+                    strandEntry.topics.forEach((arr, topic) => {
+                      const t = topic.toLowerCase()
+                      if (!placed && (title.includes(t) || desc.includes(t))) {
+                        arr.push(lesson)
+                        placed = true
+                      }
+                    })
+                    if (!placed) strandEntry.other.push(lesson)
+                  })
+
+                  const strandSections: JSX.Element[] = []
+                  strandMap.forEach((value, code) => {
+                    const topicsWithContent = Array.from(value.topics.entries()).filter(([_, list]) => list.length > 0)
+                    const hasOther = value.other.length > 0
+                    strandSections.push(
+                      <div key={code} className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">Strand {code}: {value.name}</h4>
+                        {topicsWithContent.length === 0 && !hasOther ? (
+                          <p className="text-sm text-gray-500">No lessons categorized yet.</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {topicsWithContent.map(([topic, list]) => (
+                              <div key={topic}>
+                                <p className="text-xs font-semibold uppercase text-gray-600 mb-2">{topic}</p>
+                                <div className="space-y-2">
+                                  {list.map((lesson, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                                      <div className="flex-grow">
+                                        <p className="font-medium text-gray-900">{lesson.title || lesson.name}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{lesson.description}</p>
+                                      </div>
+                                      <button onClick={() => { setSelectedLesson(lesson); setShowLessonModal(true) }} className="ml-4 text-blue-600 hover:text-blue-800 font-medium text-sm">View</button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                            {hasOther && (
+                              <div>
+                                <p className="text-xs font-semibold uppercase text-gray-600 mb-2">Other</p>
+                                <div className="space-y-2">
+                                  {value.other.map((lesson, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                                      <div className="flex-grow">
+                                        <p className="font-medium text-gray-900">{lesson.title || lesson.name}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{lesson.description}</p>
+                                      </div>
+                                      <button onClick={() => { setSelectedLesson(lesson); setShowLessonModal(true) }} className="ml-4 text-blue-600 hover:text-blue-800 font-medium text-sm">View</button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                  return <>{strandSections}</>
+                })()}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Step 7: Lessons */}
-      {currentStep >= 6 && lessons.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            ✨ Generated Lessons
-          </h2>
-          <p className="text-gray-600 mb-6">
-            {lessons.length} lessons generated for {selectedStrand?.strand_name}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {lessons.map((lesson, index) => (
-              <Card 
-                key={index}
-                onClick={() => {
-                  setSelectedLesson(lesson)
-                  setShowLessonModal(true)
-                }}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">
-                      {lesson.title || lesson.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {lesson.description}
-                    </p>
-                  </div>
-                  <span className="ml-4 text-2xl">📖</span>
-                </div>
-              </Card>
-            ))}
-          </div>
-          <div className="mt-6 flex gap-4 justify-center">
-            <ExportButton
-              onClick={() => downloadLessonsAsExcel(
-                lessons,
-                selectedSubject?.name,
-                selectedFramework?.name,
-                selectedGrade?.name
-              )}
-              variant="success"
-            />
-            <Button variant="outline" onClick={() => setCurrentStep(3)}>
-              ← Back to Strands
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Step 7: Removed - results are shown within Saved Lessons section */}
 
       {/* Context Modal */}
       <Modal
