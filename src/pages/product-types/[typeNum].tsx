@@ -353,7 +353,7 @@ export default function ProductTypePage() {
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-blue-900 mb-3">Quick Actions</h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <button
                   onClick={() => setShowGenerateModal(true)}
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
@@ -363,6 +363,42 @@ export default function ProductTypePage() {
                 <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
                   📥 Download
                 </button>
+
+                {totalLessons > 0 && categoryButtons.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-sm font-semibold text-blue-900 mb-2">Categories</p>
+                    <div className="flex flex-wrap gap-2">
+                      {categoryButtons.map((c) => (
+                        <button
+                          key={`qa-cat-${c.groupId}`}
+                          onClick={() => goToCategory(c.groupId)}
+                          className="px-3 py-1.5 rounded-full bg-white border border-blue-300 text-blue-800 hover:bg-blue-100 text-xs font-medium"
+                          title={`Go to ${formatGroupLabel(c.groupId)}`}
+                        >
+                          {formatGroupLabel(c.groupId)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {totalLessons > 0 && subPageButtons.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-sm font-semibold text-blue-900 mb-2">Sub-Pages</p>
+                    <div className="flex flex-wrap gap-2">
+                      {subPageButtons.map((s) => (
+                        <button
+                          key={`qa-sub-${s.groupId}-${s.subPageId}`}
+                          onClick={() => goToSubPage(s.groupId, s.subPageId)}
+                          className="px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs font-medium"
+                          title={`Go to ${formatSubPageLabel(s.subPageId)}`}
+                        >
+                          {formatSubPageLabel(s.subPageId)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
