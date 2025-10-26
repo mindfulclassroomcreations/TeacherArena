@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { OpenAI } from 'openai'
+import { createClient } from '@supabase/supabase-js'
 
 // Disable body parser size limit
 export const config = {
@@ -40,6 +41,40 @@ function normalizeStandardCode(input: string | undefined | null): string {
   return raw
 }
 
+// Supabase admin client for token enforcement
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE || ''
+const supabaseAdmin = (SUPABASE_URL && SUPABASE_SERVICE_ROLE)
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
+  : null
+
+async function getAuthUserId(req: NextApiRequest): Promise<{ userId?: string; error?: string }> {
+  try {
+    const authHeader = req.headers.authorization || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : ''
+    if (!token) return { error: 'Login required' }
+    if (!supabaseAdmin) return { error: 'Token system not configured' }
+    const { data, error } = await supabaseAdmin.auth.getUser(token)
+    if (error || !data.user) return { error: 'Invalid session' }
+    return { userId: data.user.id }
+  } catch (e: any) {
+    return { error: String(e?.message || e) }
+  }
+}
+
+async function getUserTokens(userId: string): Promise<number> {
+  if (!supabaseAdmin) return Number.MAX_SAFE_INTEGER
+  const { data, error } = await supabaseAdmin.from('profiles').select('tokens').eq('id', userId).single()
+  if (error) throw error
+  return data?.tokens ?? 0
+}
+
+async function setUserTokens(userId: string, newTokens: number) {
+  if (!supabaseAdmin) return
+  const { error } = await supabaseAdmin.from('profiles').update({ tokens: Math.max(0, newTokens) }).eq('id', userId)
+  if (error) throw error
+}
+
 type ResponseData = {
   success?: boolean
   items?: any[]
@@ -72,7 +107,7 @@ export default async function handler(
   }
 
   try {
-  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section, stateCurriculum } = req.body
+  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section, stateCurriculum, subStandards, lessonsPerStandard, targetLessonCount } = req.body
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -88,6 +123,31 @@ export default async function handler(
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'OpenAI API key not configured' })
+    }
+
+    // Token pre-check for lesson generation endpoints
+    let userId: string | undefined
+    if (type === 'lessons-by-substandards' || type === 'lesson-generation-by-strand') {
+      const { userId: uid, error } = await getAuthUserId(req)
+      if (error || !uid) {
+        return res.status(401).json({ error: 'Login required' })
+      }
+      userId = uid
+      // Estimate cost
+      let estimated = 0
+      if (type === 'lessons-by-substandards') {
+        const per = Number(lessonsPerStandard) > 0 ? Number(lessonsPerStandard) : 1
+        const subs = Array.isArray(subStandards) ? subStandards.length : 1
+        estimated = Math.max(1, per * subs)
+      } else {
+        estimated = Math.max(1, Number(targetLessonCount) || 10)
+      }
+      if (supabaseAdmin) {
+        const tokens = await getUserTokens(userId)
+        if (tokens < estimated) {
+          return res.status(402).json({ error: 'Insufficient tokens. Please add tokens to continue.' })
+        }
+      }
     }
 
   let userPrompt = ''
@@ -560,7 +620,15 @@ REQUIREMENTS
           lesson_code: lessonCode
         }
       })
-
+      // Deduct tokens equal to the number of lessons generated
+      if (userId && supabaseAdmin) {
+        try {
+          const current = await getUserTokens(userId)
+          await setUserTokens(userId, current - items.length)
+        } catch (e) {
+          console.error('Token deduction failed (substandards):', e)
+        }
+      }
       return res.status(200).json({
         success: true,
         items,
@@ -599,7 +667,15 @@ REQUIREMENTS
         title: item.title,
         description: item.description || '',
       }))
-
+      // Deduct tokens equal to the number of lessons generated
+      if (userId && supabaseAdmin) {
+        try {
+          const current = await getUserTokens(userId)
+          await setUserTokens(userId, current - items.length)
+        } catch (e) {
+          console.error('Token deduction failed (strand):', e)
+        }
+      }
       return res.status(200).json({
         success: true,
         items,

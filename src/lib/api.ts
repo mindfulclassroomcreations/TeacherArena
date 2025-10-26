@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { AIGenerationRequest } from '@/types'
+import { supabase } from '@/lib/supabase'
 
 const api = axios.create({
   baseURL: '/api',
@@ -36,3 +37,33 @@ export const getLessons = async (gradeId: string) => {
 }
 
 export default api
+
+// Attach Supabase access token to API requests (browser only)
+api.interceptors.request.use(async (config) => {
+  try {
+    if (typeof window !== 'undefined') {
+      const { data } = await supabase.auth.getSession()
+      const token = data?.session?.access_token
+      if (token) {
+        config.headers = config.headers || {}
+        ;(config.headers as any)['Authorization'] = `Bearer ${token}`
+      }
+    }
+  } catch {}
+  return config
+})
+
+// Normalize error messages, especially for insufficient tokens
+api.interceptors.response.use(
+  (resp) => resp,
+  async (error) => {
+    const status = error?.response?.status
+    const msg = error?.response?.data?.error || error?.message
+    if (status === 402) {
+      // Payment required / insufficient tokens
+      throw new Error(msg || 'Insufficient tokens. Please add tokens to continue.')
+    }
+    if (msg) throw new Error(msg)
+    throw error
+  }
+)
