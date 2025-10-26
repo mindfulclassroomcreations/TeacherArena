@@ -1649,8 +1649,8 @@ export default function Home() {
                   <p className="text-sm text-blue-800">{selectedRegion || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade</p>
-                  <p className="text-sm text-blue-800">{selectedGrade?.name}</p>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade{selectedGrades.length > 1 ? 's' : ''}</p>
+                  <p className="text-sm text-blue-800">{selectedGrades.map(g => g.name).join(', ')}</p>
                 </div>
               </div>
             </div>
