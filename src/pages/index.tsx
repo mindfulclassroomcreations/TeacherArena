@@ -8,7 +8,6 @@ import Textarea from '@/components/Textarea'
 import Alert from '@/components/Alert'
 import Modal from '@/components/Modal'
 import PaymentModal from '@/components/PaymentModal'
-import ProductSelectionModal from '@/components/ProductSelectionModal'
 import SelectionStep from '@/components/SelectionStep'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
@@ -114,59 +113,49 @@ export default function Home() {
       setError('Please select at least one lesson to continue to product generation.')
       return
     }
-    // Store lessons and show product generation modal to select group/subpage
+    // Build summary context
+    const summary = {
+      country: selectedCountry,
+      state: selectedRegion,
+      curriculum_name: (() => {
+        const name = String(selectedStateCurriculum?.curriculum_name || '')
+        const isNoSpecial = name.toLowerCase().includes('no special curriculum')
+        if (isNoSpecial && selectedStateStandardDetails?.standard_name) return selectedStateStandardDetails.standard_name
+        return name
+      })(),
+      grade: selectedGrade?.name,
+      section: section.title || section.name,
+      sub_standards: Array.from(new Set(selected.map((ls: any) => String(ls.standard_code || ls.code || '').trim()))).filter(Boolean)
+    }
+    // Store pending lessons and show category selection modal
     setPendingLessonsForProduct(selected)
+    setPendingProductSummary(summary)
     setSelectedProductGroup(null)
     setSelectedProductSubPage(null)
-    setShowProductGenerationModal(true)
+    setShowProductCategoryModal(true)
   }
 
-  const handleConfirmProductSelection = () => {
+  const handleConfirmProductCategorySelection = () => {
     if (!selectedProductGroup || !selectedProductSubPage) {
-      setError('Please select both a category group and sub-page.')
+      setError('Please select both a group and sub-page.')
       return
     }
-    
-    // Build storage key for the selected group and sub-page
-    const storageKey = `product_${selectedProductGroup}_${selectedProductSubPage}`
-    
-    // Get existing lessons or create empty array
-    let existingLessons: LessonItem[] = []
     try {
       if (typeof window !== 'undefined') {
-        const stored = window.localStorage.getItem(storageKey)
-        if (stored) {
-          existingLessons = JSON.parse(stored)
-        }
-      }
-    } catch {
-      existingLessons = []
-    }
-    
-    // Combine existing and new lessons (avoid duplicates based on lesson code or title)
-    const combinedLessons = [...existingLessons]
-    for (const newLesson of pendingLessonsForProduct) {
-      const lessonKey = newLesson.lesson_code || newLesson.code || newLesson.name || newLesson.title
-      const exists = combinedLessons.some((ls: any) => {
-        const existingKey = ls.lesson_code || ls.code || ls.name || ls.title
-        return existingKey === lessonKey
-      })
-      if (!exists) {
-        combinedLessons.push(newLesson)
-      }
-    }
-    
-    // Save to localStorage
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(storageKey, JSON.stringify(combinedLessons))
-        setSuccess(`Added ${pendingLessonsForProduct.length} lesson(s) to ${selectedProductGroup.toUpperCase()} - ${selectedProductSubPage.toUpperCase()}`)
-        setShowProductGenerationModal(false)
-        setPendingLessonsForProduct([])
+        // Store the selected lessons and summary
+        window.localStorage.setItem('ta_selected_lessons', JSON.stringify(pendingLessonsForProduct))
+        window.localStorage.setItem('ta_selection_context', JSON.stringify(pendingProductSummary))
+        // Store the target category and sub-page
+        window.localStorage.setItem('ta_product_target_group', selectedProductGroup)
+        window.localStorage.setItem('ta_product_target_subpage', selectedProductSubPage)
+        // Navigate to the product page
+        window.open(`/products/${selectedProductGroup}/${selectedProductSubPage}`, '_blank')
+        setShowProductCategoryModal(false)
+        setSuccess(`${pendingLessonsForProduct.length} lesson(s) added to ${selectedProductGroup} > ${selectedProductSubPage}!`)
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (e) {
-      setError('Failed to save lessons. Please try again.')
+      setError('Failed to add lessons to product. Please try again.')
     }
   }
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
@@ -195,11 +184,6 @@ export default function Home() {
   // Payment modal for insufficient tokens
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentErrorMessage, setPaymentErrorMessage] = useState('Insufficient tokens. Please buy more credits to continue.')
-  // Product Generation Selection Modal
-  const [showProductGenerationModal, setShowProductGenerationModal] = useState(false)
-  const [pendingLessonsForProduct, setPendingLessonsForProduct] = useState<LessonItem[]>([])
-  const [selectedProductGroup, setSelectedProductGroup] = useState<string | null>(null)
-  const [selectedProductSubPage, setSelectedProductSubPage] = useState<string | null>(null)
   // Step 2: track which curriculum cards have expanded state lists
   const [expandedCurriculaStates, setExpandedCurriculaStates] = useState<Record<string, boolean>>({})
   // Step 2: state standard modal and cache
@@ -215,6 +199,12 @@ export default function Home() {
   const [highlightedCurriculumName, setHighlightedCurriculumName] = useState<string | null>(null)
   // Step 2: custom curriculum grouping
   const [showCustomGroupModal, setShowCustomGroupModal] = useState(false)
+  // Product category selection modal
+  const [showProductCategoryModal, setShowProductCategoryModal] = useState(false)
+  const [pendingLessonsForProduct, setPendingLessonsForProduct] = useState<any[]>([])
+  const [pendingProductSummary, setPendingProductSummary] = useState<any | null>(null)
+  const [selectedProductGroup, setSelectedProductGroup] = useState<string | null>(null)
+  const [selectedProductSubPage, setSelectedProductSubPage] = useState<string | null>(null)
   const [customGroupName, setCustomGroupName] = useState('Custom Curriculum Group')
   const [customGroupDescription, setCustomGroupDescription] = useState('Custom grouping created by user')
   const [customGroupSelectedStates, setCustomGroupSelectedStates] = useState<string[]>([])
@@ -1877,6 +1867,15 @@ export default function Home() {
                         )}
                       </div>
                       <div className="flex items-center gap-3 ml-4">
+                        <label className="inline-flex items-center gap-2 text-sm text-gray-700" onClick={(e)=> e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            checked={isSelected}
+                            onChange={() => toggleSectionSelection(section)}
+                          />
+                          {isSelected ? 'Selected' : 'Select'}
+                        </label>
                         <span className="text-gray-400">
                           {isSelected ? '▼' : '▶'}
                         </span>
@@ -1943,20 +1942,13 @@ export default function Home() {
                                     const composite = `${secKey}__${subKey}`
                                     const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : '')
                                     const isSingleCompleted = !!completedSingleLessons[composite]
-                                    const isSelected = !!(selectedSubStandardsBySection[secKey]?.[composite])
                                     return (
-                                    <tr 
-                                      key={idx} 
-                                      onClick={() => toggleSubStandardSelection(section, ss, idx)}
-                                      className={`border-b border-gray-100 cursor-pointer transition-colors ${
-                                        isSelected ? 'bg-blue-100 hover:bg-blue-150' : 'hover:bg-gray-50'
-                                      } ${loadingSingleLessonsKey === composite ? 'animate-pulse bg-yellow-50' : ''}`}
-                                    >
+                                    <tr key={idx} className={`border-b border-gray-100 hover:bg-white ${loadingSingleLessonsKey === composite ? 'animate-pulse bg-yellow-50' : ''}`}>
                                       <td className="py-2 px-3">
                                         <input
                                           type="checkbox"
                                           onClick={(e)=> e.stopPropagation()}
-                                          checked={isSelected}
+                                          checked={!!(selectedSubStandardsBySection[secKey]?.[composite])}
                                           onChange={() => toggleSubStandardSelection(section, ss, idx)}
                                         />
                                       </td>
@@ -2775,13 +2767,97 @@ export default function Home() {
         redirectTo="/credits"
       />
 
-      {/* Product Selection Modal */}
-      <ProductSelectionModal
-        isOpen={showProductGenerationModal}
-        onClose={() => setShowProductGenerationModal(false)}
-        onConfirm={handleConfirmProductSelection}
-        lessonCount={pendingLessonsForProduct.length}
-      />
+      {/* Product Category Selection Modal */}
+      <Modal
+        isOpen={showProductCategoryModal}
+        onClose={() => setShowProductCategoryModal(false)}
+        title="Select Product Category and Sub-Page"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Select a group and sub-page to add your {pendingLessonsForProduct.length} selected lesson(s)
+          </p>
+
+          {/* Category Groups */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Product Group</label>
+            <select
+              value={selectedProductGroup || ''}
+              onChange={(e) => {
+                setSelectedProductGroup(e.target.value || null)
+                setSelectedProductSubPage(null)
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">-- Select a Group --</option>
+              <option value="group-t">Group T</option>
+              <option value="group-a">Group A</option>
+              <option value="group-b">Group B</option>
+              <option value="group-c">Group C</option>
+              <option value="group-d">Group D</option>
+              <option value="group-e">Group E</option>
+              <option value="group-f">Group F</option>
+              <option value="group-g">Group G</option>
+              <option value="group-h">Group H</option>
+              <option value="group-i">Group I</option>
+            </select>
+          </div>
+
+          {/* Sub-Pages for Selected Group */}
+          {selectedProductGroup && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Sub-Page</label>
+              <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                {Array.from({ length: 11 }, (_, i) => {
+                  const groupLetter = selectedProductGroup.replace('group-', '').toUpperCase()
+                  const subPageId = `${groupLetter.toLowerCase()}-${String(i + 1).padStart(2, '0')}`
+                  const subPageName = `${groupLetter} - ${String(i + 1).padStart(2, '0')}`
+                  return (
+                    <button
+                      key={subPageId}
+                      onClick={() => setSelectedProductSubPage(subPageId)}
+                      className={`px-2 py-2 rounded border-2 transition-colors text-xs font-medium ${
+                        selectedProductSubPage === subPageId
+                          ? 'border-blue-500 bg-blue-50 text-blue-900'
+                          : 'border-gray-300 bg-white text-gray-900 hover:border-gray-400'
+                      }`}
+                    >
+                      {subPageName}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Summary */}
+          {selectedProductGroup && selectedProductSubPage && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-sm text-green-900">
+                <strong>Ready to add:</strong> {pendingLessonsForProduct.length} lesson(s) to <strong>{selectedProductGroup.replace('group-', 'Group ')}</strong> → <strong>{selectedProductSubPage.toUpperCase()}</strong>
+              </p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-end border-t border-gray-200 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowProductCategoryModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmProductCategorySelection}
+              disabled={!selectedProductGroup || !selectedProductSubPage}
+            >
+              Add to Selected Sub-Page
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Getting Started Guide - Removed */}
       </div>
