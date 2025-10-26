@@ -8,6 +8,7 @@ import Textarea from '@/components/Textarea'
 import Alert from '@/components/Alert'
 import Modal from '@/components/Modal'
 import PaymentModal from '@/components/PaymentModal'
+import ProductSelectionModal from '@/components/ProductSelectionModal'
 import SelectionStep from '@/components/SelectionStep'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
@@ -113,28 +114,59 @@ export default function Home() {
       setError('Please select at least one lesson to continue to product generation.')
       return
     }
-    // Build summary context
-    const summary = {
-      country: selectedCountry,
-      state: selectedRegion,
-      curriculum_name: (() => {
-        const name = String(selectedStateCurriculum?.curriculum_name || '')
-        const isNoSpecial = name.toLowerCase().includes('no special curriculum')
-        if (isNoSpecial && selectedStateStandardDetails?.standard_name) return selectedStateStandardDetails.standard_name
-        return name
-      })(),
-      grade: selectedGrade?.name,
-      section: section.title || section.name,
-      sub_standards: Array.from(new Set(selected.map((ls: any) => String(ls.standard_code || ls.code || '').trim()))).filter(Boolean)
+    // Store lessons and show product generation modal to select group/subpage
+    setPendingLessonsForProduct(selected)
+    setSelectedProductGroup(null)
+    setSelectedProductSubPage(null)
+    setShowProductGenerationModal(true)
+  }
+
+  const handleConfirmProductSelection = () => {
+    if (!selectedProductGroup || !selectedProductSubPage) {
+      setError('Please select both a category group and sub-page.')
+      return
     }
+    
+    // Build storage key for the selected group and sub-page
+    const storageKey = `product_${selectedProductGroup}_${selectedProductSubPage}`
+    
+    // Get existing lessons or create empty array
+    let existingLessons: LessonItem[] = []
     try {
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('ta_selected_lessons', JSON.stringify(selected))
-        window.localStorage.setItem('ta_selection_context', JSON.stringify(summary))
-        window.open('/product-generation', '_blank')
+        const stored = window.localStorage.getItem(storageKey)
+        if (stored) {
+          existingLessons = JSON.parse(stored)
+        }
+      }
+    } catch {
+      existingLessons = []
+    }
+    
+    // Combine existing and new lessons (avoid duplicates based on lesson code or title)
+    const combinedLessons = [...existingLessons]
+    for (const newLesson of pendingLessonsForProduct) {
+      const lessonKey = newLesson.lesson_code || newLesson.code || newLesson.name || newLesson.title
+      const exists = combinedLessons.some((ls: any) => {
+        const existingKey = ls.lesson_code || ls.code || ls.name || ls.title
+        return existingKey === lessonKey
+      })
+      if (!exists) {
+        combinedLessons.push(newLesson)
+      }
+    }
+    
+    // Save to localStorage
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(storageKey, JSON.stringify(combinedLessons))
+        setSuccess(`Added ${pendingLessonsForProduct.length} lesson(s) to ${selectedProductGroup.toUpperCase()} - ${selectedProductSubPage.toUpperCase()}`)
+        setShowProductGenerationModal(false)
+        setPendingLessonsForProduct([])
+        setTimeout(() => setSuccess(null), 3000)
       }
     } catch (e) {
-      setError('Failed to open product generation page. Please check popup blockers.')
+      setError('Failed to save lessons. Please try again.')
     }
   }
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
@@ -163,6 +195,11 @@ export default function Home() {
   // Payment modal for insufficient tokens
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentErrorMessage, setPaymentErrorMessage] = useState('Insufficient tokens. Please buy more credits to continue.')
+  // Product Generation Selection Modal
+  const [showProductGenerationModal, setShowProductGenerationModal] = useState(false)
+  const [pendingLessonsForProduct, setPendingLessonsForProduct] = useState<LessonItem[]>([])
+  const [selectedProductGroup, setSelectedProductGroup] = useState<string | null>(null)
+  const [selectedProductSubPage, setSelectedProductSubPage] = useState<string | null>(null)
   // Step 2: track which curriculum cards have expanded state lists
   const [expandedCurriculaStates, setExpandedCurriculaStates] = useState<Record<string, boolean>>({})
   // Step 2: state standard modal and cache
@@ -2729,6 +2766,14 @@ export default function Home() {
         onClose={() => setShowPaymentModal(false)}
         message={paymentErrorMessage}
         redirectTo="/credits"
+      />
+
+      {/* Product Selection Modal */}
+      <ProductSelectionModal
+        isOpen={showProductGenerationModal}
+        onClose={() => setShowProductGenerationModal(false)}
+        onConfirm={handleConfirmProductSelection}
+        lessonCount={pendingLessonsForProduct.length}
       />
 
       {/* Getting Started Guide - Removed */}
