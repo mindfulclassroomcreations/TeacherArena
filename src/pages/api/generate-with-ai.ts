@@ -67,39 +67,80 @@ export default async function handler(
       return res.status(500).json({ error: 'OpenAI API key not configured' })
     }
 
-    let userPrompt = ''
+  let userPrompt = ''
+
+  // Shared guidance injected into each prompt for higher compliance
+  const sharedRules = `
+GENERAL INSTRUCTIONS
+- Output MUST be valid JSON only. No prose, no markdown, no comments, no code fences.
+- Use only the fields requested for each item. Do not add extra fields.
+- Ensure items are unique and non-duplicative.
+- If unsure or information is insufficient, make the best, typical curriculum-aligned choice—do NOT leave placeholders.
+- Keep language concise and neutral.
+`
 
     switch (type) {
       case 'subjects':
-        userPrompt = `Generate educational subjects relevant to ${country} curriculum standards based on the following context: ${context || 'General educational subjects'}
+        userPrompt = `${sharedRules}
+TASK: Generate educational subjects relevant to ${country} curriculum standards.
+CONTEXT: ${context || 'General educational subjects'}
 
-Generate 6-10 relevant subjects that are commonly taught in ${country} schools and span different disciplines.
-These should align with ${country}'s national curriculum standards.
-Respond with ONLY a JSON array of objects with "name" and "description" fields.`
+REQUIREMENTS
+- Return 6–10 subjects commonly taught in ${country} schools spanning different disciplines.
+- Each item must include: name (string), description (string).
+- Avoid grade-level labels (e.g., not "Algebra I"—use broader like "Mathematics" unless context dictates specificity).
+
+OUTPUT
+[
+  { "name": "Mathematics", "description": "Foundational numeracy, arithmetic, geometry, and early algebraic thinking." }
+]
+`
         break
 
       case 'frameworks':
-        userPrompt = `Generate educational frameworks for the subject: "${subject}" relevant to ${country} curriculum.
-${context || ''}
-Respond with ONLY a JSON array of objects with "name" and "description" fields.`
+        userPrompt = `${sharedRules}
+TASK: Generate curriculum frameworks (or unit clusters) for:
+- Subject: "${subject}"
+- Country: "${country}"
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+
+REQUIREMENTS
+- Return 4–10 items representing frameworks, strands, or unit clusters commonly used for this subject in ${country}.
+- Each item must include: name (string), description (string).
+- Names should be short and recognizable; descriptions 1–2 sentences.
+
+OUTPUT
+[
+  { "name": "Number and Operations", "description": "Numeracy foundations including place value, operations with whole numbers, and fractions." }
+]
+`
         break
 
       case 'grades':
-        userPrompt = `Generate individual grade levels for:
+        userPrompt = `${sharedRules}
+TASK: Generate individual grade levels for:
 - Subject: "${subject}"
 - Framework: "${framework}"
 - Country: "${country}"
-${context || ''}
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
 
-IMPORTANT: Generate INDIVIDUAL grades ONLY (e.g., "Grade 1", "Grade 2", "Grade 3", etc.) as used in ${country}.
-Generate 8-12 individual grades appropriate for ${country}.
-Respond with ONLY a JSON array of objects with "name" and "description" fields.`
+REQUIREMENTS
+- Return 8–12 INDIVIDUAL grades ONLY (e.g., "Kindergarten" and "Grade 1", "Grade 2", etc.) based on ${country} conventions.
+- No grade ranges (avoid "Grades 3–5").
+- Each item must include: name (string), description (string).
+
+OUTPUT
+[
+  { "name": "Grade 1", "description": "First year of primary school with foundational literacy and numeracy." }
+]
+`
         break
 
       case 'lesson-discovery':
         const finalTotalLessonCount = totalLessonCount || 45
         
-        userPrompt = `ROLE: You are a curriculum framework analyst.
+        userPrompt = `${sharedRules}
+ROLE: You are a curriculum framework analyst.
 
 INPUTS
 - Subject: "${subject}"
@@ -126,13 +167,20 @@ Respond with ONLY a JSON object:
   ],
   "total_lessons_planned": ${finalTotalLessonCount},
   "estimated_coverage": "percentage string"
-}`
+}
+
+CONSTRAINTS
+- The sum of target_lesson_count across major_parts should closely match ${finalTotalLessonCount} (±10%).
+- Provide 4–10 major_parts where reasonable.
+- Codes and names should be concise and recognizably tied to the subject.
+`
         break
 
       case 'lesson-generation-by-strand':
         const { strandCode, strandName, targetLessonCount, keyTopics, performanceExpectations } = req.body
         
-        userPrompt = `ROLE: You are an expert lesson plan creator.
+        userPrompt = `${sharedRules}
+ROLE: You are an expert lesson plan creator.
 
 INPUTS
 - Subject: "${subject}"
@@ -162,20 +210,30 @@ REQUIREMENTS:
 - Include clear learning objectives
 - Suggest hands-on activities appropriate for the grade level
 - Include assessment strategies
-- Align with the performance expectations provided`
+- Align with the performance expectations provided
+- Titles must be unique and concise; descriptions 1–3 sentences
+- Strongly incorporate the provided key topics where applicable
+`
         break
 
       case 'state-curricula':
-        userPrompt = `For the subject "${subject}" in ${country}, provide information about state/provincial/regional curriculum standards.
-List the major states or provinces and their curriculum names (e.g., Common Core, state-specific standards, etc.).
-If multiple states share the same curriculum, group them together.
+        userPrompt = `${sharedRules}
+TASK: For the subject "${subject}" in ${country}, list state/provincial/regional curriculum standards.
 
-Format the response as a JSON array where each object has:
-- "curriculum_name": the name of the curriculum standard (e.g., "Common Core", "Texas TEKS", etc.)
-- "states": an array of state/province names that use this curriculum
-- "description": brief description of what this curriculum covers
+REQUIREMENTS
+- Group states/provinces that share the same curriculum.
+- Each item must include: curriculum_name (string), states (string[]), description (string).
+- Provide 3–8 curriculum groupings relevant to ${country}.
 
-Respond with ONLY a JSON array of such objects.`
+OUTPUT
+[
+  {
+    "curriculum_name": "Common Core State Standards (CCSS)",
+    "states": ["California", "New York"],
+    "description": "Standards outlining expectations for knowledge and skills in mathematics and ELA."
+  }
+]
+`
         break
 
       default:
@@ -186,19 +244,22 @@ Respond with ONLY a JSON array of such objects.`
       ? LESSON_PROMPT_ID 
       : PROMPT_ID
 
+    // Tune temperature per type: keep structured outputs lower
+    const temperature = (type === 'lesson-generation-by-strand') ? 0.7 : 0.3
+
     const response = await client.chat.completions.create({
       model: 'gpt-4',
       messages: [
         {
           role: 'system',
-          content: 'You are an expert curriculum designer. Generate responses in valid JSON format only.'
+          content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
         },
         {
           role: 'user',
           content: userPrompt
         }
       ],
-      temperature: 0.7,
+      temperature,
       max_tokens: 2000,
     })
 
