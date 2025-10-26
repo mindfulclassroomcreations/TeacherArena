@@ -81,20 +81,99 @@ GENERAL INSTRUCTIONS
 
     switch (type) {
       case 'subjects':
-        userPrompt = `${sharedRules}
-TASK: Generate educational subjects relevant to ${country} curriculum standards.
-CONTEXT: ${context || 'General educational subjects'}
+        // Use the Responses API with a managed prompt for subjects to ensure strict JSON compliance
+        {
+          const grade_min = 1
+          const grade_max = 12
+          const resource_types = ["worksheets","task cards","Google Forms","quizzes","activities","projects"]
+          const include_electives = true
+          const min_items = 6
+          const max_items = 10
+          const exclude_subjects: string[] = []
+          const language = 'en'
 
-REQUIREMENTS
-- Return 6–10 subjects commonly taught in ${country} schools spanning different disciplines.
-- Each item must include: name (string), description (string).
-- Avoid grade-level labels (e.g., not "Algebra I"—use broader like "Mathematics" unless context dictates specificity).
+          // Wrapped-object schema to allow strict:true
+          const subjectsSchema = {
+            name: 'subjects_payload',
+            schema: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['subjects'],
+              properties: {
+                subjects: {
+                  type: 'array',
+                  minItems: min_items,
+                  maxItems: max_items,
+                  items: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['name', 'description'],
+                    properties: {
+                      name: { type: 'string', minLength: 2, maxLength: 80 },
+                      description: { type: 'string', minLength: 10, maxLength: 240 },
+                    },
+                  },
+                },
+              },
+            },
+            strict: true,
+          }
 
-OUTPUT
-[
-  { "name": "Mathematics", "description": "Foundational numeracy, arithmetic, geometry, and early algebraic thinking." }
-]
-`
+          try {
+            const response = await (client as any).responses.create({
+              model: 'gpt-4.1-nano',
+              prompt: {
+                id: 'pmpt_68fd9bddcd4c8195b83cc578da7f876e009ccf7e089176e0',
+                version: '1',
+              },
+              // Variables for the managed prompt
+              input: ({
+                country,
+                grade_min,
+                grade_max,
+                resource_types,
+                context: context || '',
+                include_electives,
+                min_items,
+                max_items,
+                exclude_subjects,
+                language,
+              } as any),
+              response_format: {
+                type: 'json_schema',
+                json_schema: subjectsSchema as any,
+              },
+              temperature: 0.3,
+              top_p: 1.0,
+              max_output_tokens: 700,
+            } as any)
+
+            const anyRes: any = response as any
+            let parsed = anyRes.output_parsed
+            if (!parsed) {
+              const text: string = anyRes.output_text || ''
+              // Try to parse the first JSON object from text as fallback
+              const match = text.match(/\{[\s\S]*\}/)
+              if (match) parsed = JSON.parse(match[0])
+            }
+            if (!parsed) {
+              return res.status(500).json({ error: 'AI did not return parseable JSON for subjects' })
+            }
+            const subjectsArray = Array.isArray(parsed) ? parsed : parsed.subjects
+            if (!Array.isArray(subjectsArray)) {
+              return res.status(500).json({ error: 'AI did not return a subjects array' })
+            }
+            const items = subjectsArray.map((item: any, index: number) => ({
+              name: item.name || item.title || `Item ${index + 1}`,
+              title: item.title,
+              description: item.description || '',
+            }))
+            return res.status(200).json({ success: true, items, count: items.length })
+          } catch (responsesError) {
+            console.error('Responses API (subjects) error:', responsesError)
+            return res.status(500).json({ error: 'Failed to generate subjects', details: String(responsesError) })
+          }
+        }
         break
 
       case 'frameworks':
