@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Button from '@/components/Button'
@@ -46,8 +47,8 @@ export default function DashboardPage() {
               <div className="text-sm text-gray-600">Token Balance</div>
               <div className="text-2xl font-extrabold text-blue-700 mt-1">{loading ? '…' : (tokens != null ? tokens.toLocaleString() : '—')}</div>
               <div className="mt-3 flex gap-2">
-                <a href="/credits"><Button size="sm">Buy Credits</Button></a>
-                <a href="/product-generation"><Button size="sm" variant="outline">Generate</Button></a>
+                <Link href="/credits"><Button size="sm">Buy Credits</Button></Link>
+                <Link href="/product-generation"><Button size="sm" variant="outline">Generate</Button></Link>
                 <Button size="sm" variant="outline" onClick={() => {
                   // re-run effect
                   if (user && session?.access_token) {
@@ -79,15 +80,15 @@ export default function DashboardPage() {
               <div className="text-sm text-gray-600">Account</div>
               <div className="text-lg font-semibold text-gray-900 mt-1">{user?.email}</div>
               <div className="mt-3">
-                <a href="/settings"><Button size="sm" variant="outline">Settings</Button></a>
+                <Link href="/settings"><Button size="sm" variant="outline">Settings</Button></Link>
               </div>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <div className="text-sm text-gray-600">Shortcuts</div>
               <ul className="mt-2 text-sm list-disc list-inside text-gray-700">
-                <li><a className="text-blue-700 underline" href="/showcase">Showcase</a></li>
-                <li><a className="text-blue-700 underline" href="/product-generation">Generate Lessons</a></li>
-                <li><a className="text-blue-700 underline" href="/credits">Buy Tokens</a></li>
+                <li><Link href="/showcase" className="text-blue-700 underline">Showcase</Link></li>
+                <li><Link href="/product-generation" className="text-blue-700 underline">Generate Lessons</Link></li>
+                <li><Link href="/credits" className="text-blue-700 underline">Buy Tokens</Link></li>
               </ul>
             </div>
           </div>
