@@ -1180,10 +1180,9 @@ export default function Home() {
           items={subjects}
           selectedItem={selectedSubject}
           onSelect={handleSelectSubject}
-          onGenerate={handleGenerateSubjects}
           isLoading={isLoading}
-          generateButtonText={subjects.length > 0 ? "Generate More Subjects" : "Generate Subjects"}
-          emptyStateText="No subjects generated yet. Click the button below to generate subjects using AI."
+          generateButtonText="Generate Subjects"
+          emptyStateText="No subjects available. Please select a different country."
         />
       )}
 

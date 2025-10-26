@@ -15,7 +15,7 @@ interface SelectionStepProps {
   items: Item[]
   selectedItem: Item | null
   onSelect: (item: Item) => void
-  onGenerate: () => void
+  onGenerate?: () => void
   isLoading: boolean
   generateButtonText: string
   emptyStateText: string
@@ -42,9 +42,11 @@ export default function SelectionStep({
       {items.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 mb-4">{emptyStateText}</p>
-          <Button onClick={onGenerate} isLoading={isLoading} variant="primary">
-            {generateButtonText}
-          </Button>
+          {onGenerate && (
+            <Button onClick={onGenerate} isLoading={isLoading} variant="primary">
+              {generateButtonText}
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -64,11 +66,13 @@ export default function SelectionStep({
               </Card>
             ))}
           </div>
-          <div className="flex justify-end">
-            <Button onClick={onGenerate} isLoading={isLoading} variant="primary">
-              {generateButtonText}
-            </Button>
-          </div>
+          {onGenerate && (
+            <div className="flex justify-end">
+              <Button onClick={onGenerate} isLoading={isLoading} variant="primary">
+                {generateButtonText}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>
