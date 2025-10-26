@@ -48,6 +48,7 @@ export default function Home() {
   const [lessons, setLessons] = useState<Item[]>([])
   // Step 5: sub-standards under sections
   const [subStandardsBySection, setSubStandardsBySection] = useState<Record<string, any[]>>({})
+  const [lessonsBySection, setLessonsBySection] = useState<Record<string, any[]>>({})
   const [lessonsPerSubStandardBySection, setLessonsPerSubStandardBySection] = useState<Record<string, number>>({})
   const [loadingSectionKey, setLoadingSectionKey] = useState<string | null>(null)
   const [loadingLessonsSectionKey, setLoadingLessonsSectionKey] = useState<string | null>(null)
@@ -659,52 +660,20 @@ export default function Home() {
     try {
       const response = await generateContent({
         type: 'lessons-by-substandards' as any,
+        country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework.name,
         grade: selectedGrade.name,
         region: selectedRegion || undefined,
+        stateCurriculum: selectedStateCurriculum?.curriculum_name,
         section: section.title || section.name,
         subStandards,
         lessonsPerStandard: per,
         context
       } as any)
       if (Array.isArray(response.items)) {
-        // Create a synthetic strand for this section if missing
-        const makeStrandCode = (s: any) => {
-          const base = String(s.title || s.name || 'SECTION').toUpperCase().replace(/[^A-Z0-9]+/g, '-')
-          return `SEC-${base}`.slice(0, 18)
-        }
-        const strand_code = makeStrandCode(section)
-        const strand_name = String(section.title || section.name || strand_code)
-        // Ensure strands include this synthetic one for grouping in Step 6
-        setStrands((prev) => {
-          if (prev.some((st) => st.strand_code === strand_code)) return prev
-          const num_standards = subStandards.length
-          const target_lesson_count = num_standards * per
-          const newStrand: Strand = {
-            strand_code,
-            strand_name,
-            num_standards,
-            key_topics: subStandards.map((s: any) => String(s.title || s.name || s.code || '').trim()).filter(Boolean).slice(0, 8),
-            target_lesson_count,
-            performance_expectations: []
-          }
-          return [...prev, newStrand]
-        })
-
-        // Tag lessons with strand context
-        const tagged = response.items.map((it: any) => ({
-          ...it,
-          strand_code,
-          strand_name
-        }))
-        setLessons((prev: any[]) => {
-          const existingKeys = new Set(prev.map((l: any) => `${l.strand_code}__${l.title || l.name}`))
-          const deduped = tagged.filter((l: any) => !existingKeys.has(`${l.strand_code}__${l.title || l.name}`))
-          return [...prev, ...deduped]
-        })
-        setCurrentStep(5)
-        scrollToStep6()
+        // Save lessons under this section only (do not push to Step 6 lists)
+        setLessonsBySection((prev) => ({ ...prev, [key]: response.items }))
         setSuccess(`Generated ${response.items.length} lessons for "${section.title || section.name}" from sub-standards.`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -1625,6 +1594,30 @@ export default function Home() {
                                     Generate Lessons from Sub-standards
                                   </Button>
                                 </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* Lessons under this section */}
+                          {Array.isArray(lessonsBySection[String(section.id || section.name || section.title || '')]) && lessonsBySection[String(section.id || section.name || section.title || '')].length > 0 && (
+                            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-sm font-semibold text-yellow-900">Lessons ({lessonsBySection[String(section.id || section.name || section.title || '')].length})</h4>
+                                <span className="text-[11px] text-yellow-800">Generated from sub-standards</span>
+                              </div>
+                              <div className="space-y-2">
+                                {lessonsBySection[String(section.id || section.name || section.title || '')].map((ls: any, idx: number) => (
+                                  <div key={idx} className="p-3 bg-white rounded border border-yellow-200">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex-1">
+                                        <p className="font-medium text-gray-900">{ls.title || ls.name}</p>
+                                        {ls.description && <p className="text-xs text-gray-600 mt-1">{ls.description}</p>}
+                                      </div>
+                                      {ls.standard_code && (
+                                        <span className="text-[11px] font-mono text-yellow-800 bg-yellow-100 px-2 py-1 rounded">{ls.standard_code}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           )}
