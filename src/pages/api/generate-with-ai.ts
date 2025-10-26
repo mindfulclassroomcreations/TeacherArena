@@ -64,14 +64,14 @@ async function getAuthUserId(req: NextApiRequest): Promise<{ userId?: string; er
 
 async function getUserTokens(userId: string): Promise<number> {
   if (!supabaseAdmin) return Number.MAX_SAFE_INTEGER
-  const { data, error } = await supabaseAdmin.from('profiles').select('tokens').eq('id', userId).single()
+  const { data, error } = await supabaseAdmin.from('user_profiles').select('tokens').eq('id', userId).single()
   if (error) throw error
   return data?.tokens ?? 0
 }
 
 async function setUserTokens(userId: string, newTokens: number) {
   if (!supabaseAdmin) return
-  const { error } = await supabaseAdmin.from('profiles').update({ tokens: Math.max(0, newTokens) }).eq('id', userId)
+  const { error } = await supabaseAdmin.from('user_profiles').update({ tokens: Math.max(0, newTokens) }).eq('id', userId)
   if (error) throw error
 }
 
