@@ -1840,15 +1840,6 @@ export default function Home() {
                         )}
                       </div>
                       <div className="flex items-center gap-3 ml-4">
-                        <label className="inline-flex items-center gap-2 text-sm text-gray-700" onClick={(e)=> e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            checked={isSelected}
-                            onChange={() => toggleSectionSelection(section)}
-                          />
-                          {isSelected ? 'Selected' : 'Select'}
-                        </label>
                         <span className="text-gray-400">
                           {isSelected ? '▼' : '▶'}
                         </span>
