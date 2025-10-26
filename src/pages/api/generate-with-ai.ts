@@ -64,14 +64,28 @@ async function getAuthUserId(req: NextApiRequest): Promise<{ userId?: string; er
 
 async function getUserTokens(userId: string): Promise<number> {
   if (!supabaseAdmin) return Number.MAX_SAFE_INTEGER
-  const { data, error } = await supabaseAdmin.from('user_profiles').select('tokens').eq('id', userId).single()
+  // Try new table name first
+  let { data, error } = await supabaseAdmin.from('user_profiles').select('tokens').eq('id', userId).maybeSingle()
+  // If relation missing, fallback to legacy table
+  const missing = (error as any)?.code === '42P01' || /relation .* does not exist/i.test(String(error?.message || ''))
+  if (missing) {
+    const alt = await supabaseAdmin.from('profiles').select('tokens').eq('id', userId).maybeSingle()
+    if (alt.error) throw alt.error
+    return alt.data?.tokens ?? 0
+  }
   if (error) throw error
   return data?.tokens ?? 0
 }
 
 async function setUserTokens(userId: string, newTokens: number) {
   if (!supabaseAdmin) return
-  const { error } = await supabaseAdmin.from('user_profiles').update({ tokens: Math.max(0, newTokens) }).eq('id', userId)
+  let { error } = await supabaseAdmin.from('user_profiles').update({ tokens: Math.max(0, newTokens) }).eq('id', userId)
+  const missing = (error as any)?.code === '42P01' || /relation .* does not exist/i.test(String(error?.message || ''))
+  if (missing) {
+    const alt = await supabaseAdmin.from('profiles').update({ tokens: Math.max(0, newTokens) }).eq('id', userId)
+    if (alt.error) throw alt.error
+    return
+  }
   if (error) throw error
 }
 

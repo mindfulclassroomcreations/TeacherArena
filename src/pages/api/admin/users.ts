@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient, PostgrestError } from '@supabase/supabase-js'
 
 // Server-only admin client using service role
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -23,12 +23,23 @@ async function bearerAdminAuthorized(req: NextApiRequest): Promise<boolean> {
     const { data, error } = await supabaseAdmin.auth.getUser(token)
     if (error || !data?.user?.id) return false
     const userId = data.user.id
-    const { data: prof, error: selErr } = await supabaseAdmin
+    // Try new table first; fallback to legacy if missing
+    let { data: prof, error: selErr } = await supabaseAdmin
       .from('user_profiles')
       .select('role')
       .eq('id', userId)
-      .single()
-    if (selErr) return false
+      .maybeSingle()
+    const missing = (selErr as PostgrestError | null)?.code === '42P01' || /relation .* does not exist/i.test(String(selErr?.message || ''))
+    if (selErr && !missing) return false
+    if (!prof && missing) {
+      const alt = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle()
+      if (alt.error) return false
+      prof = alt.data as any
+    }
     return String(prof?.role || '').toLowerCase() === 'admin'
   } catch {
     return false
@@ -60,13 +71,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     if (req.method === 'GET') {
+      // Determine profile table
+      const probe = await supabaseAdmin.from('user_profiles').select('id').limit(1)
+      const err = (probe as any)?.error as PostgrestError | null
+      const profileTable = (err && (err.code === '42P01' || /relation .* does not exist/i.test(err.message))) ? 'profiles' : 'user_profiles'
       // Get all users from auth with their email
       const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers()
       if (usersError) throw usersError
       
       // Get user profiles with role and tokens
       const { data: profiles, error: profilesError } = await supabaseAdmin
-        .from('user_profiles')
+        .from(profileTable)
         .select('id,role,tokens,created_at,updated_at')
       if (profilesError) throw profilesError
       
@@ -87,6 +102,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'POST') {
+      const probe = await supabaseAdmin.from('user_profiles').select('id').limit(1)
+      const err = (probe as any)?.error as PostgrestError | null
+      const profileTable = (err && (err.code === '42P01' || /relation .* does not exist/i.test(err.message))) ? 'profiles' : 'user_profiles'
       const { id, role, addTokens, setTokens } = req.body || {}
       if (!id) return res.status(400).json({ error: 'Missing id' } as any)
       const updates: any = {}
@@ -94,25 +112,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof setTokens === 'number') updates.tokens = setTokens
       let error
       if (Object.keys(updates).length > 0) {
-        const resp = await supabaseAdmin.from('user_profiles').update(updates).eq('id', id)
+        const resp = await supabaseAdmin.from(profileTable).update(updates).eq('id', id)
         error = resp.error
       }
       if (!error && typeof addTokens === 'number' && addTokens !== 0) {
         // increment tokens atomically
-        const { data: row, error: selErr } = await supabaseAdmin.from('user_profiles').select('tokens').eq('id', id).single()
+        const { data: row, error: selErr } = await supabaseAdmin.from(profileTable).select('tokens').eq('id', id).single()
         if (selErr) throw selErr
         const newTokens = Math.max(0, (row?.tokens || 0) + addTokens)
-        const { error: upErr } = await supabaseAdmin.from('user_profiles').update({ tokens: newTokens }).eq('id', id)
+        const { error: upErr } = await supabaseAdmin.from(profileTable).update({ tokens: newTokens }).eq('id', id)
         if (upErr) throw upErr
       }
       return res.status(200).json({ success: true })
     }
 
     if (req.method === 'DELETE') {
+      const probe = await supabaseAdmin.from('user_profiles').select('id').limit(1)
+      const err = (probe as any)?.error as PostgrestError | null
+      const profileTable = (err && (err.code === '42P01' || /relation .* does not exist/i.test(err.message))) ? 'profiles' : 'user_profiles'
       const { id } = req.body || {}
       if (!id) return res.status(400).json({ error: 'Missing id' } as any)
       // remove profile row; optionally remove auth user via GoTrue admin (requires separate key)
-      const { error } = await supabaseAdmin.from('user_profiles').delete().eq('id', id)
+      const { error } = await supabaseAdmin.from(profileTable).delete().eq('id', id)
       if (error) throw error
       return res.status(200).json({ success: true })
     }

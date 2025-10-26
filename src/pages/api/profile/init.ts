@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient, PostgrestError } from '@supabase/supabase-js'
 import { UserProfile, UserRole } from '@/types'
 
 // Server-only admin client using service role to safely upsert profiles
@@ -10,6 +10,16 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE || ''
 function getSupabaseAdmin(): SupabaseClient | null {
   if (!url || !serviceKey) return null
   return createClient(url, serviceKey)
+}
+
+async function resolveProfileTable(supabaseAdmin: SupabaseClient): Promise<'user_profiles' | 'profiles'> {
+  // Prefer new table name; fall back if relation doesn't exist
+  const probe = await supabaseAdmin.from('user_profiles').select('id').limit(1)
+  const err = (probe as any)?.error as PostgrestError | null
+  if (err && (err.code === '42P01' || /relation .* does not exist/i.test(err.message))) {
+    return 'profiles'
+  }
+  return 'user_profiles'
 }
 
 const INITIAL_TOKENS: Record<UserRole, number> = {
@@ -58,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const supabaseAdmin = getSupabaseAdmin()
     if (!supabaseAdmin) return res.status(500).json({ error: 'Server not configured for profiles' })
+    const profileTable = await resolveProfileTable(supabaseAdmin)
     // Ensure a profile exists for this user; if not, create with initial tokens based on role
     const userId = user.id
     const email = user.email || null
@@ -67,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check existing profile
     const { data: existing, error: selErr } = await supabaseAdmin
-      .from('user_profiles')
+      .from(profileTable)
       .select('id,email,role,tokens,created_at,updated_at')
       .eq('id', userId)
       .maybeSingle()
@@ -80,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Insert new profile with initial tokens
       const { data, error: insErr } = await supabaseAdmin
-        .from('user_profiles')
+        .from(profileTable)
         .insert({ id: userId, email, role, tokens: initialTokens })
         .select('id,email,role,tokens,created_at,updated_at')
         .single()
