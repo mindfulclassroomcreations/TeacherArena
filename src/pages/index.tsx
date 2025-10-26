@@ -762,7 +762,12 @@ export default function Home() {
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
-      setError('Failed to generate lessons from sub-standards. Please try again.')
+      const errMsg = String((err as any)?.message || err || 'Failed to generate lessons')
+      if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
+        setError('Insufficient tokens. Please buy more credits to continue.')
+      } else {
+        setError('Failed to generate lessons from sub-standards. Please try again.')
+      }
     } finally {
       setIsLoading(false)
       setLoadingLessonsSectionKey(null)
@@ -828,7 +833,12 @@ export default function Home() {
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
-      setError('Failed to generate lessons for this sub-standard. Please try again.')
+      const errMsg = String((err as any)?.message || err || 'Failed to generate lessons')
+      if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
+        setError('Insufficient tokens. Please buy more credits to continue.')
+      } else {
+        setError('Failed to generate lessons for this sub-standard. Please try again.')
+      }
     } finally {
       setIsLoading(false)
       setLoadingSingleLessonsKey(null)
@@ -924,7 +934,15 @@ export default function Home() {
           })
         }
       } catch (e) {
-        // continue other items; optionally collect failures
+        // Check for payment/token errors and report them
+        const errMsg = String((e as any)?.message || e || '')
+        if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
+          setError('Insufficient tokens. Please buy more credits to continue.')
+          setIsLoading(false)
+          setLoadingSelectedLessonsSecKey(null)
+          return
+        }
+        // Otherwise continue with other items; optionally collect failures
       }
       await sleep(200)
     }
