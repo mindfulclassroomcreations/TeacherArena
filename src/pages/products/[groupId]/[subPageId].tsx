@@ -32,6 +32,10 @@ interface LessonSelection {
   [key: string]: boolean
 }
 
+interface SentToProduct {
+  [key: string]: number[] // Map of lesson keys to product type numbers
+}
+
 export default function ProductPage() {
   const router = useRouter()
   const { groupId, subPageId } = router.query
@@ -41,7 +45,9 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true)
   const [showArchived, setShowArchived] = useState(false)
   const [lessonSelections, setLessonSelections] = useState<LessonSelection>({})
+  const [sentToProducts, setSentToProducts] = useState<SentToProduct>({})
   const [showProductTypes, setShowProductTypes] = useState(false)
+  const [showProductTypeModal, setShowProductTypeModal] = useState(false)
 
   // Format the display name from URL
   const groupName = groupId ? (typeof groupId === 'string' ? groupId.replace('group-', '').toUpperCase() : '') : ''
@@ -54,10 +60,12 @@ export default function ProductPage() {
         const groupedKey = `ta_product_${groupId}_${subPageId}_grouped`
         const archivedKey = `ta_product_${groupId}_${subPageId}_archived`
         const summaryKey = `ta_product_${groupId}_${subPageId}_summary`
+        const sentKey = `ta_product_${groupId}_${subPageId}_sent`
         
         const groupedData = window.localStorage.getItem(groupedKey)
         const archivedData = window.localStorage.getItem(archivedKey)
         const summaryData = window.localStorage.getItem(summaryKey)
+        const sentData = window.localStorage.getItem(sentKey)
         
         if (groupedData) {
           setGroupedLessons(JSON.parse(groupedData) || [])
@@ -68,6 +76,9 @@ export default function ProductPage() {
         if (summaryData) {
           setSummary(JSON.parse(summaryData) || null)
         }
+        if (sentData) {
+          setSentToProducts(JSON.parse(sentData) || {})
+        }
       } catch (e) {
         console.error('Error loading lessons:', e)
       }
@@ -76,13 +87,17 @@ export default function ProductPage() {
   }, [groupId, subPageId])
 
   // Save lessons to localStorage
-  const saveLessons = (grouped: GroupedLesson[], archived: GroupedLesson[]) => {
+  const saveLessons = (grouped: GroupedLesson[], archived: GroupedLesson[], sent?: SentToProduct) => {
     if (typeof window !== 'undefined' && groupId && subPageId) {
       try {
         const groupedKey = `ta_product_${groupId}_${subPageId}_grouped`
         const archivedKey = `ta_product_${groupId}_${subPageId}_archived`
+        const sentKey = `ta_product_${groupId}_${subPageId}_sent`
         window.localStorage.setItem(groupedKey, JSON.stringify(grouped))
         window.localStorage.setItem(archivedKey, JSON.stringify(archived))
+        if (sent) {
+          window.localStorage.setItem(sentKey, JSON.stringify(sent))
+        }
       } catch (e) {
         console.error('Error saving lessons:', e)
       }
@@ -245,6 +260,34 @@ export default function ProductPage() {
     // TODO: Implement product generation logic
   }
 
+  const handleSendToProductType = (typeNum: number) => {
+    if (getSelectedLessonCount() === 0) {
+      alert('Please select at least one lesson to send to product generation.')
+      return
+    }
+
+    const newSent = { ...sentToProducts }
+    groupedLessons.forEach((group) => {
+      group.lessons.forEach((_, lessonIdx) => {
+        const key = getLessonKey(group.subStandard, lessonIdx)
+        if (lessonSelections[key]) {
+          if (!newSent[key]) {
+            newSent[key] = []
+          }
+          if (!newSent[key].includes(typeNum)) {
+            newSent[key].push(typeNum)
+          }
+        }
+      })
+    })
+
+    setSentToProducts(newSent)
+    saveLessons(groupedLessons, archivedGroupedLessons, newSent)
+    setLessonSelections({})
+    setShowProductTypeModal(false)
+    alert(`${getSelectedLessonCount()} lesson(s) sent to PRODUCT TYPE - ${String(typeNum).padStart(2, '0')}`)
+  }
+
   const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
   const totalArchived = archivedGroupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
 
@@ -389,11 +432,51 @@ export default function ProductPage() {
                             >
                               🗑️ Delete Selected
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowProductTypeModal(true)}
+                              className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                            >
+                              ➕ Add to Product Generation
+                            </Button>
                           </>
                         )}
                       </div>
                     </div>
                   </div>
+
+                  {/* Product Type Modal */}
+                  {showProductTypeModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                      <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-96 overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Select Product Type - Send {getSelectedLessonCount()} Lesson(s)
+                          </h3>
+                        </div>
+                        <div className="p-4 grid grid-cols-2 gap-2">
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map((typeNum) => (
+                            <button
+                              key={typeNum}
+                              onClick={() => handleSendToProductType(typeNum)}
+                              className="px-3 py-2 bg-purple-100 text-purple-900 rounded hover:bg-purple-200 transition-colors font-medium text-sm"
+                            >
+                              PRODUCT TYPE - {String(typeNum).padStart(2, '0')}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="border-t border-gray-200 p-4 flex justify-end gap-2">
+                          <button
+                            onClick={() => setShowProductTypeModal(false)}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Lessons Display */}
                   <div className="space-y-4">
@@ -458,6 +541,21 @@ export default function ProductPage() {
                                         <span className="text-[11px] font-mono text-gray-800 bg-gray-200 px-2 py-1 rounded">
                                           {lesson.code}
                                         </span>
+                                      )}
+                                      {sentToProducts[key] && sentToProducts[key].length > 0 && (
+                                        <div className="w-full">
+                                          <p className="text-[10px] font-semibold text-green-700 mb-1">Sent to:</p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {sentToProducts[key].map((typeNum) => (
+                                              <span
+                                                key={typeNum}
+                                                className="text-[10px] font-mono text-white bg-green-600 px-2 py-1 rounded"
+                                              >
+                                                TYPE-{String(typeNum).padStart(2, '0')}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -583,16 +681,14 @@ export default function ProductPage() {
                 {showProductTypes && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-purple-300 rounded-lg shadow-lg z-10 p-2 grid grid-cols-2 gap-2">
                     {Array.from({ length: 10 }, (_, i) => i + 1).map((typeNum) => (
-                      <button
-                        key={typeNum}
-                        onClick={() => {
-                          handleGenerateProductType(typeNum)
-                          setShowProductTypes(false)
-                        }}
-                        className="px-3 py-2 bg-purple-100 text-purple-900 rounded hover:bg-purple-200 transition-colors text-sm font-medium"
-                      >
-                        PRODUCT TYPE - {String(typeNum).padStart(2, '0')}
-                      </button>
+                      <Link key={typeNum} href={`/product-types/${typeNum}`}>
+                        <button
+                          onClick={() => setShowProductTypes(false)}
+                          className="w-full px-3 py-2 bg-purple-100 text-purple-900 rounded hover:bg-purple-200 transition-colors text-sm font-medium"
+                        >
+                          PRODUCT TYPE - {String(typeNum).padStart(2, '0')}
+                        </button>
+                      </Link>
                     ))}
                   </div>
                 )}
