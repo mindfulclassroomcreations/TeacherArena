@@ -61,6 +61,21 @@ CREATE TABLE strands (
   UNIQUE(grade_id, strand_code)
 );
 
+-- User Profiles table
+-- Stores user profile information linked to auth.users
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  avatar_url TEXT,
+  school TEXT,
+  grade_level TEXT,
+  subjects_taught TEXT[],
+  role TEXT DEFAULT 'user', -- user, manager, designer, admin
+  tokens INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Lessons table
 -- Stores individual lesson plans
 CREATE TABLE lessons (
@@ -84,12 +99,13 @@ CREATE TABLE lessons (
 -- ================================================
 -- Create indexes for better query performance
 
-CREATE INDEX idx_frameworks_subject_id ON frameworks(subject_id);
-CREATE INDEX idx_grades_framework_id ON grades(framework_id);
-CREATE INDEX idx_strands_grade_id ON strands(grade_id);
-CREATE INDEX idx_lessons_strand_id ON lessons(strand_id);
-CREATE INDEX idx_subjects_name ON subjects(name);
-CREATE INDEX idx_lessons_title ON lessons(title);
+CREATE INDEX IF NOT EXISTS idx_frameworks_subject_id ON frameworks(subject_id);
+CREATE INDEX IF NOT EXISTS idx_grades_framework_id ON grades(framework_id);
+CREATE INDEX IF NOT EXISTS idx_strands_grade_id ON strands(grade_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_strand_id ON lessons(strand_id);
+CREATE INDEX IF NOT EXISTS idx_subjects_name ON subjects(name);
+CREATE INDEX IF NOT EXISTS idx_lessons_title ON lessons(title);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
 
 -- ================================================
 -- TRIGGERS
@@ -129,6 +145,11 @@ CREATE TRIGGER update_lessons_updated_at
   FOR EACH ROW 
   EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_user_profiles_updated_at 
+  BEFORE UPDATE ON user_profiles
+  FOR EACH ROW 
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- ================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ================================================
@@ -139,6 +160,7 @@ ALTER TABLE frameworks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE grades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE strands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
 -- ================================================
 -- RLS POLICIES - Public Read, Authenticated Write
@@ -229,9 +251,18 @@ CREATE POLICY "Allow authenticated delete on lessons"
   ON lessons FOR DELETE 
   USING (true);
 
--- ================================================
--- SAMPLE DATA (Optional - for testing)
--- ================================================
+-- User Profiles policies
+CREATE POLICY "Allow public read on user_profiles" 
+  ON user_profiles FOR SELECT 
+  USING (true);
+
+CREATE POLICY "Allow users to update their own profile" 
+  ON user_profiles FOR UPDATE 
+  USING (auth.uid() = id);
+
+CREATE POLICY "Allow users to insert their own profile" 
+  ON user_profiles FOR INSERT 
+  WITH CHECK (auth.uid() = id);
 
 -- Insert sample subject
 INSERT INTO subjects (name, description) VALUES
