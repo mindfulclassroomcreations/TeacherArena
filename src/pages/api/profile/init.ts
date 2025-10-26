@@ -28,9 +28,21 @@ async function getAuthUser(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  res.setHeader('Allow', 'GET,POST,OPTIONS')
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   if (!url || !serviceKey) {
+    console.error('profile/init: missing SUPABASE config', { urlPresent: Boolean(url), serviceKeyPresent: Boolean(serviceKey) })
     return res.status(500).json({ error: 'Server not configured for profiles' })
   }
+
+  // Allow GET (fetch profile) and POST (create/init). Other methods are not allowed.
+  if (!(req.method === 'GET' || req.method === 'POST')) {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   const { user, error: authError } = await getAuthUser(req)
   if (authError || !user) {
     return res.status(401).json({ error: authError || 'Unauthorized' })

@@ -15,9 +15,11 @@ function isAuthorized(req: NextApiRequest) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!serviceKey || !url) {
+    console.error('admin/users: missing SUPABASE_SERVICE_ROLE or NEXT_PUBLIC_SUPABASE_URL', { serviceKeyPresent: Boolean(serviceKey), urlPresent: Boolean(url) })
     return res.status(500).json({ error: 'Server not configured for admin actions' } as any)
   }
   if (!isAuthorized(req)) {
+    console.warn('admin/users: unauthorized request - missing or invalid x-admin-key')
     return res.status(403).json({ error: 'Unauthorized' } as any)
   }
 
@@ -65,6 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', 'GET,POST,DELETE')
     return res.status(405).json({ error: 'Method not allowed' } as any)
   } catch (e: any) {
+    console.error('admin/users: unexpected error', e)
     return res.status(500).json({ error: String(e?.message || e) } as any)
   }
 }
