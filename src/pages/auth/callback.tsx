@@ -24,7 +24,7 @@ export default function AuthCallbackPage() {
       try {
         // Prefer PKCE code exchange when present
         if (code) {
-          const { data, error: exErr } = await supabase.auth.exchangeCodeForSession({ code })
+          const { data, error: exErr } = await supabase.auth.exchangeCodeForSession(code)
           if (exErr) throw exErr
         } else {
           // Legacy hash token fallback (?access_token/#access_token)
