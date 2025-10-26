@@ -1583,11 +1583,6 @@ export default function Home() {
                   ))}
                 </div>
               )}
-              <div className="flex justify-end">
-                <Button onClick={handleGenerateGrades} isLoading={isLoading} variant="primary">
-                  Generate More Grades
-                </Button>
-              </div>
             </>
           )}
         </div>
