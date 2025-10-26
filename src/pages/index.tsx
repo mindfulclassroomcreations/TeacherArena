@@ -142,31 +142,53 @@ export default function Home() {
     }
     try {
       if (typeof window !== 'undefined') {
-        // Store the selected lessons with product-specific keys for persistence
-        const lessonStorageKey = `ta_product_${selectedProductGroup}_${selectedProductSubPage}_lessons`
+        // Store the selected lessons grouped by sub-standard with product-specific keys for persistence
+        const groupedStorageKey = `ta_product_${selectedProductGroup}_${selectedProductSubPage}_grouped`
+        const archivedStorageKey = `ta_product_${selectedProductGroup}_${selectedProductSubPage}_archived`
         const summaryStorageKey = `ta_product_${selectedProductGroup}_${selectedProductSubPage}_summary`
         
-        // Get existing lessons for this product sub-page (if any)
-        const existingLessonsStr = window.localStorage.getItem(lessonStorageKey)
-        const existingLessons = existingLessonsStr ? JSON.parse(existingLessonsStr) : []
-        
-        // Merge new lessons with existing ones (avoid duplicates based on standard_code and title)
-        const mergedLessons = [...existingLessons]
-        pendingLessonsForProduct.forEach((newLesson) => {
-          const isDuplicate = mergedLessons.some(
-            (existing) =>
-              (existing.standard_code === newLesson.standard_code &&
-                existing.title === newLesson.title) ||
-              (existing.name === newLesson.name &&
-                existing.standard_code === newLesson.standard_code)
-          )
-          if (!isDuplicate) {
-            mergedLessons.push(newLesson)
+        // Group new lessons by sub-standard
+        const newGroupedLessons: { subStandard: string; lessons: any[] }[] = []
+        pendingLessonsForProduct.forEach((lesson) => {
+          const subStandard = String(lesson.standard_code || lesson.code || 'Ungrouped').trim()
+          let group = newGroupedLessons.find((g) => g.subStandard === subStandard)
+          if (!group) {
+            group = { subStandard, lessons: [] }
+            newGroupedLessons.push(group)
           }
+          group.lessons.push(lesson)
         })
         
-        // Store merged lessons
-        window.localStorage.setItem(lessonStorageKey, JSON.stringify(mergedLessons))
+        // Get existing grouped lessons for this product sub-page (if any)
+        const existingGroupedStr = window.localStorage.getItem(groupedStorageKey)
+        const existingGrouped = existingGroupedStr ? JSON.parse(existingGroupedStr) : []
+        
+        // Merge new grouped lessons with existing ones (avoid duplicates)
+        const mergedGrouped = [...existingGrouped]
+        newGroupedLessons.forEach((newGroup) => {
+          let existingGroup = mergedGrouped.find((g) => g.subStandard === newGroup.subStandard)
+          if (!existingGroup) {
+            existingGroup = { subStandard: newGroup.subStandard, lessons: [] }
+            mergedGrouped.push(existingGroup)
+          }
+          // Add lessons to the group (avoid duplicates within the group)
+          newGroup.lessons.forEach((newLesson) => {
+            const isDuplicate = existingGroup.lessons.some(
+              (existing: any) =>
+                (existing.standard_code === newLesson.standard_code &&
+                  existing.title === newLesson.title) ||
+                (existing.name === newLesson.name &&
+                  existing.standard_code === newLesson.standard_code)
+            )
+            if (!isDuplicate) {
+              existingGroup.lessons.push(newLesson)
+            }
+          })
+        })
+        
+        // Store merged grouped lessons and archived (empty at first)
+        window.localStorage.setItem(groupedStorageKey, JSON.stringify(mergedGrouped))
+        window.localStorage.setItem(archivedStorageKey, JSON.stringify([]))
         window.localStorage.setItem(summaryStorageKey, JSON.stringify(pendingProductSummary))
         
         // Also keep in temporary storage for product-generation page
