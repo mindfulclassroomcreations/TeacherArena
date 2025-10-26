@@ -151,15 +151,93 @@ export default function ProductPage() {
     const newSelections = { ...lessonSelections }
     const group = groupedLessons.find((g) => g.subStandard === subStandard)
     if (group) {
-      group.lessons.forEach((_, lessonIdx) => {
-        newSelections[getLessonKey(subStandard, lessonIdx)] = true
-      })
+      const allSelected = group.lessons.every((_, lessonIdx) => 
+        newSelections[getLessonKey(subStandard, lessonIdx)]
+      )
+      if (allSelected) {
+        // Deselect all in this category
+        group.lessons.forEach((_, lessonIdx) => {
+          delete newSelections[getLessonKey(subStandard, lessonIdx)]
+        })
+      } else {
+        // Select all in this category
+        group.lessons.forEach((_, lessonIdx) => {
+          newSelections[getLessonKey(subStandard, lessonIdx)] = true
+        })
+      }
     }
     setLessonSelections(newSelections)
   }
 
   const getSelectedLessonCount = () => {
     return Object.values(lessonSelections).filter(Boolean).length
+  }
+
+  const isCategoryFullySelected = (subStandard: string) => {
+    const group = groupedLessons.find((g) => g.subStandard === subStandard)
+    if (!group) return false
+    return group.lessons.every((_, lessonIdx) => 
+      lessonSelections[getLessonKey(subStandard, lessonIdx)]
+    )
+  }
+
+  const handleArchiveSelectedLessons = () => {
+    if (getSelectedLessonCount() === 0) {
+      alert('Please select at least one lesson to archive.')
+      return
+    }
+    
+    const newGrouped: GroupedLesson[] = []
+    const selectedToArchive: GroupedLesson[] = []
+    
+    groupedLessons.forEach((group) => {
+      const remainingLessons = group.lessons.filter((_, lessonIdx) => 
+        !lessonSelections[getLessonKey(group.subStandard, lessonIdx)]
+      )
+      const archivedLessons = group.lessons.filter((_, lessonIdx) => 
+        lessonSelections[getLessonKey(group.subStandard, lessonIdx)]
+      )
+      
+      if (remainingLessons.length > 0) {
+        newGrouped.push({ subStandard: group.subStandard, lessons: remainingLessons })
+      }
+      if (archivedLessons.length > 0) {
+        selectedToArchive.push({ subStandard: group.subStandard, lessons: archivedLessons })
+      }
+    })
+    
+    const newArchived = [...archivedGroupedLessons, ...selectedToArchive]
+    setGroupedLessons(newGrouped)
+    setArchivedGroupedLessons(newArchived)
+    saveLessons(newGrouped, newArchived)
+    setLessonSelections({})
+  }
+
+  const handleDeleteSelectedLessons = () => {
+    if (getSelectedLessonCount() === 0) {
+      alert('Please select at least one lesson to delete.')
+      return
+    }
+    
+    if (!confirm(`Delete ${getSelectedLessonCount()} selected lesson(s)? This cannot be undone.`)) {
+      return
+    }
+    
+    const newGrouped: GroupedLesson[] = []
+    
+    groupedLessons.forEach((group) => {
+      const remainingLessons = group.lessons.filter((_, lessonIdx) => 
+        !lessonSelections[getLessonKey(group.subStandard, lessonIdx)]
+      )
+      
+      if (remainingLessons.length > 0) {
+        newGrouped.push({ subStandard: group.subStandard, lessons: remainingLessons })
+      }
+    })
+    
+    setGroupedLessons(newGrouped)
+    saveLessons(newGrouped, archivedGroupedLessons)
+    setLessonSelections({})
   }
 
   const handleGenerateProductType = (typeNum: number) => {
@@ -276,9 +354,9 @@ export default function ProductPage() {
                 <>
                   {/* Lesson Selection Controls */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <h3 className="font-semibold text-blue-900">Select Lessons ({getSelectedLessonCount()})</h3>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
@@ -293,6 +371,26 @@ export default function ProductPage() {
                         >
                           ✗ Deselect All
                         </Button>
+                        {getSelectedLessonCount() > 0 && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleArchiveSelectedLessons}
+                              className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                            >
+                              📦 Archive Selected
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDeleteSelectedLessons}
+                              className="text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              🗑️ Delete Selected
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -312,9 +410,13 @@ export default function ProductPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleSelectCategory(group.subStandard)}
-                            className="text-yellow-700 border-yellow-300 whitespace-nowrap"
+                            className={`whitespace-nowrap ${
+                              isCategoryFullySelected(group.subStandard)
+                                ? 'bg-yellow-300 text-yellow-900 border-yellow-400'
+                                : 'text-yellow-700 border-yellow-300'
+                            }`}
                           >
-                            Select Category
+                            {isCategoryFullySelected(group.subStandard) ? '✓ Selected' : 'Select Category'}
                           </Button>
                         </div>
                         <div className="p-4 space-y-3">
