@@ -170,8 +170,45 @@ GENERAL INSTRUCTIONS
             }))
             return res.status(200).json({ success: true, items, count: items.length })
           } catch (responsesError) {
-            console.error('Responses API (subjects) error:', responsesError)
-            return res.status(500).json({ error: 'Failed to generate subjects', details: String(responsesError) })
+            console.warn('Responses API (subjects) failed, falling back to chat.completions:', responsesError)
+            // Fallback: use chat.completions with strict prompting and parse JSON
+            try {
+              const fallbackPrompt = `${sharedRules}\nTASK: Generate educational subjects for ${country}.\nCONTEXT: ${context || 'General educational subjects'}\n\nREQUIREMENTS\n- Return ${min_items}–${max_items} subjects commonly taught in ${country} schools spanning different disciplines.\n- Each item must include: name (string), description (string).\n- Avoid grade-level course titles (use broad areas like \"Mathematics\", unless context requires specificity).\n`;
+
+              const chatRes = await client.chat.completions.create({
+                model: 'gpt-4',
+                messages: [
+                  { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON.' },
+                  { role: 'user', content: fallbackPrompt }
+                ],
+                temperature: 0.3,
+                max_tokens: 700
+              })
+              let responseText = chatRes?.choices?.[0]?.message?.content || ''
+              if (!responseText) {
+                return res.status(500).json({ error: 'AI response was empty in fallback' })
+              }
+              let parsedData = null as any
+              try {
+                const jsonMatch = responseText.match(/\[[\s\S]*\]|\{[\s\S]*\}/)
+                parsedData = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(responseText)
+              } catch (e) {
+                return res.status(500).json({ error: 'Failed to parse fallback AI response' })
+              }
+              const subjectsArray = Array.isArray(parsedData) ? parsedData : parsedData.subjects
+              if (!Array.isArray(subjectsArray)) {
+                return res.status(500).json({ error: 'Fallback AI did not return a subjects array' })
+              }
+              const items = subjectsArray.map((item: any, index: number) => ({
+                name: item.name || item.title || `Item ${index + 1}`,
+                title: item.title,
+                description: item.description || '',
+              }))
+              return res.status(200).json({ success: true, items, count: items.length })
+            } catch (fallbackErr) {
+              console.error('Fallback subjects generation failed:', fallbackErr)
+              return res.status(500).json({ error: 'Failed to generate subjects', details: String(fallbackErr) })
+            }
           }
         }
         break
