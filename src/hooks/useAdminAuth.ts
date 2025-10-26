@@ -5,20 +5,22 @@ const STORAGE_KEY = 'ta_admin_key'
 export function useAdminAuth() {
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [ready, setReady] = useState<boolean>(false)
-  const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || 'admin'
+  const adminKey = (process.env.NEXT_PUBLIC_ADMIN_KEY ?? '').trim()
+  const configured = adminKey.length > 0
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY)
-      setIsAuthed(!!saved && saved === adminKey)
+      setIsAuthed(Boolean(saved) && configured && saved === adminKey)
     } finally {
       setReady(true)
     }
-  }, [adminKey])
+  }, [adminKey, configured])
 
   const login = (key: string) => {
     if (typeof window === 'undefined') return false
+    if (!configured) return false
     const ok = Boolean(key) && key === adminKey
     if (ok) {
       window.localStorage.setItem(STORAGE_KEY, key)
@@ -33,5 +35,5 @@ export function useAdminAuth() {
     setIsAuthed(false)
   }
 
-  return { isAuthed, ready, login, logout }
+  return { isAuthed, ready, configured, login, logout }
 }

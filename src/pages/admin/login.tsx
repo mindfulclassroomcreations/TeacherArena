@@ -6,7 +6,7 @@ import { useRouter } from 'next/router'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 export default function AdminLogin() {
-  const { isAuthed, ready, login } = useAdminAuth()
+  const { isAuthed, ready, configured, login } = useAdminAuth()
   const router = useRouter()
   const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +21,7 @@ export default function AdminLogin() {
     if (ok) {
       router.replace('/admin')
     } else {
-      setError('Invalid admin key')
+      setError(configured ? 'Invalid admin key' : 'Admin key is not configured. Set NEXT_PUBLIC_ADMIN_KEY in your environment.')
     }
   }
 
@@ -36,10 +36,10 @@ export default function AdminLogin() {
           onChange={(e) => setKey(e.target.value)}
           placeholder="Enter admin key"
           error={error || undefined}
-          helperText={!error ? 'Ask the site owner for the admin key.' : undefined}
+          helperText={!error ? (configured ? 'Ask the site owner for the admin key.' : 'Admin key is not configured. Set NEXT_PUBLIC_ADMIN_KEY in .env.local and rebuild.') : undefined}
         />
         <div className="mt-4 flex justify-end">
-          <Button onClick={handleLogin} variant="primary">Login</Button>
+          <Button onClick={handleLogin} variant="primary" disabled={!configured}>Login</Button>
         </div>
       </div>
     </Layout>
