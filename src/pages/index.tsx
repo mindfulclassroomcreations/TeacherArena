@@ -58,6 +58,8 @@ export default function Home() {
   const [showContextModal, setShowContextModal] = useState(false)
   const [showLessonModal, setShowLessonModal] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState<Item | null>(null)
+  // Step 2: track which curriculum cards have expanded state lists
+  const [expandedCurriculaStates, setExpandedCurriculaStates] = useState<Record<string, boolean>>({})
 
   // Country list
   const countries = [
@@ -659,16 +661,44 @@ export default function Home() {
                     <h3 className="font-bold text-lg text-gray-900 mb-2">{curriculum.curriculum_name}</h3>
                     <p className="text-gray-600 text-sm mb-3">{curriculum.description}</p>
                     <div className="flex flex-wrap gap-2">
-                      {(curriculum.states || []).slice(0, 5).map((state: string, i: number) => (
-                        <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                          {state}
-                        </span>
-                      ))}
-                      {(curriculum.states || []).length > 5 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                          +{(curriculum.states || []).length - 5} more
-                        </span>
-                      )}
+                      {(() => {
+                        const allStates: string[] = curriculum.states || []
+                        const isExpanded = !!expandedCurriculaStates[String(index)]
+                        const visible = isExpanded ? allStates : allStates.slice(0, 5)
+                        return (
+                          <>
+                            {visible.map((state: string, i: number) => (
+                              <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                {state}
+                              </span>
+                            ))}
+                            {allStates.length > 5 && !isExpanded && (
+                              <button
+                                type="button"
+                                className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded hover:bg-gray-200"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setExpandedCurriculaStates((prev) => ({ ...prev, [String(index)]: true }))
+                                }}
+                              >
+                                +{allStates.length - 5} more
+                              </button>
+                            )}
+                            {allStates.length > 5 && isExpanded && (
+                              <button
+                                type="button"
+                                className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded hover:bg-gray-200"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setExpandedCurriculaStates((prev) => ({ ...prev, [String(index)]: false }))
+                                }}
+                              >
+                                Show less
+                              </button>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                   </Card>
                 ))}
