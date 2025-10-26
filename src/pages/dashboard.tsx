@@ -19,8 +19,17 @@ export default function DashboardPage() {
           method: 'POST',
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
-        const data = await resp.json().catch(() => null)
-        setTokens(data?.profile?.tokens ?? null)
+        if (!resp.ok) {
+          const alt = await fetch('/api/profile/init', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+          const altData = await alt.json().catch(() => null)
+          setTokens(altData?.profile?.tokens ?? null)
+        } else {
+          const data = await resp.json().catch(() => null)
+          setTokens(data?.profile?.tokens ?? null)
+        }
       } finally { setLoading(false) }
     }
     load()
@@ -39,6 +48,31 @@ export default function DashboardPage() {
               <div className="mt-3 flex gap-2">
                 <a href="/credits"><Button size="sm">Buy Credits</Button></a>
                 <a href="/product-generation"><Button size="sm" variant="outline">Generate</Button></a>
+                <Button size="sm" variant="outline" onClick={() => {
+                  // re-run effect
+                  if (user && session?.access_token) {
+                    (async () => {
+                      setLoading(true)
+                      try {
+                        const resp = await fetch('/api/profile/init', {
+                          method: 'POST',
+                          headers: { Authorization: `Bearer ${session.access_token}` },
+                        })
+                        if (!resp.ok) {
+                          const alt = await fetch('/api/profile/init', {
+                            method: 'GET',
+                            headers: { Authorization: `Bearer ${session.access_token}` },
+                          })
+                          const altData = await alt.json().catch(() => null)
+                          setTokens(altData?.profile?.tokens ?? null)
+                        } else {
+                          const data = await resp.json().catch(() => null)
+                          setTokens(data?.profile?.tokens ?? null)
+                        }
+                      } finally { setLoading(false) }
+                    })()
+                  }
+                }}>Refresh</Button>
               </div>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-4">

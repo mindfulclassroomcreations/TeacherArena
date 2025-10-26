@@ -19,44 +19,53 @@ export default function Layout({ children }: LayoutProps) {
     router.push('/login')
   }
 
-  // When opening the user menu, fetch current tokens via profile init endpoint
-  useEffect(() => {
-    const fetchTokens = async () => {
-      try {
-        if (!user) { setTokens(null); return }
-        setLoadingTokens(true)
-        // Get access token from AuthContext session
-        const token = session?.access_token
-        if (!token) { setTokens(null); return }
-        // Use POST to ensure profile exists and returns latest tokens
-        const resp = await fetch('/api/profile/init', {
-          method: 'POST',
+  // Fetch current tokens via profile init endpoint
+  const fetchTokens = async () => {
+    try {
+      if (!user) { setTokens(null); return }
+      setLoadingTokens(true)
+      // Get access token from AuthContext session
+      const token = session?.access_token
+      if (!token) { setTokens(null); return }
+      // Use POST to ensure profile exists and returns latest tokens
+      const resp = await fetch('/api/profile/init', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!resp.ok) {
+        // Fallback to GET in case POST is blocked
+        const alt = await fetch('/api/profile/init', {
+          method: 'GET',
           headers: { Authorization: `Bearer ${token}` },
         })
-        if (!resp.ok) {
-          // Fallback to GET in case POST is blocked
-          const alt = await fetch('/api/profile/init', {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          const altData = await alt.json().catch(() => null)
-          if (altData?.profile?.tokens != null) setTokens(altData.profile.tokens)
-          else setTokens(null)
-          return
-        }
-        const data = await resp.json().catch(() => null)
-        if (data?.profile?.tokens != null) setTokens(data.profile.tokens)
+        const altData = await alt.json().catch(() => null)
+        if (altData?.profile?.tokens != null) setTokens(altData.profile.tokens)
         else setTokens(null)
-      } catch {
-        // ignore errors
-      } finally {
-        setLoadingTokens(false)
+        return
       }
+      const data = await resp.json().catch(() => null)
+      if (data?.profile?.tokens != null) setTokens(data.profile.tokens)
+      else setTokens(null)
+    } catch {
+      // ignore errors
+    } finally {
+      setLoadingTokens(false)
     }
-    if (showUserMenu) {
+  }
+
+  // Prefetch tokens when user/session becomes available
+  useEffect(() => {
+    if (user && session?.access_token) {
       fetchTokens()
     }
-  }, [showUserMenu, user, session?.access_token])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, session?.access_token])
+
+  // Refresh when opening the user menu
+  useEffect(() => {
+    if (showUserMenu) fetchTokens()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showUserMenu])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -100,6 +109,7 @@ export default function Layout({ children }: LayoutProps) {
                             {loadingTokens ? '…' : (tokens != null ? tokens.toLocaleString() : '—')}
                           </span>
                         </div>
+                        <button onClick={fetchTokens} className="mt-2 text-xs text-blue-700 underline">Refresh</button>
                       </div>
                       <Link
                         href="/credits"
