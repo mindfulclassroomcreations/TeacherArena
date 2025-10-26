@@ -70,6 +70,14 @@ export default function AdminUsers() {
     // setCustomAmounts(prev => ({ ...prev, [id]: '' }))
   }
 
+  const applyCustomSet = async (id: string) => {
+    const raw = customAmounts[id]
+    const amt = raw ? parseInt(raw, 10) : 0
+    if (amt < 0 || Number.isNaN(amt)) return
+    setLoading(true)
+    try { await api('POST', { id, setTokens: amt }); await load() } finally { setLoading(false) }
+  }
+
   const removeUser = async (id: string) => {
     if (!confirm('Remove this user?')) return
     setLoading(true)
@@ -131,6 +139,7 @@ export default function AdminUsers() {
                       />
                       <Button size="sm" variant="outline" onClick={() => applyCustomAdd(u.id, 1)} disabled={loading}>Add</Button>
                       <Button size="sm" variant="danger" onClick={() => applyCustomAdd(u.id, -1)} disabled={loading}>Deduct</Button>
+                      <Button size="sm" variant="primary" onClick={() => applyCustomSet(u.id)} disabled={loading}>Set</Button>
                     </span>
                     <Button size="sm" variant="danger" onClick={() => removeUser(u.id)} disabled={loading}>Remove</Button>
                   </div>
