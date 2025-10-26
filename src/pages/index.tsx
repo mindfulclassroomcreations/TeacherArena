@@ -142,12 +142,37 @@ export default function Home() {
     }
     try {
       if (typeof window !== 'undefined') {
-        // Store the selected lessons and summary
+        // Store the selected lessons with product-specific keys for persistence
+        const lessonStorageKey = `ta_product_${selectedProductGroup}_${selectedProductSubPage}_lessons`
+        const summaryStorageKey = `ta_product_${selectedProductGroup}_${selectedProductSubPage}_summary`
+        
+        // Get existing lessons for this product sub-page (if any)
+        const existingLessonsStr = window.localStorage.getItem(lessonStorageKey)
+        const existingLessons = existingLessonsStr ? JSON.parse(existingLessonsStr) : []
+        
+        // Merge new lessons with existing ones (avoid duplicates based on standard_code and title)
+        const mergedLessons = [...existingLessons]
+        pendingLessonsForProduct.forEach((newLesson) => {
+          const isDuplicate = mergedLessons.some(
+            (existing) =>
+              (existing.standard_code === newLesson.standard_code &&
+                existing.title === newLesson.title) ||
+              (existing.name === newLesson.name &&
+                existing.standard_code === newLesson.standard_code)
+          )
+          if (!isDuplicate) {
+            mergedLessons.push(newLesson)
+          }
+        })
+        
+        // Store merged lessons
+        window.localStorage.setItem(lessonStorageKey, JSON.stringify(mergedLessons))
+        window.localStorage.setItem(summaryStorageKey, JSON.stringify(pendingProductSummary))
+        
+        // Also keep in temporary storage for product-generation page
         window.localStorage.setItem('ta_selected_lessons', JSON.stringify(pendingLessonsForProduct))
         window.localStorage.setItem('ta_selection_context', JSON.stringify(pendingProductSummary))
-        // Store the target category and sub-page
-        window.localStorage.setItem('ta_product_target_group', selectedProductGroup)
-        window.localStorage.setItem('ta_product_target_subpage', selectedProductSubPage)
+        
         // Navigate to the product page
         window.open(`/products/${selectedProductGroup}/${selectedProductSubPage}`, '_blank')
         setShowProductCategoryModal(false)
