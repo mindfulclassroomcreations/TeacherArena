@@ -42,6 +42,8 @@ export default function ProductTypePage() {
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [showLessonGenerateModal, setShowLessonGenerateModal] = useState(false)
   const [generatingLessonKey, setGeneratingLessonKey] = useState<string | null>(null)
+  const [sourceCategories, setSourceCategories] = useState<Set<string>>(new Set())
+  const [sourceSubPages, setSourceSubPages] = useState<Set<string>>(new Set())
 
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
@@ -69,6 +71,19 @@ export default function ProductTypePage() {
           try {
             const persistedLessons = JSON.parse(persistedData) as GroupedProductLesson[]
             setGroupedLessons(persistedLessons)
+            
+            // Extract categories and sub-pages from persisted lessons
+            const categories = new Set<string>()
+            const subPages = new Set<string>()
+            persistedLessons.forEach((group) => {
+              group.lessons.forEach((item) => {
+                categories.add(item.source.groupId.toUpperCase())
+                subPages.add(item.source.subPageId.toUpperCase())
+              })
+            })
+            setSourceCategories(categories)
+            setSourceSubPages(subPages)
+            
             setLoading(false)
             return
           } catch (e) {
@@ -136,6 +151,16 @@ export default function ProductTypePage() {
         if (grouped.length > 0) {
           saveLessonsToProductType(grouped)
         }
+
+        // Extract unique categories and sub-pages
+        const categories = new Set<string>()
+        const subPages = new Set<string>()
+        allLessons.forEach((item) => {
+          categories.add(item.source.groupId.toUpperCase())
+          subPages.add(item.source.subPageId.toUpperCase())
+        })
+        setSourceCategories(categories)
+        setSourceSubPages(subPages)
       } catch (e) {
         console.error('Error loading lessons:', e)
       }
@@ -239,10 +264,62 @@ export default function ProductTypePage() {
                 </button>
               </Link>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
               PRODUCT TYPE - {typeNumber}
             </h1>
-            <p className="text-gray-600">Lessons sent for this product type</p>
+            <p className="text-gray-600 mb-4">Lessons sent for this product type</p>
+
+            {/* Category and Sub-Page Navigation */}
+            {(sourceCategories.size > 0 || sourceSubPages.size > 0) && (
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Categories */}
+                  {sourceCategories.size > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-indigo-900 uppercase mb-2">📁 Source Categories</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from(sourceCategories).sort().map((category) => (
+                          <Link
+                            key={category}
+                            href={`/product-generation`}
+                          >
+                            <button className="px-3 py-1 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors text-sm font-medium">
+                              {category}
+                            </button>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-Pages */}
+                  {sourceSubPages.size > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-blue-900 uppercase mb-2">📄 Source Sub-Pages</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from(sourceSubPages).sort().map((subPage) => {
+                          // Extract group and number from subpage (e.g., "T-01" -> "t-01")
+                          const groupId = subPage.split('-')[0].toLowerCase()
+                          const pageNum = subPage.split('-')[1] || '01'
+                          const navUrl = `/products/${groupId}/${subPage.toLowerCase()}`
+                          
+                          return (
+                            <Link
+                              key={subPage}
+                              href={navUrl}
+                            >
+                              <button className="px-3 py-1 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-sm font-medium">
+                                {subPage}
+                              </button>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Product Type Details */}
