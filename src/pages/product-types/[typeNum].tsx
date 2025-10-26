@@ -214,8 +214,21 @@ export default function ProductTypePage() {
     }
   }
 
-  const handleGenerateLesson = (lessonKey: string) => {
+  const handleGenerateLesson = async (lessonKey: string) => {
     setGeneratingLessonKey(lessonKey)
+    const selected = getLessonByKey(lessonKey)
+    // If this is the supported case (Group A / A-02 / Type 02), generate immediately for a smoother UX
+    if (selected && selected.source.groupId === 'group-a' && selected.source.subPageId === 'a-02' && (String(typeNum) === '02' || String(typeNum) === '2')) {
+      try {
+        await generateTaskCardsDocx(selected.lesson, selected.source, String(typeNum))
+        setGeneratingLessonKey(null)
+        return
+      } catch (e: any) {
+        // Fall back to modal if generator rejects
+        alert(e?.message || 'Could not generate this lesson.')
+      }
+    }
+    // Otherwise, open modal to pick format
     setShowLessonGenerateModal(true)
   }
 
