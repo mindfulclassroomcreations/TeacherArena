@@ -1696,25 +1696,52 @@ export default function Home() {
                           {/* Lessons under this section */}
                           {Array.isArray(lessonsBySection[String(section.id || section.name || section.title || '')]) && lessonsBySection[String(section.id || section.name || section.title || '')].length > 0 && (
                             <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded p-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-sm font-semibold text-yellow-900">Lessons ({lessonsBySection[String(section.id || section.name || section.title || '')].length})</h4>
-                                <span className="text-[11px] text-yellow-800">Generated from sub-standards</span>
-                              </div>
-                              <div className="space-y-2">
-                                {lessonsBySection[String(section.id || section.name || section.title || '')].map((ls: any, idx: number) => (
-                                  <div key={idx} className="p-3 bg-white rounded border border-yellow-200">
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="flex-1">
-                                        <p className="font-medium text-gray-900">{ls.title || ls.name}</p>
-                                        {ls.description && <p className="text-xs text-gray-600 mt-1">{ls.description}</p>}
-                                      </div>
-                                      {ls.standard_code && (
-                                        <span className="text-[11px] font-mono text-yellow-800 bg-yellow-100 px-2 py-1 rounded">{ls.standard_code}</span>
+                              {(() => {
+                                const secKey = String(section.id || section.name || section.title || '')
+                                const sectionLessons = lessonsBySection[secKey] || []
+                                const subStandards = subStandardsBySection[secKey] || []
+                                const norm = (v: any) => String(v || '').trim().toLowerCase()
+                                const grouped = subStandards.map((ss: any, sidx: number) => {
+                                  const code = ss.code || `S${sidx + 1}`
+                                  const codeN = norm(code)
+                                  const items = sectionLessons.filter((ls: any) => norm(ls.standard_code || ls.code) === codeN)
+                                  return { ss, code, items }
+                                }).filter(g => g.items.length > 0)
+                                const total = sectionLessons.length
+                                return (
+                                  <>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="text-sm font-semibold text-yellow-900">Lessons ({total})</h4>
+                                      <span className="text-[11px] text-yellow-800">Grouped by sub-standard</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                      {grouped.length === 0 ? (
+                                        <p className="text-xs text-yellow-900">No lessons matched any sub-standard yet.</p>
+                                      ) : (
+                                        grouped.map((g, gi) => (
+                                          <div key={gi} className="bg-white rounded border border-yellow-200">
+                                            <div className="px-3 py-2 border-b border-yellow-200 flex items-center justify-between">
+                                              <div>
+                                                <p className="text-xs font-semibold text-yellow-900">{g.code}</p>
+                                                <p className="text-sm text-gray-900">{g.ss.title || g.ss.name}</p>
+                                              </div>
+                                              <span className="text-[11px] text-yellow-700">{g.items.length} lesson{g.items.length !== 1 ? 's' : ''}</span>
+                                            </div>
+                                            <div className="p-3 space-y-2">
+                                              {g.items.map((ls: any, li: number) => (
+                                                <div key={li} className="p-3 bg-yellow-25 rounded border border-yellow-100">
+                                                  <p className="font-medium text-gray-900">{ls.title || ls.name}</p>
+                                                  {ls.description && <p className="text-xs text-gray-600 mt-1">{ls.description}</p>}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))
                                       )}
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
+                                  </>
+                                )
+                              })()}
                             </div>
                           )}
                         </div>
