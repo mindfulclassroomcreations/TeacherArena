@@ -46,6 +46,7 @@ export default function Home() {
   const [selectedStateCurriculum, setSelectedStateCurriculum] = useState<any | null>(null)
   const [selectedFramework, setSelectedFramework] = useState<Item | null>(null)
   const [selectedGrade, setSelectedGrade] = useState<Item | null>(null)
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
   const [selectedStrand, setSelectedStrand] = useState<Strand | null>(null)
   const [selectedStrands, setSelectedStrands] = useState<Strand[]>([])
   
@@ -65,6 +66,7 @@ export default function Home() {
   const [stateStandardDetails, setStateStandardDetails] = useState<any | null>(null)
   const [loadingStateStandard, setLoadingStateStandard] = useState<string | null>(null)
   const [stateStandardCache, setStateStandardCache] = useState<Record<string, any>>({})
+  const [pendingStateContext, setPendingStateContext] = useState<{ region: string, curriculum: any } | null>(null)
 
   // Country list
   const countries = [
@@ -159,6 +161,7 @@ export default function Home() {
         type: 'frameworks',
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
+        region: selectedRegion || undefined,
         context: context
       })
       if (response.items) {
@@ -187,6 +190,7 @@ export default function Home() {
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework?.name,
+        region: selectedRegion || undefined,
         context: context
       })
       if (response.items) {
@@ -211,6 +215,7 @@ export default function Home() {
         subject: selectedSubject.name,
         framework: selectedFramework.name,
         grade: selectedGrade.name,
+        region: selectedRegion || undefined,
         totalLessonCount: parseInt(totalLessonCount) || 45
       })
       if (response.items && response.items[0]?.major_parts) {
@@ -236,6 +241,7 @@ export default function Home() {
         subject: selectedSubject?.name || '',
         framework: selectedFramework?.name || '',
         grade: selectedGrade?.name || '',
+        region: selectedRegion || undefined,
         strandCode: strand.strand_code,
         strandName: strand.strand_name,
         targetLessonCount: strand.target_lesson_count,
@@ -303,6 +309,7 @@ export default function Home() {
               subject: selectedSubject?.name || '',
               framework: selectedFramework?.name || '',
               grade: selectedGrade?.name || '',
+              region: selectedRegion || undefined,
               strandCode: strand.strand_code,
               strandName: strand.strand_name,
               targetLessonCount: strand.target_lesson_count,
@@ -414,13 +421,14 @@ export default function Home() {
   }
 
   // Step 2: Lazy-generate state-specific standard for selected subject
-  const handleViewStateStandard = async (regionName: string) => {
+  const handleViewStateStandard = async (regionName: string, curriculum?: any) => {
     if (!selectedCountry || !selectedSubject) return
     const cacheKey = `${selectedCountry}__${selectedSubject.name}__${regionName}`
     const cached = stateStandardCache[cacheKey]
     if (cached) {
       setStateStandardDetails(cached)
       setShowStateStandardModal(true)
+      if (curriculum) setPendingStateContext({ region: regionName, curriculum })
       return
     }
     setLoadingStateStandard(regionName)
@@ -435,6 +443,7 @@ export default function Home() {
         const details = response.items[0]
         setStateStandardDetails(details)
         setShowStateStandardModal(true)
+        if (curriculum) setPendingStateContext({ region: regionName, curriculum })
         setStateStandardCache((prev) => ({ ...prev, [cacheKey]: details }))
       } else {
         setError('No standard details found for this region.')
@@ -713,7 +722,7 @@ export default function Home() {
                                 className={`px-2 py-1 text-xs rounded border ${loadingStateStandard === state ? 'bg-blue-200 text-blue-900 border-blue-300' : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleViewStateStandard(state)
+                                  handleViewStateStandard(state, curriculum)
                                 }}
                               >
                                 {loadingStateStandard === state ? 'Loading…' : state}
@@ -1411,8 +1420,24 @@ export default function Home() {
             {stateStandardDetails.reference_note && (
               <p className="text-xs text-gray-500">{stateStandardDetails.reference_note}</p>
             )}
-            <div className="flex justify-end">
+            <div className="flex justify-between gap-3 pt-2">
               <Button variant="outline" onClick={() => setShowStateStandardModal(false)}>Close</Button>
+              <Button
+                onClick={() => {
+                  if (pendingStateContext) {
+                    setSelectedRegion(pendingStateContext.region)
+                    if (!selectedStateCurriculum) setSelectedStateCurriculum(pendingStateContext.curriculum)
+                    setCurrentStep(3)
+                    setShowStateStandardModal(false)
+                  } else if (stateStandardDetails?.region) {
+                    setSelectedRegion(stateStandardDetails.region)
+                    setCurrentStep(3)
+                    setShowStateStandardModal(false)
+                  }
+                }}
+              >
+                Use this state for next step
+              </Button>
             </div>
           </div>
         ) : (

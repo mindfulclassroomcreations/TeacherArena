@@ -100,11 +100,12 @@ OUTPUT
 `
         break
 
-      case 'frameworks':
+  case 'frameworks':
         userPrompt = `${sharedRules}
 TASK: Generate curriculum frameworks (or unit clusters) for:
 - Subject: "${subject}"
 - Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
 ${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
 
 REQUIREMENTS
@@ -119,12 +120,13 @@ OUTPUT
 `
         break
 
-      case 'grades':
+  case 'grades':
         userPrompt = `${sharedRules}
 TASK: Generate individual grade levels for:
 - Subject: "${subject}"
 - Framework: "${framework}"
 - Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
 ${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
 
 REQUIREMENTS
@@ -139,7 +141,7 @@ OUTPUT
 `
         break
 
-      case 'lesson-discovery':
+  case 'lesson-discovery':
         const finalTotalLessonCount = totalLessonCount || 45
         
         userPrompt = `${sharedRules}
@@ -149,6 +151,7 @@ INPUTS
 - Subject: "${subject}"
 - Framework: "${framework}"
 - Grade Level: "${grade}"
+${region ? `- Region/State: "${region}"` : ''}
 - Target Total Lesson Count: ${finalTotalLessonCount}
 
 GOAL
@@ -179,7 +182,7 @@ CONSTRAINTS
 `
         break
 
-      case 'lesson-generation-by-strand':
+  case 'lesson-generation-by-strand':
         const { strandCode, strandName, targetLessonCount, keyTopics, performanceExpectations } = req.body
         
         userPrompt = `${sharedRules}
@@ -189,6 +192,7 @@ INPUTS
 - Subject: "${subject}"
 - Framework: "${framework}"
 - Grade Level: "${grade}"
+${region ? `- Region/State: "${region}"` : ''}
 - Strand Code: "${strandCode}"
 - Strand Name: "${strandName}"
 - Target Lesson Count: ${targetLessonCount || 5}
@@ -265,7 +269,7 @@ SUBJECT-SPECIFIC GUIDANCE (Science)
 `
           : ''
 
-        userPrompt = `${sharedRules}
+  userPrompt = `${sharedRules}
 TASK: For the subject "${subject}" in ${country}, list curriculum standards groupings and ensure COMPLETE region coverage.
 
 ${requiredRegionsText ? `${requiredRegionsText}\n` : ''}
