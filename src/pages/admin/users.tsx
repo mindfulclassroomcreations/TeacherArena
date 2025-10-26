@@ -30,6 +30,7 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
+  const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({})
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -52,6 +53,21 @@ export default function AdminUsers() {
   const addTokens = async (id: string, delta: number) => {
     setLoading(true)
     try { await api('POST', { id, addTokens: delta }); await load() } finally { setLoading(false) }
+  }
+
+  const setCustomAmount = (id: string, value: string) => {
+    // allow empty string; otherwise keep only digits
+    const sanitized = value.replace(/[^0-9]/g, '')
+    setCustomAmounts(prev => ({ ...prev, [id]: sanitized }))
+  }
+
+  const applyCustomAdd = async (id: string, sign: 1 | -1) => {
+    const raw = customAmounts[id]
+    const amt = raw ? parseInt(raw, 10) : 0
+    if (!amt || amt <= 0) return
+    await addTokens(id, sign * amt)
+    // keep the amount for convenience; comment next line to clear after action
+    // setCustomAmounts(prev => ({ ...prev, [id]: '' }))
   }
 
   const removeUser = async (id: string) => {
@@ -102,6 +118,20 @@ export default function AdminUsers() {
                     <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 1000)} disabled={loading}>+1K</Button>
                     <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 5000)} disabled={loading}>+5K</Button>
                     <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 10000)} disabled={loading}>+10K</Button>
+                    <span className="inline-flex items-center gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-20 border border-gray-300 rounded px-2 py-1"
+                        placeholder="Amt"
+                        value={customAmounts[u.id] ?? ''}
+                        onChange={(e) => setCustomAmount(u.id, e.target.value)}
+                        disabled={loading}
+                      />
+                      <Button size="sm" variant="outline" onClick={() => applyCustomAdd(u.id, 1)} disabled={loading}>Add</Button>
+                      <Button size="sm" variant="danger" onClick={() => applyCustomAdd(u.id, -1)} disabled={loading}>Deduct</Button>
+                    </span>
                     <Button size="sm" variant="danger" onClick={() => removeUser(u.id)} disabled={loading}>Remove</Button>
                   </div>
                 </td>
