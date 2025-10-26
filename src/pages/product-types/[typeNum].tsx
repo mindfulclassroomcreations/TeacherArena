@@ -40,35 +40,6 @@ export default function ProductTypePage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingLessons, setEditingLessons] = useState<EditingLesson>({})
   const [showGenerateModal, setShowGenerateModal] = useState(false)
-  const categoryButtons = React.useMemo(() => {
-    const map = new Map<string, Set<string>>()
-    groupedLessons.forEach((g) =>
-      g.lessons.forEach((it) => {
-        if (!map.has(it.source.groupId)) map.set(it.source.groupId, new Set<string>())
-        map.get(it.source.groupId)!.add(it.source.subPageId)
-      })
-    )
-    return Array.from(map.entries()).map(([groupId, subs]) => ({
-      groupId,
-      firstSubPageId: Array.from(subs).sort()[0],
-    }))
-  }, [groupedLessons])
-
-  const subPageButtons = React.useMemo(() => {
-    const seen = new Set<string>()
-    const arr: Array<{ groupId: string; subPageId: string }> = []
-    groupedLessons.forEach((g) =>
-      g.lessons.forEach((it) => {
-        const key = `${it.source.groupId}|${it.source.subPageId}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          arr.push({ groupId: it.source.groupId, subPageId: it.source.subPageId })
-        }
-      })
-    )
-    arr.sort((a, b) => `${a.groupId}-${a.subPageId}`.localeCompare(`${b.groupId}-${b.subPageId}`))
-    return arr
-  }, [groupedLessons])
   const [showLessonGenerateModal, setShowLessonGenerateModal] = useState(false)
   const [generatingLessonKey, setGeneratingLessonKey] = useState<string | null>(null)
 
@@ -231,32 +202,37 @@ export default function ProductTypePage() {
 
   const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
 
-  const formatGroupLabel = (groupId: string) => {
-    // Expecting ids like "group-t" -> "Group T"
-    const parts = groupId.split('-')
-    const suffix = parts[1] ? parts[1].toUpperCase() : groupId.toUpperCase()
-    return `Group ${suffix}`
-  }
+  // Unique Categories (by groupId) and Sub-Pages present in this product type
+  const uniqueCategories = React.useMemo(() => {
+    const map = new Map<string, { groupId: string; subPageId: string }>()
+    groupedLessons.forEach((g) =>
+      g.lessons.forEach((item) => {
+        if (!map.has(item.source.groupId)) {
+          // Use the first encountered subPageId as the landing page for the category
+          map.set(item.source.groupId, {
+            groupId: item.source.groupId,
+            subPageId: item.source.subPageId,
+          })
+        }
+      })
+    )
+    return Array.from(map.values())
+  }, [groupedLessons])
 
-  const formatSubPageLabel = (subPageId: string) => {
-    // Expecting ids like "t-01" -> "T - 01"
-    const parts = subPageId.split('-')
-    if (parts.length === 2) return `${parts[0].toUpperCase()} - ${parts[1]}`
-    return subPageId.toUpperCase()
-  }
-
-  const goToCategory = (groupId: string) => {
-    const entry = categoryButtons.find((c) => c.groupId === groupId)
-    if (entry && entry.firstSubPageId) {
-      router.push(`/products/${groupId}/${entry.firstSubPageId}`)
-    } else {
-      router.push('/product-generation')
-    }
-  }
-
-  const goToSubPage = (groupId: string, subPageId: string) => {
-    router.push(`/products/${groupId}/${subPageId}`)
-  }
+  const uniqueSubPages = React.useMemo(() => {
+    const seen = new Set<string>()
+    const list: Array<{ groupId: string; subPageId: string }> = []
+    groupedLessons.forEach((g) =>
+      g.lessons.forEach((item) => {
+        const key = `${item.source.groupId}|${item.source.subPageId}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          list.push({ groupId: item.source.groupId, subPageId: item.source.subPageId })
+        }
+      })
+    )
+    return list
+  }, [groupedLessons])
 
   if (!typeNum) {
     return (
@@ -299,45 +275,6 @@ export default function ProductTypePage() {
               PRODUCT TYPE - {typeNumber}
             </h1>
             <p className="text-gray-600">Lessons sent for this product type</p>
-            {/* Top navigation buttons for Categories and Sub-Pages */}
-            {totalLessons > 0 && (
-              <div className="mt-4 space-y-3">
-                {categoryButtons.length > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Categories</p>
-                    <div className="flex flex-wrap gap-2">
-                      {categoryButtons.map((c) => (
-                        <button
-                          key={c.groupId}
-                          onClick={() => goToCategory(c.groupId)}
-                          className="px-3 py-1.5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm"
-                          title={`Go to ${formatGroupLabel(c.groupId)}`}
-                        >
-                          {formatGroupLabel(c.groupId)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {subPageButtons.length > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Sub-Pages</p>
-                    <div className="flex flex-wrap gap-2">
-                      {subPageButtons.map((s) => (
-                        <button
-                          key={`${s.groupId}-${s.subPageId}`}
-                          onClick={() => goToSubPage(s.groupId, s.subPageId)}
-                          className="px-3 py-1.5 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm"
-                          title={`Go to ${formatSubPageLabel(s.subPageId)}`}
-                        >
-                          {formatSubPageLabel(s.subPageId)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Product Type Details */}
@@ -353,7 +290,7 @@ export default function ProductTypePage() {
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-blue-900 mb-3">Quick Actions</h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <button
                   onClick={() => setShowGenerateModal(true)}
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
@@ -363,42 +300,6 @@ export default function ProductTypePage() {
                 <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
                   📥 Download
                 </button>
-
-                {totalLessons > 0 && categoryButtons.length > 0 && (
-                  <div className="pt-2">
-                    <p className="text-sm font-semibold text-blue-900 mb-2">Categories</p>
-                    <div className="flex flex-wrap gap-2">
-                      {categoryButtons.map((c) => (
-                        <button
-                          key={`qa-cat-${c.groupId}`}
-                          onClick={() => goToCategory(c.groupId)}
-                          className="px-3 py-1.5 rounded-full bg-white border border-blue-300 text-blue-800 hover:bg-blue-100 text-xs font-medium"
-                          title={`Go to ${formatGroupLabel(c.groupId)}`}
-                        >
-                          {formatGroupLabel(c.groupId)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {totalLessons > 0 && subPageButtons.length > 0 && (
-                  <div className="pt-2">
-                    <p className="text-sm font-semibold text-blue-900 mb-2">Sub-Pages</p>
-                    <div className="flex flex-wrap gap-2">
-                      {subPageButtons.map((s) => (
-                        <button
-                          key={`qa-sub-${s.groupId}-${s.subPageId}`}
-                          onClick={() => goToSubPage(s.groupId, s.subPageId)}
-                          className="px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs font-medium"
-                          title={`Go to ${formatSubPageLabel(s.subPageId)}`}
-                        >
-                          {formatSubPageLabel(s.subPageId)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -411,6 +312,41 @@ export default function ProductTypePage() {
               </ul>
             </div>
           </div>
+
+          {/* Quick Navigation */}
+          {(uniqueCategories.length > 0 || uniqueSubPages.length > 0) && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Quick Navigation</h3>
+              {uniqueCategories.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Categories</p>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueCategories.map(({ groupId, subPageId }) => (
+                      <Link key={groupId} href={`/products/${groupId}/${subPageId}`}>
+                        <button className="px-3 py-1.5 text-sm rounded-full bg-purple-600 text-white hover:bg-purple-700">
+                          {groupId.toUpperCase()}
+                        </button>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {uniqueSubPages.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Sub-Pages</p>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueSubPages.map(({ groupId, subPageId }) => (
+                      <Link key={`${groupId}-${subPageId}`} href={`/products/${groupId}/${subPageId}`}>
+                        <button className="px-3 py-1.5 text-sm rounded-full bg-blue-600 text-white hover:bg-blue-700">
+                          {subPageId.toUpperCase()}
+                        </button>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Generate Product Modal */}
           {showGenerateModal && (
