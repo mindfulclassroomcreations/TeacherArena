@@ -242,7 +242,13 @@ export default function Home() {
           strand_code: strand.strand_code,
           strand_name: strand.strand_name
         }))
-        setLessons(tagged)
+        // Append to any existing lessons instead of overwriting
+        setLessons((prev) => {
+          // de-duplicate by strand_code + title/name to avoid duplicates
+          const existingKeys = new Set(prev.map((l: any) => `${l.strand_code}__${l.title || l.name}`))
+          const deduped = tagged.filter((l: any) => !existingKeys.has(`${l.strand_code}__${l.title || l.name}`))
+          return [...prev, ...deduped]
+        })
         setCurrentStep(6)
         setSuccess(`Generated ${response.items.length} lessons!`)
         setTimeout(() => setSuccess(null), 3000)
@@ -276,36 +282,73 @@ export default function Home() {
     setError(null)
     setSelectedStrand(selectedStrands[0] || null)
     const allLessons: any[] = []
+    const failed: { code: string, name: string }[] = []
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
     try {
       for (const strand of selectedStrands) {
-        try {
-          const response = await generateContent({
-            type: 'lesson-generation-by-strand',
-            subject: selectedSubject?.name || '',
-            framework: selectedFramework?.name || '',
-            grade: selectedGrade?.name || '',
-            strandCode: strand.strand_code,
-            strandName: strand.strand_name,
-            targetLessonCount: strand.target_lesson_count,
-            keyTopics: strand.key_topics,
-            performanceExpectations: strand.performance_expectations
-          })
-          if (response.items) {
-            const tagged = response.items.map((it: any) => ({
-              ...it,
-              strand_code: strand.strand_code,
-              strand_name: strand.strand_name
-            }))
-            allLessons.push(...tagged)
+        // up to 2 retries per strand, with brief backoff to avoid rate limits
+        let attempt = 0
+        let successForStrand = false
+        while (attempt < 2 && !successForStrand) {
+          try {
+            const response = await generateContent({
+              type: 'lesson-generation-by-strand',
+              subject: selectedSubject?.name || '',
+              framework: selectedFramework?.name || '',
+              grade: selectedGrade?.name || '',
+              strandCode: strand.strand_code,
+              strandName: strand.strand_name,
+              targetLessonCount: strand.target_lesson_count,
+              keyTopics: strand.key_topics,
+              performanceExpectations: strand.performance_expectations
+            })
+            if (response.items && Array.isArray(response.items)) {
+              const tagged = response.items.map((it: any) => ({
+                ...it,
+                strand_code: strand.strand_code,
+                strand_name: strand.strand_name
+              }))
+              allLessons.push(...tagged)
+              // also update incrementally so user sees progress
+              setLessons((prev: any[]) => {
+                const existingKeys = new Set(prev.map((l: any) => `${l.strand_code}__${l.title || l.name}`))
+                const deduped = tagged.filter((l: any) => !existingKeys.has(`${l.strand_code}__${l.title || l.name}`))
+                return [...prev, ...deduped]
+              })
+              successForStrand = true
+            } else {
+              throw new Error('No items returned')
+            }
+          } catch (e) {
+            attempt += 1
+            if (attempt >= 2) {
+              failed.push({ code: strand.strand_code, name: strand.strand_name })
+            } else {
+              // brief pause before retry
+              await sleep(600)
+            }
           }
-        } catch (e) {
-          // continue with next strand
         }
+        // slight delay between strands to reduce provider rate limiting
+        await sleep(400)
       }
       if (allLessons.length > 0) {
-        setLessons(allLessons)
+        // final normalize to ensure state has all accumulated lessons
+        setLessons((prev: any[]) => {
+          const existingKeys = new Set(prev.map((l: any) => `${l.strand_code}__${l.title || l.name}`))
+          const newKeys = new Set(allLessons.map((l: any) => `${l.strand_code}__${l.title || l.name}`))
+          const missing = allLessons.filter((l: any) => !existingKeys.has(`${l.strand_code}__${l.title || l.name}`))
+        
+          // If prev already contains all, just return prev; else append missing
+          if (missing.length === 0 && newKeys.size > 0) return prev
+          return [...prev, ...missing]
+        })
         setCurrentStep(6)
-        setSuccess(`Generated ${allLessons.length} lessons across ${selectedStrands.length} strands!`)
+        if (failed.length > 0) {
+          setSuccess(`Generated ${allLessons.length} lessons. ${failed.length} strand(s) failed.`)
+        } else {
+          setSuccess(`Generated ${allLessons.length} lessons across ${selectedStrands.length} strands!`)
+        }
         setTimeout(() => setSuccess(null), 3000)
       } else {
         setError('No lessons were generated. Please try again.')
