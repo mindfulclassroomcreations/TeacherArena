@@ -17,6 +17,29 @@ const client = new OpenAI({
 const PROMPT_ID = 'pmpt_68fa404d58b08190a2e2c32770b4f59806857d16f04d704a'
 const LESSON_PROMPT_ID = 'pmpt_68fafd15edc08197806351f71c1b39cb086c40b5fe347771'
 
+// Lightweight normalizer to preserve official code punctuation and fix common NGSS-style hyphen omissions
+function normalizeStandardCode(input: string | undefined | null): string {
+  const raw = String(input || '').trim()
+  if (!raw) return ''
+  const up = raw.toUpperCase()
+  // If already has a hyphen after HS/MS or grade number, keep as-is
+  if (/^(HS|MS|K|[1-9]|1[0-2])-/.test(up)) return raw
+  // Insert missing hyphen for NGSS-style DCI identifiers without the hyphen (e.g., HSLS1.A -> HS-LS1.A)
+  const m1 = up.match(/^(HS|MS)(LS|PS|ESS|ETS)(\d)(\.[A-Z])?$/)
+  if (m1) {
+    const fixed = `${m1[1]}-${m1[2]}${m1[3]}${m1[4] || ''}`
+    return fixed
+  }
+  // K-12 numeric prefixes without hyphen, e.g., 3ESS2.C -> 3-ESS2.C
+  const m2 = up.match(/^(K|[1-9]|1[0-2])(LS|PS|ESS|ETS)(\d)(\.[A-Z])?$/)
+  if (m2) {
+    const fixed = `${m2[1]}-${m2[2]}${m2[3]}${m2[4] || ''}`
+    return fixed
+  }
+  // Otherwise, return original untouched to avoid breaking state-specific formats (TEKS, SOL, etc.)
+  return raw
+}
+
 type ResponseData = {
   success?: boolean
   items?: any[]
@@ -104,6 +127,11 @@ REQUIREMENTS
 - Base sub-standards strictly on the official curriculum/state standard for the given country/region.
 - Prefer official government or state education websites (e.g., TEKS, SOL, NGSS-aligned state pages) as the reference basis.
 - Do NOT invent standards; mirror real structure/names where possible.
+
+CODE FORMAT RULES
+- Preserve official punctuation and separators in codes (hyphens and dots). Do NOT drop hyphens.
+- If the framework is NGSS-style (or a state adoption like NYSSLS, MA STE), use DCI-style identifiers when applicable, e.g., "HS-LS1.A", "MS-PS2.B", "3-ESS2.C" (NOT "HSLS1.A").
+- If the framework uses state-specific formats (e.g., TEKS, SOL), follow those exactly and do not convert formats.
 
 OUTPUT
 [
@@ -442,6 +470,7 @@ REQUIREMENTS
 - Align to the grade level and the sub-standard referenced via standard_code
 - Provide a lesson_code for each lesson. Compose it using the sub-standard code plus a short sequence (e.g., CODE-L01, CODE-L02). Do NOT claim it is an official state code; it is a teacher-facing lesson identifier aligned to the standard.
 - Base topic alignment and naming on official curriculum/state standards where possible; do not invent standard codes beyond the provided sub-standard codes.
+- CODE FORMAT RULES: Preserve hyphens and dots in codes exactly as in the official framework. For NGSS-style identifiers, use forms like "HS-LS1.A" (NOT "HSLS1.A").
 `
         break
 
@@ -520,13 +549,17 @@ REQUIREMENTS
         return res.status(500).json({ error: 'AI did not return an array of lessons' })
       }
 
-      items = items.map((item: any, index: number) => ({
-        name: item.title || item.name || `Lesson ${index + 1}`,
-        title: item.title || item.name || `Lesson ${index + 1}`,
-        description: item.description || '',
-        standard_code: item.standard_code || item.code || '',
-        lesson_code: item.lesson_code || (item.standard_code ? `${item.standard_code}-L${String(index + 1).padStart(2, '0')}` : `L${String(index + 1).padStart(2, '0')}`)
-      }))
+      items = items.map((item: any, index: number) => {
+        const std = normalizeStandardCode(item.standard_code || item.code || '')
+        const lessonCode = item.lesson_code || (std ? `${std}-L${String(index + 1).padStart(2, '0')}` : `L${String(index + 1).padStart(2, '0')}`)
+        return {
+          name: item.title || item.name || `Lesson ${index + 1}`,
+          title: item.title || item.name || `Lesson ${index + 1}`,
+          description: item.description || '',
+          standard_code: std,
+          lesson_code: lessonCode
+        }
+      })
 
       return res.status(200).json({
         success: true,
@@ -542,7 +575,7 @@ REQUIREMENTS
       }
 
       items = items.map((item: any, index: number) => ({
-        code: item.code || item.standard_code || `S${index + 1}`,
+        code: normalizeStandardCode(item.code || item.standard_code || `S${index + 1}`),
         name: item.name || item.title || `Sub-standard ${index + 1}`,
         title: item.name || item.title,
         description: item.description || ''
