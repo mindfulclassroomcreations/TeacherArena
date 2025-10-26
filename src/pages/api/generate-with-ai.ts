@@ -253,16 +253,29 @@ REQUIREMENTS:
           requiredRegionsText = `REQUIRED REGIONS (United Kingdom: 4 Countries)\n${ukRegions.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
         }
 
+        const subjectLower = (subject || '').toLowerCase()
+        const subjectSpecific = subjectLower.includes('science')
+          ? `
+SUBJECT-SPECIFIC GUIDANCE (Science)
+- USA: Reflect NGSS (Next Generation Science Standards) adoption/adaptation where applicable, and name state-specific standards explicitly (e.g., "Texas Essential Knowledge and Skills (TEKS) – Science", "Virginia Standards of Learning (SOL) – Science", "New York State Science Learning Standards (NYSSLS)", "Massachusetts Science and Technology/Engineering (STE) Standards", "Florida NGSSS Science").
+- Canada: Use official provincial/territorial science curriculum names (e.g., "Ontario Science Curriculum", "BC Science K–12", "Alberta Science K–12", "Programme de formation – Science et technologie (QC)").
+- Australia: Use "Australian Curriculum: Science (ACARA)" and state syllabus names (e.g., "NSW Science K–10 Syllabus", "Victorian Curriculum: Science").
+- UK: Name per-country frameworks (e.g., "National Curriculum – Science (England)", "Curriculum for Excellence – Sciences (Scotland)", "Curriculum for Wales – Science and Technology", "Northern Ireland Science & Technology").
+- Prefer the subject name within curriculum_name (e.g., include "Science").
+`
+          : ''
+
         userPrompt = `${sharedRules}
 TASK: For the subject "${subject}" in ${country}, list curriculum standards groupings and ensure COMPLETE region coverage.
 
 ${requiredRegionsText ? `${requiredRegionsText}\n` : ''}
+${subjectSpecific}
 
 REQUIREMENTS
-- Consider the selected subject when grouping (e.g., Math, Science, ELA variants per region).
+- Consider the selected subject when grouping (use subject-specific official names where possible).
 - Group regions that share the same curriculum into a single object.
 - Each object must include: curriculum_name (string), states (string[]), description (string).
-- Include ALL regions for ${country}. If a region has no distinct curriculum for this subject, include it under a grouping with curriculum_name like "No special curriculum (Subject)" and a brief description.
+- Include ALL regions for ${country}. If a region has no distinct curriculum for this subject, include it under a grouping with curriculum_name like "No special curriculum (${subject})" and a brief description.
 - SORT ORDER: Sort the array by the number of regions in each grouping (states.length) DESC so the most common curricula appear first. Place the "No special curriculum" grouping last.
 - Avoid duplicates: the union of all "states" arrays MUST cover each required region exactly once.
 - Provide 3–12 groupings depending on ${country}.
@@ -270,9 +283,9 @@ REQUIREMENTS
 OUTPUT
 [
   {
-    "curriculum_name": "Common Core State Standards (CCSS)",
+    "curriculum_name": "Common Core State Standards (CCSS) – Science",
     "states": ["California", "New York"],
-    "description": "Discipline-specific learning standards adopted or adapted by multiple states."
+    "description": "Science learning standards adopted or adapted by multiple states (discipline core ideas, practices, and crosscutting concepts)."
   }
 ]
 `
@@ -371,6 +384,17 @@ OUTPUT
       if (!Array.isArray(items)) {
         return res.status(500).json({ error: 'AI did not return an array of state curricula' })
       }
+
+      // Sort by number of states descending, keep "No special curriculum" last if present
+      items = items.slice().sort((a, b) => {
+        const aNo = String(a.curriculum_name || '').toLowerCase().includes('no special curriculum')
+        const bNo = String(b.curriculum_name || '').toLowerCase().includes('no special curriculum')
+        if (aNo && !bNo) return 1
+        if (!aNo && bNo) return -1
+        const aLen = Array.isArray(a.states) ? a.states.length : 0
+        const bLen = Array.isArray(b.states) ? b.states.length : 0
+        return bLen - aLen
+      })
 
       // items already have curriculum_name, states, and description
       return res.status(200).json({
