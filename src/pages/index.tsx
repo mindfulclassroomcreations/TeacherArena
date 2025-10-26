@@ -1613,6 +1613,11 @@ export default function Home() {
                     (s.id && section.id && s.id === section.id) ||
                     ((s.name || s.title) && (section.name || section.title) && (s.name || s.title) === (section.name || section.title))
                   )
+                  const secKey = String(section.id || section.name || section.title || '')
+                  const isGenSubsLoading = loadingSectionKey === secKey
+                  const isSecLessonsLoading = loadingLessonsSectionKey === secKey
+                  const isSelectedLessonsLoading = loadingSelectedLessonsSecKey === secKey
+                  const anySecLoading = isGenSubsLoading || isSecLessonsLoading || isSelectedLessonsLoading
                   return (
                   <div
                     key={section.id || index}
@@ -1662,11 +1667,21 @@ export default function Home() {
                         <div className="mt-4">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-sm font-semibold text-gray-900">Sub-standards</h4>
+                            {(isSecLessonsLoading || isSelectedLessonsLoading) && (
+                              <span className="ml-2 inline-flex items-center text-xs text-blue-800 bg-blue-100 px-2 py-1 rounded">
+                                <svg className="animate-spin mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Generating lessons…
+                              </span>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={(e) => { e.stopPropagation(); handleGenerateSubStandards(section) }}
-                              isLoading={loadingSectionKey === String(section.id || section.name || section.title || '')}
+                              isLoading={isGenSubsLoading}
+                              className={isGenSubsLoading ? 'animate-pulse ring-2 ring-blue-300' : ''}
                             >
                               Generate
                             </Button>
@@ -1702,7 +1717,7 @@ export default function Home() {
                                     const composite = `${secKey}__${subKey}`
                                     const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : '')
                                     return (
-                                    <tr key={idx} className="border-b border-gray-100 hover:bg-white">
+                                    <tr key={idx} className={`border-b border-gray-100 hover:bg-white ${loadingSingleLessonsKey === composite ? 'animate-pulse bg-yellow-50' : ''}`}>
                                       <td className="py-2 px-3">
                                         <input
                                           type="checkbox"
@@ -1731,12 +1746,14 @@ export default function Home() {
                                               setLessonsPerSingleSub((prev) => ({ ...prev, [composite]: Number.isFinite(v) && v > 0 ? v : 1 }))
                                             }}
                                             className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                                            disabled={loadingSingleLessonsKey === composite || isSelectedLessonsLoading || isSecLessonsLoading}
                                           />
                                           <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={(e) => { e.stopPropagation(); handleGenerateLessonsForSingleSubStandard(section, ss, idx) }}
                                             isLoading={isLoading && loadingSingleLessonsKey === composite}
+                                            className={loadingSingleLessonsKey === composite ? 'animate-pulse ring-2 ring-blue-300' : ''}
                                           >
                                             Generate
                                           </Button>
@@ -1761,7 +1778,8 @@ export default function Home() {
                                   size="sm"
                                   variant="primary"
                                   onClick={(e) => { e.stopPropagation(); handleGenerateLessonsForSelectedSubStandards(section) }}
-                                  isLoading={isLoading && loadingSelectedLessonsSecKey === String(section.id || section.name || section.title || '')}
+                                  isLoading={isLoading && isSelectedLessonsLoading}
+                                  className={isSelectedLessonsLoading ? 'animate-pulse ring-2 ring-blue-300' : ''}
                                   disabled={(() => {
                                     const secKey = String(section.id || section.name || section.title || '')
                                     return Object.values(selectedSubStandardsBySection[secKey] || {}).filter(Boolean).length === 0
@@ -1791,6 +1809,7 @@ export default function Home() {
                                     placeholder="e.g., 10"
                                     min="1"
                                     max="50"
+                                    disabled={isSecLessonsLoading || isSelectedLessonsLoading}
                                   />
                                   {/* No default value; user must set explicitly */}
                                 </div>
@@ -1799,7 +1818,8 @@ export default function Home() {
                                     size="sm"
                                     variant="primary"
                                     onClick={(e) => { e.stopPropagation(); handleGenerateLessonsFromSubStandards(section) }}
-                                    isLoading={isLoading && loadingLessonsSectionKey === String(section.id || section.name || section.title || '')}
+                                    isLoading={isLoading && isSecLessonsLoading}
+                                    className={isSecLessonsLoading ? 'animate-pulse ring-2 ring-blue-300' : ''}
                                   >
                                     Generate Lessons from Sub-standards
                                   </Button>
