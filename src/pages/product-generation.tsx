@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
+import ProtectedRoute from '@/components/ProtectedRoute'
 import Button from '@/components/Button'
 
 interface LessonItem {
@@ -40,6 +41,7 @@ export default function ProductGenerationPage() {
   const title = '🛍️ Product Generation'
 
   return (
+    <ProtectedRoute>
     <Layout>
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
@@ -161,5 +163,6 @@ export default function ProductGenerationPage() {
         </div>
       </div>
     </Layout>
+    </ProtectedRoute>
   )
 }

@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react'
+import React, { ReactNode, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/router'
@@ -8,14 +8,42 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, signOut } = useAuth()
+  const { user, session, signOut } = useAuth()
   const router = useRouter()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [tokens, setTokens] = useState<number | null>(null)
+  const [loadingTokens, setLoadingTokens] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
     router.push('/login')
   }
+
+  // When opening the user menu, fetch current tokens via profile init endpoint
+  useEffect(() => {
+    const fetchTokens = async () => {
+      try {
+        if (!user) { setTokens(null); return }
+        setLoadingTokens(true)
+        // Get access token from supabase client through AuthContext session if needed
+        // We avoid importing supabase here; rely on server to accept cookie/session when possible
+        const token = session?.access_token
+        const resp = await fetch('/api/profile/init', { 
+          method: 'GET', 
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        })
+        const data = await resp.json()
+        if (data?.profile?.tokens != null) setTokens(data.profile.tokens)
+      } catch {
+        // ignore errors
+      } finally {
+        setLoadingTokens(false)
+      }
+    }
+    if (showUserMenu) {
+      fetchTokens()
+    }
+  }, [showUserMenu, user])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,7 +81,19 @@ export default function Layout({ children }: LayoutProps) {
                       <div className="px-4 py-2 border-b border-gray-200">
                         <p className="text-sm font-medium text-gray-900">{user.user_metadata?.full_name || 'User'}</p>
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-xs text-gray-600">Tokens</span>
+                          <span className="text-xs font-mono text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                            {loadingTokens ? '…' : (tokens != null ? tokens.toLocaleString() : '—')}
+                          </span>
+                        </div>
                       </div>
+                      <Link
+                        href="/credits"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        Buy Credits
+                      </Link>
                       <Link
                         href="/dashboard"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"

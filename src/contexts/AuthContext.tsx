@@ -45,6 +45,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe()
   }, [])
 
+  // Initialize profile on login (first session) to ensure tokens/role row exists
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const token = session?.access_token
+        if (!token) return
+        await fetch('/api/profile/init', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        // Ignore result; UI components can fetch profile when needed
+      } catch {
+        // no-op: profile init will be retried on demand
+      }
+    }
+    init()
+  }, [session?.access_token])
+
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
       const { data, error } = await supabase.auth.signUp({

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import Layout from '@/components/Layout'
+import ProtectedRoute from '@/components/ProtectedRoute'
 import Button from '@/components/Button'
 import Card from '@/components/Card'
 import Input from '@/components/Input'
@@ -1070,6 +1071,7 @@ export default function Home() {
   }
 
   return (
+    <ProtectedRoute>
     <Layout>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -2663,5 +2665,6 @@ export default function Home() {
       {/* Getting Started Guide - Removed */}
       </div>
     </Layout>
+    </ProtectedRoute>
   )
 }
