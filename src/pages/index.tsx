@@ -54,6 +54,8 @@ export default function Home() {
   const [loadingLessonsSectionKey, setLoadingLessonsSectionKey] = useState<string | null>(null)
   const [lessonsPerSingleSub, setLessonsPerSingleSub] = useState<Record<string, number>>({})
   const [loadingSingleLessonsKey, setLoadingSingleLessonsKey] = useState<string | null>(null)
+  const [selectedSubStandardsBySection, setSelectedSubStandardsBySection] = useState<Record<string, Record<string, boolean>>>({})
+  const [loadingSelectedLessonsSecKey, setLoadingSelectedLessonsSecKey] = useState<string | null>(null)
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
   const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
   const [selectedCurriculumSections, setSelectedCurriculumSections] = useState<any[]>([])
@@ -721,6 +723,101 @@ export default function Home() {
       setIsLoading(false)
       setLoadingSingleLessonsKey(null)
     }
+  }
+
+  // Toggle selection for a single sub-standard within a section
+  const toggleSubStandardSelection = (section: any, subStandard: any, idx: number) => {
+    const secKey = String(section.id || section.name || section.title || '')
+    const subKey = String(subStandard.code || `S${idx + 1}`)
+    const composite = `${secKey}__${subKey}`
+    setSelectedSubStandardsBySection((prev) => {
+      const current = { ...(prev[secKey] || {}) }
+      current[composite] = !current[composite]
+      return { ...prev, [secKey]: current }
+    })
+  }
+
+  const toggleSelectAllSubStandards = (section: any) => {
+    const secKey = String(section.id || section.name || section.title || '')
+    const subs: any[] = subStandardsBySection[secKey] || []
+    const allSelected = Object.values(selectedSubStandardsBySection[secKey] || {}).filter(Boolean).length === subs.length && subs.length > 0
+    setSelectedSubStandardsBySection((prev) => {
+      const nextMap: Record<string, boolean> = {}
+      if (!allSelected) {
+        subs.forEach((ss: any, idx: number) => {
+          const subKey = String(ss.code || `S${idx + 1}`)
+          const composite = `${secKey}__${subKey}`
+          nextMap[composite] = true
+        })
+      }
+      return { ...prev, [secKey]: nextMap }
+    })
+  }
+
+  // Generate lessons for multiple selected sub-standards (per-row counts)
+  const handleGenerateLessonsForSelectedSubStandards = async (section: any) => {
+    const secKey = String(section.id || section.name || section.title || '')
+    const subs: any[] = subStandardsBySection[secKey] || []
+    const selectedMap = selectedSubStandardsBySection[secKey] || {}
+    const selectedList = subs
+      .map((ss, idx) => ({ ss, idx, code: String(ss.code || `S${idx + 1}`), composite: `${secKey}__${String(ss.code || `S${idx + 1}`)}` }))
+      .filter(({ composite }) => !!selectedMap[composite])
+
+    if (selectedList.length === 0) {
+      setError('Please select at least one sub-standard.')
+      return
+    }
+
+    // Validate counts present for each selected sub-standard
+    for (const item of selectedList) {
+      const per = lessonsPerSingleSub[item.composite]
+      if (!Number.isFinite(per as any) || (per as any) <= 0) {
+        setError(`Please set a lesson amount for sub-standard ${item.code} before generating.`)
+        return
+      }
+    }
+
+    setIsLoading(true)
+    setLoadingSelectedLessonsSecKey(secKey)
+    setError(null)
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    let total = 0
+    for (const item of selectedList) {
+      try {
+        const per = Math.max(1, Number(lessonsPerSingleSub[item.composite]))
+        const response = await generateContent({
+          type: 'lessons-by-substandards' as any,
+          country: selectedCountry || undefined,
+          subject: selectedSubject?.name || '',
+          framework: selectedFramework?.name || '',
+          grade: selectedGrade?.name || '',
+          region: selectedRegion || undefined,
+          stateCurriculum: selectedStateCurriculum?.curriculum_name,
+          section: section.title || section.name,
+          subStandards: [item.ss],
+          lessonsPerStandard: per,
+          context
+        } as any)
+        if (Array.isArray(response.items)) {
+          total += response.items.length
+          setLessonsBySection((prev) => {
+            const existing = prev[secKey] || []
+            const existingKeys = new Set(existing.map((l: any) => (l.title || l.name || '').toLowerCase()))
+            const toAdd = response.items.filter((l: any) => !existingKeys.has(String(l.title || l.name || '').toLowerCase()))
+            return { ...prev, [secKey]: [...existing, ...toAdd] }
+          })
+        }
+      } catch (e) {
+        // continue other items; optionally collect failures
+      }
+      await sleep(200)
+    }
+    if (total > 0) {
+      setSuccess(`Generated ${total} lesson(s) for ${selectedList.length} sub-standard(s).`)
+      setTimeout(() => setSuccess(null), 3000)
+    }
+    setIsLoading(false)
+    setLoadingSelectedLessonsSecKey(null)
   }
 
   // Smoothly scroll viewport to Step 6 after selection
@@ -1575,13 +1672,27 @@ export default function Home() {
                             </Button>
                           </div>
                           {Array.isArray(subStandardsBySection[String(section.id || section.name || section.title || '')]) && subStandardsBySection[String(section.id || section.name || section.title || '')].length > 0 ? (
+                            <>
                             <div className="overflow-x-auto border border-gray-200 rounded">
                               <table className="w-full min-w-[720px] text-sm">
                                 <thead>
                                   <tr className="bg-white border-b border-gray-200">
+                                    <th className="text-left py-2 px-3 font-bold text-gray-700 w-10">
+                                      <input
+                                        type="checkbox"
+                                        onClick={(e)=> e.stopPropagation()}
+                                        onChange={() => toggleSelectAllSubStandards(section)}
+                                        checked={(() => {
+                                          const secKey = String(section.id || section.name || section.title || '')
+                                          const subs: any[] = subStandardsBySection[secKey] || []
+                                          const selected = Object.values(selectedSubStandardsBySection[secKey] || {}).filter(Boolean).length
+                                          return subs.length > 0 && selected === subs.length
+                                        })()}
+                                      />
+                                    </th>
                                     <th className="text-left py-2 px-3 font-bold text-gray-700 w-40">Standard</th>
                                     <th className="text-left py-2 px-3 font-bold text-gray-700">Title</th>
-                                    <th className="text-left py-2 px-3 font-bold text-gray-700 w-64">Actions</th>
+                                    <th className="text-left py-2 px-3 font-bold text-gray-700 w-72">Actions</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1592,6 +1703,14 @@ export default function Home() {
                                     const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : '')
                                     return (
                                     <tr key={idx} className="border-b border-gray-100 hover:bg-white">
+                                      <td className="py-2 px-3">
+                                        <input
+                                          type="checkbox"
+                                          onClick={(e)=> e.stopPropagation()}
+                                          checked={!!(selectedSubStandardsBySection[secKey]?.[composite])}
+                                          onChange={() => toggleSubStandardSelection(section, ss, idx)}
+                                        />
+                                      </td>
                                       <td className="py-2 px-3 font-mono text-blue-600 text-xs">{ss.code || `S${idx + 1}`}</td>
                                       <td className="py-2 px-3 text-gray-700">
                                         <div className="font-medium">{ss.title || ss.name}</div>
@@ -1628,6 +1747,31 @@ export default function Home() {
                                 </tbody>
                               </table>
                             </div>
+                            {/* Multi-select actions for sub-standards */}
+                            <div className="mt-3 flex items-center justify-between">
+                              <div className="text-xs text-gray-600">
+                                {(() => {
+                                  const secKey = String(section.id || section.name || section.title || '')
+                                  const selected = Object.values(selectedSubStandardsBySection[secKey] || {}).filter(Boolean).length
+                                  return `${selected} sub-standard${selected !== 1 ? 's' : ''} selected`
+                                })()}
+                              </div>
+                              <div>
+                                <Button
+                                  size="sm"
+                                  variant="primary"
+                                  onClick={(e) => { e.stopPropagation(); handleGenerateLessonsForSelectedSubStandards(section) }}
+                                  isLoading={isLoading && loadingSelectedLessonsSecKey === String(section.id || section.name || section.title || '')}
+                                  disabled={(() => {
+                                    const secKey = String(section.id || section.name || section.title || '')
+                                    return Object.values(selectedSubStandardsBySection[secKey] || {}).filter(Boolean).length === 0
+                                  })()}
+                                >
+                                  Generate lessons for selected
+                                </Button>
+                              </div>
+                            </div>
+                            </>
                           ) : (
                             <p className="text-xs text-gray-500">No sub-standards yet. Click Generate to create them.</p>
                           )}
