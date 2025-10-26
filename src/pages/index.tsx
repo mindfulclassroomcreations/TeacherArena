@@ -1450,25 +1450,11 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Expanded Standards Table */}
+                    {/* Expanded Section Content (without header table) */}
               {isSelected && (
-                      <div className="border-t border-gray-200 bg-gray-50 p-4 overflow-x-auto">
-                        <table className="w-full min-w-[480px] text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-300">
-                              <th className="text-left py-2 px-3 font-bold text-gray-700">Standard</th>
-                              <th className="text-left py-2 px-3 font-bold text-gray-700">Title</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b border-gray-200 hover:bg-white">
-                              <td className="py-2 px-3 font-mono text-blue-600 text-xs">{section.id || '—'}</td>
-                              <td className="py-2 px-3 text-gray-700">{section.title || section.name}</td>
-                            </tr>
-                          </tbody>
-                        </table>
+                      <div className="border-t border-gray-200 bg-gray-50 p-4">
                         {section.description && (
-                          <p className="mt-3 text-xs text-gray-600 italic">{section.description}</p>
+                          <p className="text-xs text-gray-600 italic mb-3">{section.description}</p>
                         )}
                         {/* Sub-standards generator and list */}
                         <div className="mt-4">
