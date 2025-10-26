@@ -7,6 +7,7 @@ import Input from '@/components/Input'
 import Textarea from '@/components/Textarea'
 import Alert from '@/components/Alert'
 import Modal from '@/components/Modal'
+import PaymentModal from '@/components/PaymentModal'
 import SelectionStep from '@/components/SelectionStep'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
@@ -159,6 +160,9 @@ export default function Home() {
   const [showContextModal, setShowContextModal] = useState(false)
   const [showLessonModal, setShowLessonModal] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState<Item | null>(null)
+  // Payment modal for insufficient tokens
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentErrorMessage, setPaymentErrorMessage] = useState('Insufficient tokens. Please buy more credits to continue.')
   // Step 2: track which curriculum cards have expanded state lists
   const [expandedCurriculaStates, setExpandedCurriculaStates] = useState<Record<string, boolean>>({})
   // Step 2: state standard modal and cache
@@ -764,7 +768,8 @@ export default function Home() {
     } catch (err) {
       const errMsg = String((err as any)?.message || err || 'Failed to generate lessons')
       if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
-        setError('Insufficient tokens. Please buy more credits to continue.')
+        setPaymentErrorMessage('Insufficient tokens. Please buy more credits to continue.')
+        setShowPaymentModal(true)
       } else {
         setError('Failed to generate lessons from sub-standards. Please try again.')
       }
@@ -835,7 +840,8 @@ export default function Home() {
     } catch (err) {
       const errMsg = String((err as any)?.message || err || 'Failed to generate lessons')
       if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
-        setError('Insufficient tokens. Please buy more credits to continue.')
+        setPaymentErrorMessage('Insufficient tokens. Please buy more credits to continue.')
+        setShowPaymentModal(true)
       } else {
         setError('Failed to generate lessons for this sub-standard. Please try again.')
       }
@@ -937,7 +943,8 @@ export default function Home() {
         // Check for payment/token errors and report them
         const errMsg = String((e as any)?.message || e || '')
         if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
-          setError('Insufficient tokens. Please buy more credits to continue.')
+          setPaymentErrorMessage('Insufficient tokens. Please buy more credits to continue.')
+          setShowPaymentModal(true)
           setIsLoading(false)
           setLoadingSelectedLessonsSecKey(null)
           return
@@ -2680,9 +2687,18 @@ export default function Home() {
         </div>
       </Modal>
 
+      {/* Payment Required Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        message={paymentErrorMessage}
+        redirectTo="/credits"
+      />
+
       {/* Getting Started Guide - Removed */}
       </div>
     </Layout>
     </ProtectedRoute>
   )
 }
+
