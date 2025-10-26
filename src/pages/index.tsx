@@ -747,11 +747,11 @@ export default function Home() {
     <Layout>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-8 text-white">
-          <p className="text-xl text-blue-100 mb-6">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-4 sm:p-6 md:p-8 mb-8 text-white">
+          <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-6">
             Create curriculum-aligned lessons powered by AI. Generate complete lesson plans in minutes!
         </p>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <Button 
             variant="outline" 
             className="bg-transparent text-white border-white hover:bg-blue-700"
@@ -799,7 +799,7 @@ export default function Home() {
       {currentStep >= 1 && selectedCountry && (
         <div className="mb-4 bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-end gap-4 flex-wrap">
-            <div className="w-48">
+            <div className="w-full sm:w-48">
               <Input
                 type="number"
                 label="Number of subjects (optional)"
@@ -854,7 +854,7 @@ export default function Home() {
       {currentStep >= 2 && selectedSubject && (
         <div className="mb-8">
           <div className="mb-6">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">🗺️ Step 2: Select State/Provincial Curriculum</h2>
                 <p className="text-gray-600 mb-4">Choose the state curriculum standards you want to follow, or create a custom grouping.</p>
@@ -870,7 +870,7 @@ export default function Home() {
 
             {/* Context Display */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-xs font-semibold text-blue-900 uppercase">Country</p>
                   <p className="text-sm text-blue-800">{selectedCountry}</p>
@@ -990,7 +990,7 @@ export default function Home() {
                     </Button>
                   </div>
                   <div id="selected-state-summary" className="bg-green-50 border border-green-200 rounded-lg p-4 mt-3">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                     <div className="space-y-1">
                       <h3 className="text-lg font-semibold text-green-900">Selected State</h3>
                       <p className="text-sm text-green-800"><span className="font-semibold">Region:</span> {selectedRegion}</p>
@@ -1009,10 +1009,11 @@ export default function Home() {
                         <p className="text-sm text-green-800"><span className="font-semibold">Standard:</span> {selectedStateStandardDetails.standard_name}</p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Button
                         size="sm"
                         variant="primary"
+                        className="w-full sm:w-auto"
                         onClick={() => setCurrentStep(3)}
                       >
                         Continue to Step 3
@@ -1020,6 +1021,7 @@ export default function Home() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
                         onClick={() => scrollToCurriculaGrid()}
                       >
                         Change state
@@ -1027,6 +1029,7 @@ export default function Home() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           setSelectedRegion(null)
                         setSelectedStateCurriculum(null)
@@ -1053,7 +1056,7 @@ export default function Home() {
               {/* Selected Custom Curriculum Summary (bottom of Step 2) */}
               {!selectedRegion && selectedStateCurriculum && (
                 <div id="selected-custom-summary" className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-6">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                     <div className="space-y-1">
                       <h3 className="text-lg font-semibold text-purple-900">Selected Custom Curriculum</h3>
                       <p className="text-sm text-purple-800"><span className="font-semibold">Curriculum:</span> {selectedStateCurriculum.curriculum_name}</p>
@@ -1062,10 +1065,11 @@ export default function Home() {
                         <p className="text-sm text-purple-800"><span className="font-semibold">Description:</span> {selectedStateCurriculum.description}</p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Button
                         size="sm"
                         variant="primary"
+                        className="w-full sm:w-auto"
                         onClick={() => setCurrentStep(3)}
                       >
                         Continue to Step 3
@@ -1073,6 +1077,7 @@ export default function Home() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           setSelectedStateCurriculum(null)
                           setFrameworks([])
@@ -1114,7 +1119,7 @@ export default function Home() {
             
             {/* Context Display */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
                   <p className="text-sm text-blue-800">{selectedSubject.name}</p>
@@ -1261,7 +1266,7 @@ export default function Home() {
             <p className="text-gray-600 text-sm">Select curriculum units for your lesson plan</p>
             {/* Context Summary for Step 4 */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
                   <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
@@ -1354,7 +1359,7 @@ export default function Home() {
             <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
             {/* Context Summary for Step 5 */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4">
                 <div>
                   <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
                   <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
@@ -1447,8 +1452,8 @@ export default function Home() {
 
                     {/* Expanded Standards Table */}
               {isSelected && (
-                      <div className="border-t border-gray-200 bg-gray-50 p-4">
-                        <table className="w-full text-sm">
+                      <div className="border-t border-gray-200 bg-gray-50 p-4 overflow-x-auto">
+                        <table className="w-full min-w-[480px] text-sm">
                           <thead>
                             <tr className="border-b border-gray-300">
                               <th className="text-left py-2 px-3 font-bold text-gray-700">Standard</th>
@@ -1479,8 +1484,8 @@ export default function Home() {
                             </Button>
                           </div>
                           {Array.isArray(subStandardsBySection[String(section.id || section.name || section.title || '')]) && subStandardsBySection[String(section.id || section.name || section.title || '')].length > 0 ? (
-                            <div className="overflow-hidden border border-gray-200 rounded">
-                              <table className="w-full text-sm">
+                            <div className="overflow-x-auto border border-gray-200 rounded">
+                              <table className="w-full min-w-[560px] text-sm">
                                 <thead>
                                   <tr className="bg-white border-b border-gray-200">
                                     <th className="text-left py-2 px-3 font-bold text-gray-700 w-40">Standard</th>
@@ -1618,8 +1623,8 @@ export default function Home() {
           )}
 
           {/* Analysis Summary */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-bold text-gray-900 mb-3">📚 Framework Overview</h3>
                 <p className="text-sm text-gray-700 mb-2">
@@ -1728,7 +1733,7 @@ export default function Home() {
                   {strand.performance_expectations && strand.performance_expectations.length > 0 && (
                     <div className="mb-4">
                       <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Performance Expectations:</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                         {strand.performance_expectations.map((expectation, i) => (
                           <p key={i} className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
                             {expectation}

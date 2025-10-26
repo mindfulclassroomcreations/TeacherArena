@@ -6,6 +6,7 @@ export default class MyDocument extends Document {
       <Html lang="en">
         <Head>
           <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="description" content="AI-powered lesson generator for curriculum design" />
         </Head>
         <body>

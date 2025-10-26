@@ -12,11 +12,11 @@ interface ProgressIndicatorProps {
 
 export default function ProgressIndicator({ steps }: ProgressIndicatorProps) {
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between">
+    <div className="mb-8 overflow-x-auto">
+      <div className="flex items-center justify-between min-w-[640px] sm:min-w-0">
         {steps.map((step, index) => (
           <React.Fragment key={index}>
-            <div className="flex flex-col items-center flex-1">
+            <div className="flex flex-col items-center flex-1 shrink-0">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${
                   step.completed
@@ -38,7 +38,7 @@ export default function ProgressIndicator({ steps }: ProgressIndicatorProps) {
             </div>
             {index < steps.length - 1 && (
               <div
-                className={`flex-1 h-1 mx-4 transition-colors ${
+                className={`flex-1 h-1 mx-4 transition-colors shrink-0 ${
                   step.completed ? 'bg-green-500' : 'bg-gray-200'
                 }`}
                 style={{ maxWidth: '100px' }}
