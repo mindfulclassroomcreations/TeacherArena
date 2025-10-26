@@ -1943,13 +1943,20 @@ export default function Home() {
                                     const composite = `${secKey}__${subKey}`
                                     const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : '')
                                     const isSingleCompleted = !!completedSingleLessons[composite]
+                                    const isSelected = !!(selectedSubStandardsBySection[secKey]?.[composite])
                                     return (
-                                    <tr key={idx} className={`border-b border-gray-100 hover:bg-white ${loadingSingleLessonsKey === composite ? 'animate-pulse bg-yellow-50' : ''}`}>
+                                    <tr 
+                                      key={idx} 
+                                      onClick={() => toggleSubStandardSelection(section, ss, idx)}
+                                      className={`border-b border-gray-100 cursor-pointer transition-colors ${
+                                        isSelected ? 'bg-blue-100 hover:bg-blue-150' : 'hover:bg-gray-50'
+                                      } ${loadingSingleLessonsKey === composite ? 'animate-pulse bg-yellow-50' : ''}`}
+                                    >
                                       <td className="py-2 px-3">
                                         <input
                                           type="checkbox"
                                           onClick={(e)=> e.stopPropagation()}
-                                          checked={!!(selectedSubStandardsBySection[secKey]?.[composite])}
+                                          checked={isSelected}
                                           onChange={() => toggleSubStandardSelection(section, ss, idx)}
                                         />
                                       </td>
