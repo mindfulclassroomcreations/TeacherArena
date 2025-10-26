@@ -67,3 +67,15 @@ export interface AIGenerationRequest {
   subStandards?: Array<{ code?: string; name?: string; title?: string; description?: string }>
   lessonsPerStandard?: number
 }
+
+// User roles and profile
+export type UserRole = 'user' | 'manager' | 'designer' | 'admin'
+
+export interface UserProfile {
+  id: string // uuid (matches auth.users.id)
+  email?: string | null
+  role: UserRole
+  tokens: number
+  created_at?: string
+  updated_at?: string
+}

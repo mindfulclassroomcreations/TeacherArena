@@ -1,0 +1,105 @@
+import React, { useEffect, useState } from 'react'
+import Layout from '@/components/Layout'
+import Button from '@/components/Button'
+import Input from '@/components/Input'
+import { UserProfile, UserRole } from '@/types'
+
+async function api<T=any>(method: 'GET'|'POST'|'DELETE', body?: any): Promise<T> {
+  const res = await fetch('/api/admin/users', {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || '',
+    },
+    body: method === 'GET' ? undefined : JSON.stringify(body || {}),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export default function AdminUsers() {
+  const [users, setUsers] = useState<UserProfile[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string|null>(null)
+
+  const load = async () => {
+    setLoading(true); setError(null)
+    try {
+      const data = await api<{items: UserProfile[]}>('GET')
+      setUsers(data.items || [])
+    } catch (e: any) {
+      setError('Failed to load users')
+    } finally { setLoading(false) }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const updateRole = async (id: string, role: UserRole) => {
+    setLoading(true)
+    try { await api('POST', { id, role }); await load() } finally { setLoading(false) }
+  }
+
+  const addTokens = async (id: string, delta: number) => {
+    setLoading(true)
+    try { await api('POST', { id, addTokens: delta }); await load() } finally { setLoading(false) }
+  }
+
+  const removeUser = async (id: string) => {
+    if (!confirm('Remove this user?')) return
+    setLoading(true)
+    try { await api('DELETE', { id }); await load() } finally { setLoading(false) }
+  }
+
+  return (
+    <Layout>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+        <div>
+          <Button variant="outline" onClick={load} isLoading={loading}>Refresh</Button>
+        </div>
+      </div>
+      {error && <div className="mb-3 text-red-600 text-sm">{error}</div>}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+        <table className="w-full min-w-[820px] text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="text-left py-2 px-3 font-bold text-gray-700">Email</th>
+              <th className="text-left py-2 px-3 font-bold text-gray-700">Role</th>
+              <th className="text-left py-2 px-3 font-bold text-gray-700">Tokens</th>
+              <th className="text-left py-2 px-3 font-bold text-gray-700">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id} className="border-b border-gray-100">
+                <td className="py-2 px-3">{u.email || u.id}</td>
+                <td className="py-2 px-3">
+                  <select
+                    className="border border-gray-300 rounded px-2 py-1"
+                    value={u.role}
+                    onChange={(e) => updateRole(u.id, e.target.value as UserRole)}
+                    disabled={loading}
+                  >
+                    <option value="user">User</option>
+                    <option value="manager">Manager</option>
+                    <option value="designer">Designer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </td>
+                <td className="py-2 px-3 font-mono">{u.tokens}</td>
+                <td className="py-2 px-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 1000)} disabled={loading}>+1K</Button>
+                    <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 5000)} disabled={loading}>+5K</Button>
+                    <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 10000)} disabled={loading}>+10K</Button>
+                    <Button size="sm" variant="danger" onClick={() => removeUser(u.id)} disabled={loading}>Remove</Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Layout>
+  )
+}
