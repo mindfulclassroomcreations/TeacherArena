@@ -49,7 +49,7 @@ export default async function handler(
   }
 
   try {
-  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount } = req.body
+  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section } = req.body
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -80,6 +80,32 @@ GENERAL INSTRUCTIONS
 `
 
     switch (type) {
+  case 'section-standards':
+        userPrompt = `${sharedRules}
+TASK: For the selected curriculum, generate sub-standards for a specific section.
+
+INPUTS
+- Subject: "${subject}"
+- Framework/Standard: "${framework}"
+- Grade Level: "${grade}"
+${region ? `- Region/State: "${region}"` : ''}
+- Section Name: "${section}"
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+
+REQUIREMENTS
+- Generate 4–10 sub-standards that belong under the section "${section}" for ${subject} at ${grade}.
+- Each item must include exactly these fields:
+  - code (string) — a short code or identifier like "S1.A" or "BIO.1.1".
+  - name (string) — concise sub-standard title.
+  - description (string) — 1–2 sentence explanation of the sub-standard.
+- Keep codes unique and realistic; avoid placeholder text.
+
+OUTPUT
+[
+  { "code": "S1.A", "name": "Scientific Inquiry Basics", "description": "Plan and carry out simple investigations using observations and measurements." }
+]
+`
+        break
       case 'subjects':
         const count = (typeof subjectsCount === 'number' && subjectsCount > 0 && subjectsCount <= 50) ? Math.floor(subjectsCount) : undefined
         userPrompt = `${sharedRules}
@@ -90,7 +116,7 @@ CONTEXT: ${context || 'General focus on high-demand classroom subjects suitable 
 
 REQUIREMENTS
 - ${count ? `Return EXACTLY ${count} subjects` : `Return 12–20 subjects`} commonly taught across Grades 1–12 in ${country}, spanning core and high‑demand elective areas.
-- Always include at least ONE Science-related subject (e.g., "Science", "General Science", "Life Science", "Physical Science", "Earth & Space Science", "STEM/STEAM"). If ${country} explicitly does not include science at the primary/secondary level, you may omit.
+- Ensure at least one Science or science‑related subject (e.g., "Science", "General Science", "Physical Science", "Life Science", "Biology", "Chemistry", "Physics", "Earth/Space Science", "Environmental Science", "STEM") unless Science is not typically taught in K–12 for ${country}.
 - Optimize for subjects that are well-suited to worksheets, task cards, and Google Forms (clear skills practice, objective assessments).
 - Each item must include: name (string), description (string).
 - Avoid overly narrow topics and post‑secondary subjects; avoid course-level variants unless universally recognized.
@@ -102,13 +128,41 @@ OUTPUT
 `
         break
 
+  
+
   case 'frameworks':
-        userPrompt = `${sharedRules}
+        // Dual-mode: if a specific framework is provided, generate its sections aligned to grade/region.
+        if (framework) {
+          userPrompt = `${sharedRules}
+TASK: Generate curriculum standard sections under the specified framework.
+
+INPUTS
+- Subject: "${subject}"
+- Framework/Standard: "${framework}"
+- Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
+${grade ? `- Grade Level: "${grade}"` : ''}
+${context ? `ADDITIONAL CONTEXT
+${context}` : ''}
+
+REQUIREMENTS
+- Return 6–15 items that represent the major sections/units/standard groupings under "${framework}"${grade ? ` for ${grade}` : ''}.
+- Each item must include: name (string), description (string).
+- Prefer short, recognizable section names; descriptions 1–2 sentences aligned to the grade and region (if provided).
+
+OUTPUT
+[
+  { "name": "Forces and Motion", "description": "Investigate balanced and unbalanced forces, motion, and simple machines with age-appropriate investigations." }
+]
+`
+        } else {
+          userPrompt = `${sharedRules}
 TASK: Generate curriculum frameworks (or unit clusters) for:
 - Subject: "${subject}"
 - Country: "${country}"
 ${region ? `- Region/State: "${region}"` : ''}
-${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+${context ? `ADDITIONAL CONTEXT
+${context}` : ''}
 
 REQUIREMENTS
 - Return 4–10 items representing frameworks, strands, or unit clusters commonly used for this subject in ${country}.
@@ -120,11 +174,14 @@ OUTPUT
   { "name": "Number and Operations", "description": "Numeracy foundations including place value, operations with whole numbers, and fractions." }
 ]
 `
+        }
         break
 
   case 'grades':
         userPrompt = `${sharedRules}
-TASK: Generate individual grade levels for:
+TASK: Return grade levels organized into categories for lesson planning.
+
+INPUTS
 - Subject: "${subject}"
 - Framework: "${framework}"
 - Country: "${country}"
@@ -132,14 +189,38 @@ ${region ? `- Region/State: "${region}"` : ''}
 ${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
 
 REQUIREMENTS
-- Return 8–12 INDIVIDUAL grades ONLY (e.g., "Kindergarten" and "Grade 1", "Grade 2", etc.) based on ${country} conventions.
-- No grade ranges (avoid "Grades 3–5").
-- Each item must include: name (string), description (string).
+- Use EXACTLY these categories and grade lists:
+  - elementary.grades: [
+      {"name":"Preschool"},
+      {"name":"Kindergarten"},
+      {"name":"1st grade"},
+      {"name":"2nd grade"},
+      {"name":"3rd grade"},
+      {"name":"4th grade"},
+      {"name":"5th grade"}
+    ]
+  - middle_school.grades: [
+      {"name":"6th grade"},
+      {"name":"7th grade"},
+      {"name":"8th grade"}
+    ]
+  - high_school.grades: [
+      {"name":"9th grade"},
+      {"name":"10th grade"},
+      {"name":"11th grade"},
+      {"name":"12th grade"}
+    ]
+- Provide a 1–2 sentence description for each grade tailored to ${subject} in ${country}${region ? ` (${region})` : ''}.
+- Include select_all_labels: { elementary: "All Elementary", middle_school: "All Middle School", high_school: "All High School" }.
 
 OUTPUT
-[
-  { "name": "Grade 1", "description": "First year of primary school with foundational literacy and numeracy." }
-]
+Respond with ONLY a JSON object with exactly these keys and shapes:
+{
+  "elementary": { "label": "Elementary", "grades": [{"name":"Preschool","description":"..."}] },
+  "middle_school": { "label": "Middle school", "grades": [{"name":"6th grade","description":"..."}] },
+  "high_school": { "label": "High school", "grades": [{"name":"9th grade","description":"..."}] },
+  "select_all_labels": { "elementary": "All Elementary", "middle_school": "All Middle School", "high_school": "All High School" }
+}
 `
         break
 
@@ -327,10 +408,10 @@ OUTPUT (object only; will be wrapped in an array by the server)
       : PROMPT_ID
 
     // Tune temperature per type: keep structured outputs lower
-    const temperature = (type === 'lesson-generation-by-strand') ? 0.7 : 0.3
+  const temperature = (type === 'lesson-generation-by-strand') ? 0.7 : 0.3
 
   // Select model per step (subjects and state-curricula use gpt-4.1-nano as requested)
-  const model = (type === 'subjects' || type === 'state-curricula' || type === 'state-standard') ? 'gpt-4.1-nano' : 'gpt-4'
+  const model = (type === 'subjects' || type === 'state-curricula' || type === 'state-standard' || type === 'grades') ? 'gpt-4.1-nano' : 'gpt-4'
 
     const response = await client.chat.completions.create({
       model,
@@ -387,6 +468,26 @@ OUTPUT (object only; will be wrapped in an array by the server)
       }
     }
 
+    if (type === 'section-standards') {
+      let items = parsedData
+      if (!Array.isArray(items)) {
+        return res.status(500).json({ error: 'AI did not return an array of sub-standards' })
+      }
+
+      items = items.map((item: any, index: number) => ({
+        code: item.code || item.standard_code || `S${index + 1}`,
+        name: item.name || item.title || `Sub-standard ${index + 1}`,
+        title: item.name || item.title,
+        description: item.description || ''
+      }))
+
+      return res.status(200).json({
+        success: true,
+        items,
+        count: items.length
+      })
+    }
+
     if (type === 'lesson-generation-by-strand') {
       let items = parsedData
       if (!Array.isArray(items)) {
@@ -404,6 +505,65 @@ OUTPUT (object only; will be wrapped in an array by the server)
         items,
         count: items.length
       })
+    }
+
+    // Special handling for 'grades' when the model returns categorized object
+    if (type === 'grades') {
+      if (Array.isArray(parsedData)) {
+        // Legacy flat array; normalize like default below
+        let items = parsedData.map((item: any, index: number) => ({
+          name: item.title || item.name || `Item ${index + 1}`,
+          title: item.title,
+          description: item.description || '',
+        }))
+        return res.status(200).json({ success: true, items, count: items.length })
+      }
+
+      if (typeof parsedData === 'object' && parsedData) {
+        const isAdult = (n: any) => String(n?.name || n).toLowerCase().includes('adult')
+        const elementary = (parsedData.elementary?.grades || [])
+        const middle = (parsedData.middle_school?.grades || [])
+        // Filter out Adult education from high school
+        const high = (parsedData.high_school?.grades || []).filter((g: any) => !isAdult(g))
+        const selectAll = parsedData.select_all_labels || {
+          elementary: 'All Elementary',
+          middle_school: 'All Middle School',
+          high_school: 'All High School'
+        }
+
+        const toItems = (arr: any[], category: string) => arr.map((g: any, idx: number) => ({
+          name: g.name || `Grade ${idx + 1}`,
+          title: g.title,
+          description: g.description || '',
+          category,
+        }))
+
+        let items = [
+          ...toItems(elementary, 'Elementary'),
+          ...toItems(middle, 'Middle school'),
+          ...toItems(high, 'High school'),
+        ]
+
+        // Return items and include the categorized structure in details for optional UI usage
+        return res.status(200).json({
+          success: true,
+          items,
+          count: items.length,
+          details: JSON.stringify({
+            categories: {
+              elementary: parsedData.elementary,
+              middle_school: parsedData.middle_school,
+              high_school: {
+                ...(parsedData.high_school || {}),
+                grades: high
+              },
+            },
+            select_all_labels: selectAll
+          })
+        })
+      }
+
+      return res.status(500).json({ error: 'AI did not return valid grades data' })
     }
 
     if (type === 'state-curricula') {
@@ -451,6 +611,70 @@ OUTPUT (object only; will be wrapped in an array by the server)
       return res.status(200).json({ success: true, items: [item], count: 1 })
     }
 
+    // Type-specific handling: subjects must include at least one Science-related item (for supported countries)
+    if (type === 'subjects') {
+      let items = parsedData
+      if (!Array.isArray(items)) {
+        return res.status(500).json({ error: 'AI did not return an array of items' })
+      }
+
+      // Normalize items
+      items = items.map((item, index) => ({
+        name: item.title || item.name || `Item ${index + 1}`,
+        title: item.title,
+        description: item.description || '',
+      }))
+
+      const countryName = String(country || '').toLowerCase()
+      const countryLikelyHasScience = (
+        countryName.includes('usa') ||
+        countryName.includes('united states') ||
+        countryName.includes('canada') ||
+        countryName.includes('australia') ||
+        countryName.includes('uk') ||
+        countryName.includes('united kingdom') ||
+        countryName.includes('england') ||
+        countryName.includes('scotland') ||
+        countryName.includes('wales') ||
+        countryName.includes('northern ireland')
+      )
+
+      const scienceKeywords = [
+        'science', 'general science', 'physical science', 'life science', 'earth science', 'space science',
+        'biology', 'chemistry', 'physics', 'environmental science', 'stem', 'natural science', 'natural sciences'
+      ]
+
+      const hasScience = (arr: any[]) => arr.some((it: any) => {
+        const n = String(it?.name || it?.title || '').toLowerCase()
+        return scienceKeywords.some((kw) => n.includes(kw))
+      })
+
+      // Enforce presence of a science-related subject when applicable
+      if (countryLikelyHasScience && !hasScience(items)) {
+        const scienceItem = {
+          name: 'Science',
+          title: 'Science',
+          description: 'General science across life, physical, and Earth/space sciences for Grades 1–12; strong fit for worksheets, labs, and Google Forms.',
+        }
+
+        // If subjectsCount was specified and we are at/over the limit, replace the last non-science item
+        const limit = (typeof subjectsCount === 'number' && subjectsCount > 0) ? Math.floor(subjectsCount) : undefined
+        if (limit && items.length >= limit) {
+          // Avoid duplicates and keep array length equal to limit
+          const deduped = items.filter((it: any) => String(it.name).toLowerCase() !== 'science')
+          // Drop the last item to make room, if needed
+          if (deduped.length >= limit) deduped.pop()
+          items = [scienceItem, ...deduped]
+        } else {
+          // Just prepend science
+          items = [scienceItem, ...items]
+        }
+      }
+
+      return res.status(200).json({ success: true, items, count: items.length })
+    }
+
+    // Default normalization for other types
     let items = parsedData
     if (!Array.isArray(items)) {
       return res.status(500).json({ error: 'AI did not return an array of items' })

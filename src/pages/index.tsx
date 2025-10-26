@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState } from 'react'
 import Layout from '@/components/Layout'
 import Button from '@/components/Button'
 import Card from '@/components/Card'
@@ -33,13 +33,22 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
   const [requestedSubjectsCount, setRequestedSubjectsCount] = useState<string>('10')
-  const [lastGeneratedSubjectsCount, setLastGeneratedSubjectsCount] = useState<string>('10')
   const [subjects, setSubjects] = useState<Item[]>([])
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
   const [grades, setGrades] = useState<Item[]>([])
+  // Step 3: categorized grades (Elementary, Middle school, High school)
+  const [gradeCategories, setGradeCategories] = useState<{
+    elementary?: { label: string, grades: Item[] }
+    middle_school?: { label: string, grades: Item[] }
+    high_school?: { label: string, grades: Item[] }
+    select_all_labels?: { elementary?: string, middle_school?: string, high_school?: string }
+  }>({})
   const [strands, setStrands] = useState<Strand[]>([])
   const [lessons, setLessons] = useState<Item[]>([])
+  // Step 5: sub-standards under sections
+  const [subStandardsBySection, setSubStandardsBySection] = useState<Record<string, any[]>>({})
+  const [loadingSectionKey, setLoadingSectionKey] = useState<string | null>(null)
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
   const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
   const [selectedCurriculumSections, setSelectedCurriculumSections] = useState<any[]>([])
@@ -48,6 +57,8 @@ export default function Home() {
   const [selectedStateCurriculum, setSelectedStateCurriculum] = useState<any | null>(null)
   const [selectedFramework, setSelectedFramework] = useState<Item | null>(null)
   const [selectedGrade, setSelectedGrade] = useState<Item | null>(null)
+  // Step 3: support multi-grade visual selection (used by Select All buttons)
+  const [selectedGrades, setSelectedGrades] = useState<Item[]>([])
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
   const [selectedStrand, setSelectedStrand] = useState<Strand | null>(null)
   const [selectedStrands, setSelectedStrands] = useState<Strand[]>([])
@@ -69,6 +80,11 @@ export default function Home() {
   const [loadingStateStandard, setLoadingStateStandard] = useState<string | null>(null)
   const [stateStandardCache, setStateStandardCache] = useState<Record<string, any>>({})
   const [pendingStateContext, setPendingStateContext] = useState<{ region: string, curriculum: any } | null>(null)
+  // Persisted chosen state's standard after user confirms "Use this state"
+  const [selectedStateStandardDetails, setSelectedStateStandardDetails] = useState<any | null>(null)
+  // Step 2: highlight selection inside curricula/state chips
+  const [highlightedRegion, setHighlightedRegion] = useState<string | null>(null)
+  const [highlightedCurriculumName, setHighlightedCurriculumName] = useState<string | null>(null)
   // Step 2: custom curriculum grouping
   const [showCustomGroupModal, setShowCustomGroupModal] = useState(false)
   const [customGroupName, setCustomGroupName] = useState('Custom Curriculum Group')
@@ -95,7 +111,7 @@ export default function Home() {
   ]
 
   // API handlers
-  const handleGenerateSubjects = async (countryName?: string, force: boolean = false) => {
+  const handleGenerateSubjects = async (countryName?: string) => {
     const country = countryName || selectedCountry
     if (!country) {
       setError('Please select a country first.')
@@ -103,7 +119,7 @@ export default function Home() {
     }
     
     // Don't reload if already have data for this country
-    if (!force && subjects.length > 0 && selectedCountry === country) return
+    if (subjects.length > 0 && selectedCountry === country) return
     
     setIsLoading(true)
     setError(null)
@@ -118,7 +134,6 @@ export default function Home() {
       })
       if (response.items) {
         setSubjects(response.items)
-        setLastGeneratedSubjectsCount(requestedSubjectsCount)
         setSuccess(`Generated ${response.items.length} subjects for ${country}!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -128,14 +143,6 @@ export default function Home() {
       setIsLoading(false)
     }
   }
-
-  // Auto-generate subjects when entering Step 1 and none exist
-  useEffect(() => {
-    if (currentStep >= 1 && selectedCountry && subjects.length === 0 && !isLoading) {
-      handleGenerateSubjects(selectedCountry, true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, selectedCountry])
 
   const handleGenerateStateCurricula = async () => {
     if (!selectedCountry || !selectedSubject) return
@@ -214,6 +221,36 @@ export default function Home() {
       })
       if (response.items) {
         setGrades(response.items)
+        // Parse categorized details if present
+        if (response.details) {
+          try {
+            const details = JSON.parse(response.details)
+            const cat = {
+              elementary: details?.categories?.elementary ? {
+                label: details?.categories?.elementary?.label || 'Elementary',
+                grades: (details?.categories?.elementary?.grades || []).map((g: any) => ({
+                  name: g.name, description: g.description || g.summary || '', title: g.title
+                }))
+              } : undefined,
+              middle_school: details?.categories?.middle_school ? {
+                label: details?.categories?.middle_school?.label || 'Middle school',
+                grades: (details?.categories?.middle_school?.grades || []).map((g: any) => ({
+                  name: g.name, description: g.description || g.summary || '', title: g.title
+                }))
+              } : undefined,
+              high_school: details?.categories?.high_school ? {
+                label: details?.categories?.high_school?.label || 'High school',
+                grades: (details?.categories?.high_school?.grades || []).map((g: any) => ({
+                  name: g.name, description: g.description || g.summary || '', title: g.title
+                }))
+              } : undefined,
+              select_all_labels: details?.select_all_labels || {
+                elementary: 'All Elementary', middle_school: 'All Middle School', high_school: 'All High School'
+              }
+            }
+            setGradeCategories(cat)
+          } catch {}
+        }
         setSuccess(`Generated ${response.items.length} grades!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -400,7 +437,7 @@ export default function Home() {
     setGrades([])
     setStrands([])
     setLessons([])
-    setSelectedStateCurriculum(null)
+  setSelectedStateCurriculum(null)
     setSelectedFramework(null)
     setSelectedGrade(null)
   }
@@ -413,6 +450,7 @@ export default function Home() {
     setStrands([])
     setLessons([])
     setSelectedGrade(null)
+    setSelectedGrades([])
     setSelectedFramework(null)
   }
 
@@ -447,10 +485,40 @@ export default function Home() {
     if (cached) {
       setStateStandardDetails(cached)
       setShowStateStandardModal(true)
-      if (curriculum) setPendingStateContext({ region: regionName, curriculum })
+      if (curriculum) {
+        setPendingStateContext({ region: regionName, curriculum })
+        setHighlightedRegion(regionName)
+        setHighlightedCurriculumName(curriculum.curriculum_name || null)
+        // Immediately reflect selection in the bottom summary using cached details
+        setSelectedRegion(regionName)
+        setSelectedStateCurriculum(curriculum)
+        setSelectedStateStandardDetails(cached)
+        // Clear downstream to avoid stale data
+        setFrameworks([])
+        setGrades([])
+        setStrands([])
+        setLessons([])
+        setSelectedFramework(null)
+        setSelectedGrade(null)
+        setSelectedGrades([])
+      }
       return
     }
     setLoadingStateStandard(regionName)
+    // Optimistically set region/curriculum so the summary updates immediately
+    if (curriculum) {
+      setSelectedRegion(regionName)
+      setSelectedStateCurriculum(curriculum)
+      setSelectedStateStandardDetails(null)
+      // Clear downstream to avoid stale data when changing state
+      setFrameworks([])
+      setGrades([])
+      setStrands([])
+      setLessons([])
+      setSelectedFramework(null)
+      setSelectedGrade(null)
+      setSelectedGrades([])
+    }
     try {
       const response = await generateContent({
         type: 'state-standard',
@@ -462,7 +530,13 @@ export default function Home() {
         const details = response.items[0]
         setStateStandardDetails(details)
         setShowStateStandardModal(true)
-        if (curriculum) setPendingStateContext({ region: regionName, curriculum })
+        if (curriculum) {
+          setPendingStateContext({ region: regionName, curriculum })
+          setHighlightedRegion(regionName)
+          setHighlightedCurriculumName(curriculum.curriculum_name || null)
+          // Update selected standard details once fetched
+          setSelectedStateStandardDetails(details)
+        }
         setStateStandardCache((prev) => ({ ...prev, [cacheKey]: details }))
       } else {
         setError('No standard details found for this region.')
@@ -497,10 +571,14 @@ export default function Home() {
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework.name,
+        grade: selectedGrade.name,
+        region: selectedRegion || undefined,
         context: context
       })
       if (response.items) {
         setCurriculumSections(response.items)
+        // reset any previous sub-standards when regenerating sections
+        setSubStandardsBySection({})
         setSuccess(`Generated ${response.items.length} curriculum sections!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -511,10 +589,69 @@ export default function Home() {
     }
   }
 
+  // Step 5: Generate sub-standards for a given section
+  const handleGenerateSubStandards = async (section: any) => {
+    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    const key = String(section.id || section.name || section.title || '')
+    if (!key) return
+    setLoadingSectionKey(key)
+    setError(null)
+    try {
+      const response = await generateContent({
+        type: 'section-standards',
+        subject: selectedSubject.name,
+        framework: selectedFramework.name,
+        grade: selectedGrade.name,
+        region: selectedRegion || undefined,
+        section: section.title || section.name,
+        context
+      })
+      if (Array.isArray(response.items)) {
+        setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
+        setSuccess(`Generated ${response.items.length} sub-standards for "${section.title || section.name}"`)
+        setTimeout(() => setSuccess(null), 3000)
+      }
+    } catch (err) {
+      setError('Failed to generate sub-standards for this section. Please try again.')
+    } finally {
+      setLoadingSectionKey(null)
+    }
+  }
+
   // Smoothly scroll viewport to Step 6 after selection
   const scrollToStep6 = () => {
     if (typeof window !== 'undefined') {
       const el = document.getElementById('step-6')
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+      }
+    }
+  }
+
+  // Smoothly scroll to the Selected State summary within Step 2
+  const scrollToSelectedState = () => {
+    if (typeof window !== 'undefined') {
+      const el = document.getElementById('selected-state-summary')
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+      }
+    }
+  }
+
+  // Smoothly scroll to the Selected Custom Curriculum summary within Step 2
+  const scrollToSelectedCustom = () => {
+    if (typeof window !== 'undefined') {
+      const el = document.getElementById('selected-custom-summary')
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+      }
+    }
+  }
+
+  // Scroll to curricula grid for re-selection
+  const scrollToCurriculaGrid = () => {
+    if (typeof window !== 'undefined') {
+      const el = document.getElementById('state-curricula-grid')
       if (el) {
         setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
       }
@@ -554,11 +691,33 @@ export default function Home() {
 
   const handleSelectGrade = (grade: Item) => {
     setSelectedGrade(grade)
+    setSelectedGrades([grade])
     setCurrentStep(5)
     setStrands([])
     setLessons([])
     setCurriculumSections([])
     setSelectedCurriculumSection(null)
+  }
+
+  // Step 3: Select-all helpers – select all grades in the category and advance to Step 4
+  const selectAllCategory = (key: 'elementary' | 'middle_school' | 'high_school') => {
+    const group = gradeCategories[key]
+    if (group && Array.isArray(group.grades) && group.grades.length > 0) {
+      // Select all in this category for visual highlight and choose the first as the active grade for downstream steps
+      const first = group.grades[0]
+      setSelectedGrades(group.grades.slice())
+      setSelectedGrade(first)
+      // Clear downstream state and move to Step 4 (Standards & Units)
+      setFrameworks([])
+      setSelectedFramework(null)
+      setCurriculumSections([])
+      setSelectedCurriculumSection(null)
+      setStrands([])
+      setLessons([])
+      setCurrentStep(4)
+      setSuccess(`Selected all grades in ${group.label}. Proceeding to Step 4.`)
+      setTimeout(() => setSuccess(null), 2000)
+    }
   }
 
   const handleReset = () => {
@@ -575,7 +734,8 @@ export default function Home() {
     setSelectedStateCurriculum(null)
 
     setSelectedFramework(null)
-    setSelectedGrade(null)
+  setSelectedGrade(null)
+  setSelectedGrades([])
     setSelectedStrand(null)
     setContext('')
     setError(null)
@@ -648,16 +808,12 @@ export default function Home() {
                 placeholder="e.g., 15"
                 min="1"
                 max="50"
-                onBlur={() => {
-                  if (
-                    requestedSubjectsCount &&
-                    requestedSubjectsCount !== lastGeneratedSubjectsCount &&
-                    !isLoading
-                  ) {
-                    handleGenerateSubjects(selectedCountry || undefined, true)
-                  }
-                }}
               />
+            </div>
+            <div>
+              <Button onClick={() => handleGenerateSubjects()} isLoading={isLoading}>
+                Generate {requestedSubjectsCount ? `${requestedSubjectsCount} ` : ''}Subjects
+              </Button>
             </div>
           </div>
         </div>
@@ -671,7 +827,10 @@ export default function Home() {
           items={subjects}
           selectedItem={selectedSubject}
           onSelect={handleSelectSubject}
-          
+          onGenerate={handleGenerateSubjects}
+          isLoading={isLoading}
+          generateButtonText={subjects.length > 0 ? "Generate More Subjects" : "Generate Subjects"}
+          emptyStateText="No subjects generated yet. Click the button below to generate subjects using AI."
         />
       )}
 
@@ -701,12 +860,14 @@ export default function Home() {
                 <p className="text-gray-600 mb-4">Choose the state curriculum standards you want to follow, or create a custom grouping.</p>
               </div>
               <div className="pt-1">
-                <Button variant="outline" size="sm" onClick={() => setShowCustomGroupModal(true)}>
+                <Button variant="outline" size="sm" className="border-black text-black hover:bg-gray-50" onClick={() => setShowCustomGroupModal(true)}>
                   + Create Custom Curriculum
                 </Button>
               </div>
             </div>
             
+            {/* Selected State Summary moved to bottom of Step 2 */}
+
             {/* Context Display */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -750,13 +911,14 @@ export default function Home() {
                   🔄 Refresh
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div id="state-curricula-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {stateCurricula.map((curriculum, index) => (
                   <Card
                     key={index}
                     onClick={() => handleSelectStateCurriculum(curriculum)}
                     hoverable
                     isSelected={selectedStateCurriculum?.curriculum_name === curriculum.curriculum_name}
+                    className={`${highlightedCurriculumName === curriculum.curriculum_name && !selectedStateCurriculum ? 'ring-1 ring-blue-300 border-blue-300' : ''}`}
                   >
                     <h3 className="font-bold text-lg text-gray-900 mb-2">{curriculum.curriculum_name}</h3>
                     <p className="text-gray-600 text-sm mb-3">{curriculum.description}</p>
@@ -772,7 +934,13 @@ export default function Home() {
                                 key={i}
                                 type="button"
                                 title={`View ${state} standard for ${selectedSubject?.name}`}
-                                className={`px-2 py-1 text-xs rounded border ${loadingStateStandard === state ? 'bg-blue-200 text-blue-900 border-blue-300' : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'}`}
+                                className={`px-2 py-1 text-xs rounded border ${
+                                  loadingStateStandard === state
+                                    ? 'bg-blue-200 text-blue-900 border-blue-300'
+                                    : highlightedRegion === state
+                                      ? 'bg-blue-600 text-white border-blue-600'
+                                      : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'
+                                }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleViewStateStandard(state, curriculum)
@@ -812,6 +980,126 @@ export default function Home() {
                   </Card>
                 ))}
               </div>
+
+              {/* Selected State Summary (bottom of Step 2) */}
+              {selectedRegion && selectedStateCurriculum && (
+                <>
+                  <div className="flex justify-end mt-6">
+                    <Button variant="outline" size="sm" className="border-black text-black hover:bg-gray-50" onClick={() => setShowCustomGroupModal(true)}>
+                      + Create Custom Curriculum
+                    </Button>
+                  </div>
+                  <div id="selected-state-summary" className="bg-green-50 border border-green-200 rounded-lg p-4 mt-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold text-green-900">Selected State</h3>
+                      <p className="text-sm text-green-800"><span className="font-semibold">Region:</span> {selectedRegion}</p>
+                      <p className="text-sm text-green-800">
+                        <span className="font-semibold">Curriculum:</span>{' '}
+                        {(() => {
+                          const name = String(selectedStateCurriculum.curriculum_name || '')
+                          const isNoSpecial = name.toLowerCase().includes('no special curriculum')
+                          if (isNoSpecial && selectedStateStandardDetails?.standard_name) {
+                            return selectedStateStandardDetails.standard_name
+                          }
+                          return name
+                        })()}
+                      </p>
+                      {selectedStateStandardDetails?.standard_name && (
+                        <p className="text-sm text-green-800"><span className="font-semibold">Standard:</span> {selectedStateStandardDetails.standard_name}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => setCurrentStep(3)}
+                      >
+                        Continue to Step 3
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => scrollToCurriculaGrid()}
+                      >
+                        Change state
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedRegion(null)
+                        setSelectedStateCurriculum(null)
+                          setSelectedStateStandardDetails(null)
+                          setFrameworks([])
+                          setGrades([])
+                          setStrands([])
+                          setLessons([])
+                        }}
+                      >
+                        Clear selection
+                      </Button>
+                    </div>
+                  </div>
+                  {selectedStateStandardDetails?.coverage_description && (
+                    <p className="text-sm text-green-900 mt-3">
+                      {selectedStateStandardDetails.coverage_description}
+                    </p>
+                  )}
+                  </div>
+                </>
+              )}
+
+              {/* Selected Custom Curriculum Summary (bottom of Step 2) */}
+              {!selectedRegion && selectedStateCurriculum && (
+                <div id="selected-custom-summary" className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold text-purple-900">Selected Custom Curriculum</h3>
+                      <p className="text-sm text-purple-800"><span className="font-semibold">Curriculum:</span> {selectedStateCurriculum.curriculum_name}</p>
+                      <p className="text-sm text-purple-800"><span className="font-semibold">States:</span> {Array.isArray(selectedStateCurriculum.states) ? selectedStateCurriculum.states.length : 0}</p>
+                      {selectedStateCurriculum.description && (
+                        <p className="text-sm text-purple-800"><span className="font-semibold">Description:</span> {selectedStateCurriculum.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => setCurrentStep(3)}
+                      >
+                        Continue to Step 3
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedStateCurriculum(null)
+                          setFrameworks([])
+                          setGrades([])
+                          setStrands([])
+                          setLessons([])
+                        }}
+                      >
+                        Clear selection
+                      </Button>
+                    </div>
+                  </div>
+                  {Array.isArray(selectedStateCurriculum.states) && selectedStateCurriculum.states.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-purple-900 font-semibold mb-1">Included States</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedStateCurriculum.states.slice(0, 12).map((s: string, i: number) => (
+                          <span key={i} className="px-2 py-1 bg-purple-100 text-purple-900 text-xs rounded">{s}</span>
+                        ))}
+                        {selectedStateCurriculum.states.length > 12 && (
+                          <span className="px-2 py-1 bg-purple-100 text-purple-900 text-xs rounded">+{selectedStateCurriculum.states.length - 12} more</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -833,7 +1121,14 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
-                  <p className="text-sm text-blue-800">{selectedStateCurriculum.curriculum_name}</p>
+                  <p className="text-sm text-blue-800">{(() => {
+                    const name = String(selectedStateCurriculum?.curriculum_name || '')
+                    const isNoSpecial = name.toLowerCase().includes('no special curriculum')
+                    if (isNoSpecial && selectedStateStandardDetails?.standard_name) {
+                      return selectedStateStandardDetails.standard_name
+                    }
+                    return name
+                  })()}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-blue-900 uppercase">Grades</p>
@@ -852,22 +1147,85 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {grades.map((grade, index) => (
-                  <Card
-                    key={grade.id || index}
-                    isSelected={selectedGrade?.name === grade.name}
-                    onClick={() => handleSelectGrade(grade)}
-                  >
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">
-                      {grade.title || grade.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm line-clamp-3">
-                      {grade.description}
-                    </p>
-                  </Card>
-                ))}
-              </div>
+              {/* Categorized rendering if available, else fallback to flat grid */}
+              { (gradeCategories?.elementary || gradeCategories?.middle_school || gradeCategories?.high_school) ? (
+                <div className="space-y-8">
+                  {/* Elementary */}
+                  {gradeCategories.elementary && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xl font-semibold text-gray-900">{gradeCategories.elementary.label}</h3>
+                        <Button variant="outline" size="sm" onClick={() => selectAllCategory('elementary')}>
+                          {gradeCategories.select_all_labels?.elementary || 'All Elementary'}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {gradeCategories.elementary.grades.map((g, idx) => (
+                          <Card key={`el-${idx}`} isSelected={(selectedGrade?.name === g.name) || selectedGrades.some(sg => sg.name === g.name)} onClick={() => handleSelectGrade(g)}>
+                            <h4 className="font-bold text-gray-900 mb-2">{g.title || g.name}</h4>
+                            <p className="text-gray-600 text-sm line-clamp-3">{g.description}</p>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Middle school */}
+                  {gradeCategories.middle_school && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xl font-semibold text-gray-900">{gradeCategories.middle_school.label}</h3>
+                        <Button variant="outline" size="sm" onClick={() => selectAllCategory('middle_school')}>
+                          {gradeCategories.select_all_labels?.middle_school || 'All Middle School'}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {gradeCategories.middle_school.grades.map((g, idx) => (
+                          <Card key={`mid-${idx}`} isSelected={(selectedGrade?.name === g.name) || selectedGrades.some(sg => sg.name === g.name)} onClick={() => handleSelectGrade(g)}>
+                            <h4 className="font-bold text-gray-900 mb-2">{g.title || g.name}</h4>
+                            <p className="text-gray-600 text-sm line-clamp-3">{g.description}</p>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* High school */}
+                  {gradeCategories.high_school && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xl font-semibold text-gray-900">{gradeCategories.high_school.label}</h3>
+                        <Button variant="outline" size="sm" onClick={() => selectAllCategory('high_school')}>
+                          {gradeCategories.select_all_labels?.high_school || 'All High School'}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {gradeCategories.high_school.grades.map((g, idx) => (
+                          <Card key={`hi-${idx}`} isSelected={(selectedGrade?.name === g.name) || selectedGrades.some(sg => sg.name === g.name)} onClick={() => handleSelectGrade(g)}>
+                            <h4 className="font-bold text-gray-900 mb-2">{g.title || g.name}</h4>
+                            <p className="text-gray-600 text-sm line-clamp-3">{g.description}</p>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {grades.map((grade, index) => (
+                    <Card
+                      key={grade.id || index}
+                      isSelected={(selectedGrade?.name === grade.name) || selectedGrades.some(sg => sg.name === grade.name)}
+                      onClick={() => handleSelectGrade(grade)}
+                    >
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">
+                        {grade.title || grade.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm line-clamp-3">
+                        {grade.description}
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-end">
                 <Button onClick={handleGenerateGrades} isLoading={isLoading} variant="primary">
                   Generate More Grades
@@ -901,6 +1259,34 @@ export default function Home() {
           <div className="mb-6">
             <h2 className="text-3xl font-bold text-gray-900 mb-1">📋 Step 4: Browse Standards and Units</h2>
             <p className="text-gray-600 text-sm">Select curriculum units for your lesson plan</p>
+            {/* Context Summary for Step 4 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
+                  <p className="text-sm text-blue-800">{(() => {
+                    const name = String(selectedStateCurriculum?.curriculum_name || '')
+                    const isNoSpecial = name.toLowerCase().includes('no special curriculum')
+                    if (isNoSpecial && selectedStateStandardDetails?.standard_name) {
+                      return selectedStateStandardDetails.standard_name
+                    }
+                    return name
+                  })()}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Region</p>
+                  <p className="text-sm text-blue-800">{selectedRegion || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade</p>
+                  <p className="text-sm text-blue-800">{selectedGrade?.name}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {isLoading && frameworks.length === 0 ? (
@@ -966,6 +1352,38 @@ export default function Home() {
           <div className="mb-6">
             <h2 className="text-3xl font-bold text-gray-900 mb-1">📚 Step 5: Browse Curriculum Standards</h2>
             <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
+            {/* Context Summary for Step 5 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
+                  <p className="text-sm text-blue-800">{(() => {
+                    const name = String(selectedStateCurriculum?.curriculum_name || '')
+                    const isNoSpecial = name.toLowerCase().includes('no special curriculum')
+                    if (isNoSpecial && selectedStateStandardDetails?.standard_name) {
+                      return selectedStateStandardDetails.standard_name
+                    }
+                    return name
+                  })()}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Region</p>
+                  <p className="text-sm text-blue-800">{selectedRegion || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade</p>
+                  <p className="text-sm text-blue-800">{selectedGrade?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Framework</p>
+                  <p className="text-sm text-blue-800">{selectedFramework?.name}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {isLoading && curriculumSections.length === 0 ? (
@@ -1047,6 +1465,47 @@ export default function Home() {
                         {section.description && (
                           <p className="mt-3 text-xs text-gray-600 italic">{section.description}</p>
                         )}
+                        {/* Sub-standards generator and list */}
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-semibold text-gray-900">Sub-standards</h4>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => { e.stopPropagation(); handleGenerateSubStandards(section) }}
+                              isLoading={loadingSectionKey === String(section.id || section.name || section.title || '')}
+                            >
+                              Generate
+                            </Button>
+                          </div>
+                          {Array.isArray(subStandardsBySection[String(section.id || section.name || section.title || '')]) && subStandardsBySection[String(section.id || section.name || section.title || '')].length > 0 ? (
+                            <div className="overflow-hidden border border-gray-200 rounded">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="bg-white border-b border-gray-200">
+                                    <th className="text-left py-2 px-3 font-bold text-gray-700 w-40">Standard</th>
+                                    <th className="text-left py-2 px-3 font-bold text-gray-700">Title</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {subStandardsBySection[String(section.id || section.name || section.title || '')].map((ss: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-gray-100 hover:bg-white">
+                                      <td className="py-2 px-3 font-mono text-blue-600 text-xs">{ss.code || `S${idx + 1}`}</td>
+                                      <td className="py-2 px-3 text-gray-700">
+                                        <div className="font-medium">{ss.title || ss.name}</div>
+                                        {ss.description && (
+                                          <div className="text-xs text-gray-500 mt-1">{ss.description}</div>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500">No sub-standards yet. Click Generate to create them.</p>
+                          )}
+                        </div>
                          <div className="mt-4 text-right">
                            <Button onClick={(e) => { e.stopPropagation(); toggleSectionSelection(section) }} size="sm" variant={isSelected ? 'outline' : 'primary'}>
                              {isSelected ? 'Remove from selection' : 'Add to selection'}
@@ -1089,6 +1548,42 @@ export default function Home() {
               <div className="text-right">
                 <p className="text-2xl font-bold text-gray-900">{strands.reduce((sum, s) => sum + s.target_lesson_count, 0)}</p>
                 <p className="text-gray-500 text-sm">Lessons Planned</p>
+              </div>
+            </div>
+            {/* Context Summary for Step 6 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
+                  <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
+                  <p className="text-sm text-blue-800">{(() => {
+                    const name = String(selectedStateCurriculum?.curriculum_name || '')
+                    const isNoSpecial = name.toLowerCase().includes('no special curriculum')
+                    if (isNoSpecial && selectedStateStandardDetails?.standard_name) {
+                      return selectedStateStandardDetails.standard_name
+                    }
+                    return name
+                  })()}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Region</p>
+                  <p className="text-sm text-blue-800">{selectedRegion || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade</p>
+                  <p className="text-sm text-blue-800">{selectedGrade?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Framework</p>
+                  <p className="text-sm text-blue-800">{selectedFramework?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">Strands</p>
+                  <p className="text-sm text-blue-800">{strands.length}</p>
+                </div>
               </div>
             </div>
             {/* Navigation buttons removed as requested */}
@@ -1380,9 +1875,6 @@ export default function Home() {
             </Button>
             <Button onClick={() => {
               setShowContextModal(false)
-              if (subjects.length === 0 && context.trim()) {
-                handleGenerateSubjects()
-              }
             }}>
               Save Context
             </Button>
@@ -1481,6 +1973,7 @@ export default function Home() {
                     // Always set the curriculum group from the card context
                     setSelectedRegion(pendingStateContext.region)
                     setSelectedStateCurriculum(pendingStateContext.curriculum)
+                    setSelectedStateStandardDetails(stateStandardDetails || null)
                     // Clear downstream selections to avoid stale data
                     setFrameworks([])
                     setGrades([])
@@ -1488,8 +1981,13 @@ export default function Home() {
                     setLessons([])
                     setSelectedFramework(null)
                     setSelectedGrade(null)
-                    setCurrentStep(3)
+                    setSelectedGrades([])
                     setShowStateStandardModal(false)
+                    // Clear highlight since we're advancing to Step 3
+                    setHighlightedRegion(null)
+                    setHighlightedCurriculumName(null)
+                    // Scroll to the selected state summary at the bottom of Step 2
+                    scrollToSelectedState()
                   } else if (stateStandardDetails?.region) {
                     // Fallback: create a minimal synthetic curriculum group if none exists
                     const region = stateStandardDetails.region
@@ -1501,14 +1999,18 @@ export default function Home() {
                         states: [region]
                       } as any)
                     }
+                    setSelectedStateStandardDetails(stateStandardDetails || null)
                     setFrameworks([])
                     setGrades([])
                     setStrands([])
                     setLessons([])
                     setSelectedFramework(null)
                     setSelectedGrade(null)
-                    setCurrentStep(3)
+                    setSelectedGrades([])
                     setShowStateStandardModal(false)
+                    setHighlightedRegion(null)
+                    setHighlightedCurriculumName(null)
+                    scrollToSelectedState()
                   }
                 }}
               >
@@ -1579,7 +2081,18 @@ export default function Home() {
                     list.sort((a, b) => (b.states?.length || 0) - (a.states?.length || 0))
                     return list
                   })
+                  // Set as selected curriculum for summary at bottom of Step 2
+                  setSelectedStateCurriculum(newGroup as any)
+                  setSelectedRegion(null)
+                  setSelectedStateStandardDetails(null)
+                  // Clear downstream until user continues
+                  setFrameworks([])
+                  setGrades([])
+                  setStrands([])
+                  setLessons([])
                   setShowCustomGroupModal(false)
+                  // Scroll to custom summary
+                  scrollToSelectedCustom()
                 }}
               >
                 Create Group
@@ -1595,8 +2108,11 @@ export default function Home() {
                     return list
                   })
                   setSelectedStateCurriculum(newGroup as any)
-                  setCurrentStep(3)
+                  setSelectedRegion(null)
+                  setSelectedStateStandardDetails(null)
+                  // Keep user in Step 2 and show summary
                   setShowCustomGroupModal(false)
+                  scrollToSelectedCustom()
                 }}
               >
                 Create and use for next step
