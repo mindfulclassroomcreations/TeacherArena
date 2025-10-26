@@ -68,6 +68,11 @@ export default function Home() {
   const [loadingStateStandard, setLoadingStateStandard] = useState<string | null>(null)
   const [stateStandardCache, setStateStandardCache] = useState<Record<string, any>>({})
   const [pendingStateContext, setPendingStateContext] = useState<{ region: string, curriculum: any } | null>(null)
+  // Step 2: custom curriculum grouping
+  const [showCustomGroupModal, setShowCustomGroupModal] = useState(false)
+  const [customGroupName, setCustomGroupName] = useState('Custom Curriculum Group')
+  const [customGroupDescription, setCustomGroupDescription] = useState('Custom grouping created by user')
+  const [customGroupSelectedStates, setCustomGroupSelectedStates] = useState<string[]>([])
 
   // Country list
   const countries = [
@@ -677,8 +682,17 @@ export default function Home() {
       {currentStep >= 2 && selectedSubject && (
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">🗺️ Step 2: Select State/Provincial Curriculum</h2>
-            <p className="text-gray-600 mb-4">Choose the state curriculum standards you want to follow.</p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">🗺️ Step 2: Select State/Provincial Curriculum</h2>
+                <p className="text-gray-600 mb-4">Choose the state curriculum standards you want to follow, or create a custom grouping.</p>
+              </div>
+              <div className="pt-1">
+                <Button variant="outline" size="sm" onClick={() => setShowCustomGroupModal(true)}>
+                  + Create Custom Curriculum
+                </Button>
+              </div>
+            </div>
             
             {/* Context Display */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -1469,6 +1483,91 @@ export default function Home() {
         ) : (
           <p className="text-gray-600">No details available.</p>
         )}
+      </Modal>
+
+      {/* Custom Curriculum Group Modal */}
+      <Modal
+        isOpen={showCustomGroupModal}
+        onClose={() => setShowCustomGroupModal(false)}
+        title="Create Custom Curriculum Group"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Group name"
+              value={customGroupName}
+              onChange={(e) => setCustomGroupName(e.target.value)}
+              placeholder="e.g., State-Adapted Science Standards"
+            />
+            <Input
+              label="Description (optional)"
+              value={customGroupDescription}
+              onChange={(e) => setCustomGroupDescription(e.target.value)}
+              placeholder="Short description"
+            />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-2">Select states/provinces to include</p>
+            <div className="flex flex-wrap gap-2 max-h-64 overflow-auto border rounded p-3 bg-gray-50">
+              {Array.from(new Set(stateCurricula.flatMap((g: any) => g.states || []))).sort().map((state, idx) => {
+                const selected = customGroupSelectedStates.includes(state)
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`px-2 py-1 text-xs rounded border ${selected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'}`}
+                    onClick={() => {
+                      setCustomGroupSelectedStates((prev) => prev.includes(state) ? prev.filter(s => s !== state) : [...prev, state])
+                    }}
+                  >
+                    {state}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">{customGroupSelectedStates.length} selected</div>
+          </div>
+          <div className="flex justify-between pt-2">
+            <Button variant="outline" onClick={() => setShowCustomGroupModal(false)}>Cancel</Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Create but stay on current step
+                  if (!customGroupName.trim() || customGroupSelectedStates.length === 0) return
+                  const newGroup = { curriculum_name: customGroupName.trim(), description: customGroupDescription.trim(), states: customGroupSelectedStates.slice() }
+                  // Insert and sort by states count desc
+                  setStateCurricula((prev: any[]) => {
+                    const list = [...prev, newGroup]
+                    list.sort((a, b) => (b.states?.length || 0) - (a.states?.length || 0))
+                    return list
+                  })
+                  setShowCustomGroupModal(false)
+                }}
+              >
+                Create Group
+              </Button>
+              <Button
+                onClick={() => {
+                  // Create and proceed
+                  if (!customGroupName.trim() || customGroupSelectedStates.length === 0) return
+                  const newGroup = { curriculum_name: customGroupName.trim(), description: customGroupDescription.trim(), states: customGroupSelectedStates.slice() }
+                  setStateCurricula((prev: any[]) => {
+                    const list = [...prev, newGroup]
+                    list.sort((a, b) => (b.states?.length || 0) - (a.states?.length || 0))
+                    return list
+                  })
+                  setSelectedStateCurriculum(newGroup as any)
+                  setCurrentStep(3)
+                  setShowCustomGroupModal(false)
+                }}
+              >
+                Create and use for next step
+              </Button>
+            </div>
+          </div>
+        </div>
       </Modal>
 
       {/* Getting Started Guide - Removed */}
