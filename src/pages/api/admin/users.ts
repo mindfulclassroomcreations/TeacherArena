@@ -1,15 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Server-only admin client using service role
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE || ''
 const ADMIN_API_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || ''
 
-const supabaseAdmin = createClient(url, serviceKey)
+// Lazily create the admin client only when env is present to avoid import-time crashes in production
+function getSupabaseAdmin(): SupabaseClient | null {
+  if (!url || !serviceKey) return null
+  return createClient(url, serviceKey)
+}
 
 async function bearerAdminAuthorized(req: NextApiRequest): Promise<boolean> {
   try {
+    const supabaseAdmin = getSupabaseAdmin()
+    if (!supabaseAdmin) return false
     const auth = req.headers.authorization || ''
     const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : ''
     if (!token) return false
@@ -36,6 +43,12 @@ function isAuthorized(req: NextApiRequest) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!serviceKey || !url) {
     console.error('admin/users: missing SUPABASE_SERVICE_ROLE or NEXT_PUBLIC_SUPABASE_URL', { serviceKeyPresent: Boolean(serviceKey), urlPresent: Boolean(url) })
+    return res.status(500).json({ error: 'Server not configured for admin actions' } as any)
+  }
+  const supabaseAdmin = getSupabaseAdmin()
+  if (!supabaseAdmin) {
+    // Double check to satisfy TS and runtime safety
+    console.error('admin/users: failed to initialize Supabase admin client')
     return res.status(500).json({ error: 'Server not configured for admin actions' } as any)
   }
   const headerAuthorized = isAuthorized(req)
