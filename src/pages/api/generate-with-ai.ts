@@ -220,20 +220,59 @@ REQUIREMENTS:
         break
 
       case 'state-curricula':
+        // Build canonical region lists for supported countries
+        const usaRegions = [
+          'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia',
+          'Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland',
+          'Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey',
+          'New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina',
+          'South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming'
+        ]
+        const canadaRegions = [
+          // Provinces (10)
+          'Alberta','British Columbia','Manitoba','New Brunswick','Newfoundland and Labrador','Nova Scotia','Ontario','Prince Edward Island','Quebec','Saskatchewan',
+          // Territories (3)
+          'Northwest Territories','Nunavut','Yukon'
+        ]
+        const australiaRegions = [
+          // States (6)
+          'New South Wales','Queensland','South Australia','Tasmania','Victoria','Western Australia',
+          // Mainland Territories (2)
+          'Australian Capital Territory','Northern Territory'
+        ]
+        const ukRegions = ['England','Scotland','Wales','Northern Ireland']
+
+        let requiredRegionsText = ''
+        if ((country || '').toLowerCase() === 'usa' || (country || '').toLowerCase().includes('united states')) {
+          requiredRegionsText = `REQUIRED REGIONS (50 U.S. States)\n${usaRegions.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+        } else if ((country || '').toLowerCase() === 'canada') {
+          requiredRegionsText = `REQUIRED REGIONS (Canada: 10 Provinces + 3 Territories)\n${canadaRegions.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+        } else if ((country || '').toLowerCase() === 'australia') {
+          requiredRegionsText = `REQUIRED REGIONS (Australia: 6 States + 2 Mainland Territories)\n${australiaRegions.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+        } else if ((country || '').toLowerCase().includes('uk') || (country || '').toLowerCase().includes('united kingdom')) {
+          requiredRegionsText = `REQUIRED REGIONS (United Kingdom: 4 Countries)\n${ukRegions.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+        }
+
         userPrompt = `${sharedRules}
-TASK: For the subject "${subject}" in ${country}, list state/provincial/regional curriculum standards.
+TASK: For the subject "${subject}" in ${country}, list curriculum standards groupings and ensure COMPLETE region coverage.
+
+${requiredRegionsText ? `${requiredRegionsText}\n` : ''}
 
 REQUIREMENTS
-- Group states/provinces that share the same curriculum.
-- Each item must include: curriculum_name (string), states (string[]), description (string).
-- Provide 3–8 curriculum groupings relevant to ${country}.
+- Consider the selected subject when grouping (e.g., Math, Science, ELA variants per region).
+- Group regions that share the same curriculum into a single object.
+- Each object must include: curriculum_name (string), states (string[]), description (string).
+- Include ALL regions for ${country}. If a region has no distinct curriculum for this subject, include it under a grouping with curriculum_name like "No special curriculum (Subject)" and a brief description.
+- SORT ORDER: Sort the array by the number of regions in each grouping (states.length) DESC so the most common curricula appear first. Place the "No special curriculum" grouping last.
+- Avoid duplicates: the union of all "states" arrays MUST cover each required region exactly once.
+- Provide 3–12 groupings depending on ${country}.
 
 OUTPUT
 [
   {
     "curriculum_name": "Common Core State Standards (CCSS)",
     "states": ["California", "New York"],
-    "description": "Standards outlining expectations for knowledge and skills in mathematics and ELA."
+    "description": "Discipline-specific learning standards adopted or adapted by multiple states."
   }
 ]
 `
@@ -250,8 +289,8 @@ OUTPUT
     // Tune temperature per type: keep structured outputs lower
     const temperature = (type === 'lesson-generation-by-strand') ? 0.7 : 0.3
 
-    // Select model per step (subjects uses gpt-4.1-nano as requested)
-    const model = type === 'subjects' ? 'gpt-4.1-nano' : 'gpt-4'
+  // Select model per step (subjects and state-curricula use gpt-4.1-nano as requested)
+  const model = (type === 'subjects' || type === 'state-curricula') ? 'gpt-4.1-nano' : 'gpt-4'
 
     const response = await client.chat.completions.create({
       model,
