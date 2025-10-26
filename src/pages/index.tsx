@@ -32,7 +32,7 @@ export default function Home() {
   // State management
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
-  const [requestedSubjectsCount, setRequestedSubjectsCount] = useState<string>('')
+  const [requestedSubjectsCount, setRequestedSubjectsCount] = useState<string>('10')
   const [subjects, setSubjects] = useState<Item[]>([])
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
@@ -570,6 +570,7 @@ export default function Home() {
     setContext('')
     setError(null)
     setSuccess(null)
+    setRequestedSubjectsCount('10')
   }
 
   return (
@@ -612,6 +613,7 @@ export default function Home() {
                 onClick={async () => {
                   setSelectedCountry(country.name)
                   setCurrentStep(1)
+                  setRequestedSubjectsCount('10')
                 }}
                 hoverable
               >
