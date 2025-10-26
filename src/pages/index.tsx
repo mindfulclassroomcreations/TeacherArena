@@ -1279,6 +1279,33 @@ export default function Home() {
       {/* Step 2: State/Provincial Curriculum */}
       {currentStep >= 2 && selectedSubject && (
         <div className="mb-8">
+          {/* Important Guidance Section */}
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-6 mb-6">
+            <div className="flex gap-3">
+              <div className="text-3xl pt-1">📋</div>
+              <div>
+                <h3 className="text-lg font-bold text-amber-900 mb-2">Before Proceeding to Step 2</h3>
+                <div className="text-sm text-amber-800 space-y-2">
+                  <p><strong>✅ Please ensure you have completed the following:</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Reviewed Step 1: Country and Subject selection</li>
+                    <li>Selected your relevant country and subject</li>
+                    <li>Familiarized yourself with the curriculum framework</li>
+                  </ul>
+                  <p className="pt-2"><strong>🌐 Reference Materials:</strong></p>
+                  <p>Before selecting your state/provincial curriculum, we recommend referring to the following official resources:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Your state/provincial education board official website</li>
+                    <li>Government curriculum standards documentation</li>
+                    <li>Ministry of Education guidelines</li>
+                    <li>Official curriculum frameworks and learning standards</li>
+                  </ul>
+                  <p className="pt-2 italic">This will help ensure alignment with official standards and requirements.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
               <div>
