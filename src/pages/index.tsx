@@ -1467,12 +1467,35 @@ export default function Home() {
               <Button
                 onClick={() => {
                   if (pendingStateContext) {
+                    // Always set the curriculum group from the card context
                     setSelectedRegion(pendingStateContext.region)
-                    if (!selectedStateCurriculum) setSelectedStateCurriculum(pendingStateContext.curriculum)
+                    setSelectedStateCurriculum(pendingStateContext.curriculum)
+                    // Clear downstream selections to avoid stale data
+                    setFrameworks([])
+                    setGrades([])
+                    setStrands([])
+                    setLessons([])
+                    setSelectedFramework(null)
+                    setSelectedGrade(null)
                     setCurrentStep(3)
                     setShowStateStandardModal(false)
                   } else if (stateStandardDetails?.region) {
-                    setSelectedRegion(stateStandardDetails.region)
+                    // Fallback: create a minimal synthetic curriculum group if none exists
+                    const region = stateStandardDetails.region
+                    setSelectedRegion(region)
+                    if (!selectedStateCurriculum) {
+                      setSelectedStateCurriculum({
+                        curriculum_name: `Selected Region: ${region}`,
+                        description: 'User-selected region (synthetic group)',
+                        states: [region]
+                      } as any)
+                    }
+                    setFrameworks([])
+                    setGrades([])
+                    setStrands([])
+                    setLessons([])
+                    setSelectedFramework(null)
+                    setSelectedGrade(null)
                     setCurrentStep(3)
                     setShowStateStandardModal(false)
                   }
