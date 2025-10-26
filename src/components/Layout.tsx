@@ -77,6 +77,15 @@ export default function Layout({ children }: LayoutProps) {
               <h1 className="text-2xl font-bold text-gray-900">Teacher Arena Lesson Generator</h1>
             </Link>
             <div className="flex items-center space-x-4">
+              {user && (
+                <Link
+                  href="/product-generation"
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <span>🛍️</span>
+                  <span>Products</span>
+                </Link>
+              )}
               {user ? (
                 <div className="relative">
                   <button
