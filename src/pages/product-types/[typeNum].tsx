@@ -5,6 +5,7 @@ import Button from '@/components/Button'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { generateTaskCardsDocx } from '@/lib/generators/taskCards'
+import { generateTaskCardsPdf } from '@/lib/generators/taskCardsPdf'
 
 interface LessonItem {
   title?: string
@@ -226,6 +227,16 @@ export default function ProductTypePage() {
       } catch (e: any) {
         // Fall back to modal if generator rejects
         alert(e?.message || 'Could not generate this lesson.')
+      }
+    }
+    // If this is Group A / A-01 / Type 02, generate PDF via pdf-lib
+    if (selected && selected.source.groupId === 'group-a' && selected.source.subPageId === 'a-01' && (String(typeNum) === '02' || String(typeNum) === '2')) {
+      try {
+        await generateTaskCardsPdf(selected.lesson, selected.source, String(typeNum))
+        setGeneratingLessonKey(null)
+        return
+      } catch (e: any) {
+        alert(e?.message || 'Could not generate PDF for this lesson.')
       }
     }
     // Otherwise, open modal to pick format
