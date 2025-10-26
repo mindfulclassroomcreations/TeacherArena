@@ -62,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { user, error: authError } = await getAuthUser(req)
   if (authError || !user) {
+    console.error('profile/init: auth error', { authError, userPresent: Boolean(user) })
     return res.status(401).json({ error: authError || 'Unauthorized' })
   }
 
@@ -71,7 +72,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const profileTable = await resolveProfileTable(supabaseAdmin)
     // Ensure a profile exists for this user; if not, create with initial tokens based on role
     const userId = user.id
-    const email = user.email || null
     const metaRole = (user.user_metadata?.role || user.app_metadata?.role || 'user')
     const role = String(metaRole).toLowerCase() as UserRole
     const initialTokens = INITIAL_TOKENS[role] ?? INITIAL_TOKENS.user
@@ -79,28 +79,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Check existing profile
     const { data: existing, error: selErr } = await supabaseAdmin
       .from(profileTable)
-      .select('id,email,role,tokens,created_at,updated_at')
+      .select('id,role,tokens,created_at,updated_at')
       .eq('id', userId)
       .maybeSingle()
-    if (selErr) throw selErr
+    if (selErr) {
+      console.error('profile/init: select error', { selErr, table: profileTable, userId })
+      throw selErr
+    }
 
     let profile: UserProfile
     if (existing) {
-      // Return existing profile
-      profile = existing as unknown as UserProfile
+      // Return existing profile with email from auth user
+      profile = { ...existing, email: user.email } as unknown as UserProfile
     } else {
       // Insert new profile with initial tokens
       const { data, error: insErr } = await supabaseAdmin
         .from(profileTable)
-        .insert({ id: userId, email, role, tokens: initialTokens })
-        .select('id,email,role,tokens,created_at,updated_at')
+        .insert({ id: userId, role, tokens: initialTokens })
+        .select('id,role,tokens,created_at,updated_at')
         .single()
-      if (insErr) throw insErr
-      profile = data as unknown as UserProfile
+      if (insErr) {
+        console.error('profile/init: insert error', { insErr, table: profileTable, userId, role, initialTokens })
+        throw insErr
+      }
+      profile = { ...data, email: user.email } as unknown as UserProfile
     }
 
     return res.status(200).json({ profile })
   } catch (e: any) {
+    console.error('profile/init: caught exception', { error: e?.message, code: e?.code, status: e?.status, details: e?.details })
     return res.status(500).json({ error: String(e?.message || e) })
   }
 }
