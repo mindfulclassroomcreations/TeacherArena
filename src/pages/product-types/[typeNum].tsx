@@ -43,10 +43,37 @@ export default function ProductTypePage() {
 
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
+  // Save lessons to persistent storage for this product type
+  const saveLessonsToProductType = (lessons: GroupedProductLesson[]) => {
+    if (typeof window !== 'undefined' && typeNum) {
+      try {
+        const storageKey = `ta_product_type_${typeNum}_lessons`
+        window.localStorage.setItem(storageKey, JSON.stringify(lessons))
+      } catch (e) {
+        console.error('Error saving product type lessons:', e)
+      }
+    }
+  }
+
   // Load all lessons sent to this product type from all sub-pages
   const loadLessons = React.useCallback(() => {
     if (typeof window !== 'undefined') {
       try {
+        // First check if there are persisted lessons for this product type
+        const persistedKey = `ta_product_type_${typeNum}_lessons`
+        const persistedData = window.localStorage.getItem(persistedKey)
+        
+        if (persistedData) {
+          try {
+            const persistedLessons = JSON.parse(persistedData) as GroupedProductLesson[]
+            setGroupedLessons(persistedLessons)
+            setLoading(false)
+            return
+          } catch (e) {
+            console.warn('Could not parse persisted lessons, loading from sent data')
+          }
+        }
+
         const allLessons: ProductTypeLesson[] = []
         const allKeys = Object.keys(window.localStorage)
 
@@ -103,6 +130,10 @@ export default function ProductTypePage() {
         })
 
         setGroupedLessons(grouped)
+        // Save to persistent storage
+        if (grouped.length > 0) {
+          saveLessonsToProductType(grouped)
+        }
       } catch (e) {
         console.error('Error loading lessons:', e)
       }
@@ -138,6 +169,7 @@ export default function ProductTypePage() {
       const newGrouped = [...groupedLessons]
       newGrouped[groupIdx].lessons[lessonIdx].lesson = editingLessons[lessonKey]
       setGroupedLessons(newGrouped)
+      saveLessonsToProductType(newGrouped)
     }
     setEditingId(null)
     setEditingLessons({})
@@ -157,6 +189,7 @@ export default function ProductTypePage() {
         newGrouped.splice(groupIdx, 1)
       }
       setGroupedLessons(newGrouped)
+      saveLessonsToProductType(newGrouped)
     }
   }
 
