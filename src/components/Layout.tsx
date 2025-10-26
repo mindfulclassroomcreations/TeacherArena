@@ -25,15 +25,28 @@ export default function Layout({ children }: LayoutProps) {
       try {
         if (!user) { setTokens(null); return }
         setLoadingTokens(true)
-        // Get access token from supabase client through AuthContext session if needed
-        // We avoid importing supabase here; rely on server to accept cookie/session when possible
+        // Get access token from AuthContext session
         const token = session?.access_token
-        const resp = await fetch('/api/profile/init', { 
-          method: 'GET', 
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        if (!token) { setTokens(null); return }
+        // Use POST to ensure profile exists and returns latest tokens
+        const resp = await fetch('/api/profile/init', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
         })
-        const data = await resp.json()
+        if (!resp.ok) {
+          // Fallback to GET in case POST is blocked
+          const alt = await fetch('/api/profile/init', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const altData = await alt.json().catch(() => null)
+          if (altData?.profile?.tokens != null) setTokens(altData.profile.tokens)
+          else setTokens(null)
+          return
+        }
+        const data = await resp.json().catch(() => null)
         if (data?.profile?.tokens != null) setTokens(data.profile.tokens)
+        else setTokens(null)
       } catch {
         // ignore errors
       } finally {
