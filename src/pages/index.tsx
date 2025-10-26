@@ -601,10 +601,12 @@ export default function Home() {
     try {
       const response = await generateContent({
         type: 'section-standards',
+        country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework.name,
         grade: selectedGrade.name,
         region: selectedRegion || undefined,
+        stateCurriculum: selectedStateCurriculum?.curriculum_name,
         section: section.title || section.name,
         context
       })

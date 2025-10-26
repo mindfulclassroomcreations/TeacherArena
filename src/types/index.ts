@@ -59,6 +59,8 @@ export interface AIGenerationRequest {
   performanceExpectations?: string[]
   // For state-standard
   region?: string
+  // For all steps: selected curriculum grouping (e.g., TEKS, SOL)
+  stateCurriculum?: string
   // For section-standards
   section?: string
   // For lessons-by-substandards

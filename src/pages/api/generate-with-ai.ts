@@ -49,7 +49,7 @@ export default async function handler(
   }
 
   try {
-  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section } = req.body
+  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section, stateCurriculum } = req.body
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -87,6 +87,8 @@ TASK: For the selected curriculum, generate sub-standards for a specific section
 INPUTS
 - Subject: "${subject}"
 - Framework/Standard: "${framework}"
+- Country: "${country}"
+- Curriculum Group (State/Region): "${stateCurriculum || ''}"
 - Grade Level: "${grade}"
 ${region ? `- Region/State: "${region}"` : ''}
 - Section Name: "${section}"
@@ -99,6 +101,9 @@ REQUIREMENTS
   - name (string) — concise sub-standard title.
   - description (string) — 1–2 sentence explanation of the sub-standard.
 - Keep codes unique and realistic; avoid placeholder text.
+- Base sub-standards strictly on the official curriculum/state standard for the given country/region.
+- Prefer official government or state education websites (e.g., TEKS, SOL, NGSS-aligned state pages) as the reference basis.
+- Do NOT invent standards; mirror real structure/names where possible.
 
 OUTPUT
 [
@@ -447,7 +452,7 @@ REQUIREMENTS
   const temperature = (type === 'lesson-generation-by-strand' || type === 'lessons-by-substandards') ? 0.7 : 0.3
 
   // Select model per step (subjects and state-curricula use gpt-4.1-nano as requested)
-  const model = (type === 'subjects' || type === 'state-curricula' || type === 'state-standard' || type === 'grades') ? 'gpt-4.1-nano' : 'gpt-4'
+  const model = 'gpt-4.1-nano'
 
     const response = await client.chat.completions.create({
       model,
