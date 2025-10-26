@@ -415,6 +415,8 @@ INPUTS
 - Framework/Standard: "${framework}"
 - Grade Level: "${grade}"
 ${region ? `- Region/State: "${region}"` : ''}
+- Country: "${country}"
+- Curriculum Group (State/Region): "${stateCurriculum || ''}"
 - Section: "${section}"
 - Sub-standards: ${JSON.stringify(subStandards)}
 - Target Lessons Per Sub-standard: ${Number(lessonsPerStandard) || 5}
@@ -429,7 +431,8 @@ Respond with ONLY a JSON array of lesson objects:
   {
     "title": "Lesson Title",
     "description": "Brief lesson description with objectives, key activity, assessment",
-    "standard_code": "SUBSTANDARD CODE"
+    "standard_code": "SUBSTANDARD CODE",
+    "lesson_code": "CODE combining sub-standard code + sequence, e.g., SUBSTANDARD-L01"
   }
 ]
 
@@ -437,6 +440,8 @@ REQUIREMENTS
 - Cover each sub-standard with multiple lessons (approximately the requested count per sub-standard)
 - Titles must be unique and concise; descriptions 1–3 sentences
 - Align to the grade level and the sub-standard referenced via standard_code
+- Provide a lesson_code for each lesson. Compose it using the sub-standard code plus a short sequence (e.g., CODE-L01, CODE-L02). Do NOT claim it is an official state code; it is a teacher-facing lesson identifier aligned to the standard.
+- Base topic alignment and naming on official curriculum/state standards where possible; do not invent standard codes beyond the provided sub-standard codes.
 `
         break
 
@@ -519,7 +524,8 @@ REQUIREMENTS
         name: item.title || item.name || `Lesson ${index + 1}`,
         title: item.title || item.name || `Lesson ${index + 1}`,
         description: item.description || '',
-        standard_code: item.standard_code || item.code || ''
+        standard_code: item.standard_code || item.code || '',
+        lesson_code: item.lesson_code || (item.standard_code ? `${item.standard_code}-L${String(index + 1).padStart(2, '0')}` : `L${String(index + 1).padStart(2, '0')}`)
       }))
 
       return res.status(200).json({

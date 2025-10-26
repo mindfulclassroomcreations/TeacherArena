@@ -615,19 +615,7 @@ export default function Home() {
       })
       if (Array.isArray(response.items)) {
         setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
-        // Initialize default lessons-per-standard for this section if not set
-        const count = response.items.length || 0
-        setLessonsPerSubStandardBySection((prev) => {
-          if (prev[key] != null) return prev
-          const def = (n: number) => {
-            if (n <= 3) return 5
-            if (n <= 10) return 10
-            if (n <= 15) return 15
-            if (n <= 20) return 20
-            return 25
-          }
-          return { ...prev, [key]: def(count) }
-        })
+        // Do not auto-set default lesson amounts; require user input
         setSuccess(`Generated ${response.items.length} sub-standards for "${section.title || section.name}"`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -647,14 +635,11 @@ export default function Home() {
       setError('Please generate sub-standards for this section first.')
       return
     }
-    const def = (n: number) => {
-      if (n <= 3) return 5
-      if (n <= 10) return 10
-      if (n <= 15) return 15
-      if (n <= 20) return 20
-      return 25
+    const per = lessonsPerSubStandardBySection[key]
+    if (!Number.isFinite(per as any) || (per as any) <= 0) {
+      setError('Please set "Lessons per sub-standard" for this section before generating lessons.')
+      return
     }
-    const per = lessonsPerSubStandardBySection[key] != null ? lessonsPerSubStandardBySection[key] : def(subStandards.length)
 
   setIsLoading(true)
   setLoadingLessonsSectionKey(key)
@@ -696,15 +681,11 @@ export default function Home() {
     const subStandards = subStandardsBySection[secKey] || []
     if (!Array.isArray(subStandards) || subStandards.length === 0) return
 
-    const def = (n: number) => {
-      if (n <= 3) return 5
-      if (n <= 10) return 10
-      if (n <= 15) return 15
-      if (n <= 20) return 20
-      return 25
+    const per = lessonsPerSingleSub[composite]
+    if (!Number.isFinite(per as any) || (per as any) <= 0) {
+      setError('Please set a lesson amount for this sub-standard before generating.')
+      return
     }
-    const fallback = def(subStandards.length)
-    const per = lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : fallback
 
     setIsLoading(true)
     setLoadingSingleLessonsKey(composite)
@@ -1608,16 +1589,7 @@ export default function Home() {
                                     const secKey = String(section.id || section.name || section.title || '')
                                     const subKey = String(ss.code || `S${idx + 1}`)
                                     const composite = `${secKey}__${subKey}`
-                                    const countForSection = subStandardsBySection[secKey]?.length || 0
-                                    const def = (n: number) => {
-                                      if (n <= 3) return 5
-                                      if (n <= 10) return 10
-                                      if (n <= 15) return 15
-                                      if (n <= 20) return 20
-                                      return 25
-                                    }
-                                    const fallback = def(countForSection)
-                                    const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : fallback)
+                                    const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : '')
                                     return (
                                     <tr key={idx} className="border-b border-gray-100 hover:bg-white">
                                       <td className="py-2 px-3 font-mono text-blue-600 text-xs">{ss.code || `S${idx + 1}`}</td>
@@ -1676,9 +1648,7 @@ export default function Home() {
                                     min="1"
                                     max="50"
                                   />
-                                  <p className="text-[11px] text-gray-500 mt-1">
-                                    Default set by sub-standards count: 0–3→5, 4–10→10, 11–15→15, 16–20→20, 21+→25
-                                  </p>
+                                  {/* No default value; user must set explicitly */}
                                 </div>
                                 <div className="flex-1 text-right">
                                   <Button
@@ -1730,7 +1700,12 @@ export default function Home() {
                                             <div className="p-3 space-y-2">
                                               {g.items.map((ls: any, li: number) => (
                                                 <div key={li} className="p-3 bg-yellow-25 rounded border border-yellow-100">
-                                                  <p className="font-medium text-gray-900">{ls.title || ls.name}</p>
+                                                  <div className="flex items-start justify-between gap-3">
+                                                    <p className="font-medium text-gray-900">{ls.title || ls.name}</p>
+                                                    {ls.lesson_code && (
+                                                      <span className="text-[11px] font-mono text-yellow-800 bg-yellow-100 px-2 py-1 rounded">{ls.lesson_code}</span>
+                                                    )}
+                                                  </div>
                                                   {ls.description && <p className="text-xs text-gray-600 mt-1">{ls.description}</p>}
                                                 </div>
                                               ))}
