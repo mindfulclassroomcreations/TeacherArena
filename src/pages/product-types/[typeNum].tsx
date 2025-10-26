@@ -218,15 +218,15 @@ export default function ProductTypePage() {
   const handleGenerateLesson = async (lessonKey: string) => {
     setGeneratingLessonKey(lessonKey)
     const selected = getLessonByKey(lessonKey)
-    // If this is the supported case (Group A / A-02 / Type 02), generate immediately for a smoother UX
+    // Group A / A-02 / Type 02 => Generate PDF (as requested)
     if (selected && selected.source.groupId === 'group-a' && selected.source.subPageId === 'a-02' && (String(typeNum) === '02' || String(typeNum) === '2')) {
       try {
-        await generateTaskCardsDocx(selected.lesson, selected.source, String(typeNum))
+        await generateTaskCardsPdf(selected.lesson, selected.source, String(typeNum))
         setGeneratingLessonKey(null)
         return
       } catch (e: any) {
         // Fall back to modal if generator rejects
-        alert(e?.message || 'Could not generate this lesson.')
+        alert(e?.message || 'Could not generate PDF for this lesson.')
       }
     }
     // If this is Group A / A-01 / Type 02, generate PDF via pdf-lib
@@ -241,6 +241,22 @@ export default function ProductTypePage() {
     }
     // Otherwise, open modal to pick format
     setShowLessonGenerateModal(true)
+  }
+
+  const handleGeneratePdf = async () => {
+    if (!generatingLessonKey) return
+    const selected = getLessonByKey(generatingLessonKey)
+    if (!selected) {
+      alert('Could not locate the selected lesson.')
+      return
+    }
+    try {
+      await generateTaskCardsPdf(selected.lesson, selected.source, String(typeNum))
+      setShowLessonGenerateModal(false)
+      setGeneratingLessonKey(null)
+    } catch (e: any) {
+      alert(e?.message || 'PDF generation failed for this lesson.')
+    }
   }
 
   const getLessonByKey = (key: string) => {
@@ -434,7 +450,7 @@ export default function ProductTypePage() {
                   Generate this lesson as a standalone document in your preferred format.
                 </p>
                 <div className="space-y-2">
-                  <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                  <button onClick={handleGeneratePdf} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
                     📄 Generate PDF
                   </button>
                   <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
