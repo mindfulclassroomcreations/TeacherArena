@@ -40,6 +40,8 @@ export default function ProductTypePage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingLessons, setEditingLessons] = useState<EditingLesson>({})
   const [showGenerateModal, setShowGenerateModal] = useState(false)
+  const [showLessonGenerateModal, setShowLessonGenerateModal] = useState(false)
+  const [generatingLessonKey, setGeneratingLessonKey] = useState<string | null>(null)
 
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
@@ -193,6 +195,11 @@ export default function ProductTypePage() {
     }
   }
 
+  const handleGenerateLesson = (lessonKey: string) => {
+    setGeneratingLessonKey(lessonKey)
+    setShowLessonGenerateModal(true)
+  }
+
   const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
 
   if (!typeNum) {
@@ -295,6 +302,35 @@ export default function ProductTypePage() {
                 </div>
                 <button
                   onClick={() => setShowGenerateModal(false)}
+                  className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Generate Individual Lesson Modal */}
+          {showLessonGenerateModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Lesson</h3>
+                <p className="text-gray-600 mb-6">
+                  Generate this lesson as a standalone document in your preferred format.
+                </p>
+                <div className="space-y-2">
+                  <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    📄 Generate PDF
+                  </button>
+                  <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    📊 Generate Excel
+                  </button>
+                  <button className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
+                    📝 Generate Word
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowLessonGenerateModal(false)}
                   className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
                 >
                   Cancel
@@ -413,6 +449,12 @@ export default function ProductTypePage() {
                                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
                                   >
                                     ✏️ Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleGenerateLesson(lessonKey)}
+                                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"
+                                  >
+                                    🔧 Generate
                                   </button>
                                   <button
                                     onClick={() => handleRemoveLesson(groupIdx, lessonIdx)}
