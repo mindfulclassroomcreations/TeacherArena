@@ -4,6 +4,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import Button from '@/components/Button'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { generateTaskCardsDocx } from '@/lib/generators/taskCards'
 
 interface LessonItem {
   title?: string
@@ -218,6 +219,34 @@ export default function ProductTypePage() {
     setShowLessonGenerateModal(true)
   }
 
+  const getLessonByKey = (key: string) => {
+    // key format: `${subStandard}_${index}`
+    const underIdx = key.lastIndexOf('_')
+    if (underIdx === -1) return null
+    const subStandard = key.substring(0, underIdx)
+    const idxStr = key.substring(underIdx + 1)
+    const idx = Number(idxStr)
+    const group = groupedLessons.find((g) => g.subStandard === subStandard)
+    if (!group || isNaN(idx) || idx < 0 || idx >= group.lessons.length) return null
+    return group.lessons[idx]
+  }
+
+  const handleGenerateWord = async () => {
+    if (!generatingLessonKey) return
+    const selected = getLessonByKey(generatingLessonKey)
+    if (!selected) {
+      alert('Could not locate the selected lesson.')
+      return
+    }
+    try {
+      await generateTaskCardsDocx(selected.lesson, selected.source, String(typeNum))
+      setShowLessonGenerateModal(false)
+      setGeneratingLessonKey(null)
+    } catch (e: any) {
+      alert(e?.message || 'Generation failed. This generator may be limited to specific categories/sub-pages.')
+    }
+  }
+
   const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
 
   if (!typeNum) {
@@ -387,7 +416,7 @@ export default function ProductTypePage() {
                   <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
                     📊 Generate Excel
                   </button>
-                  <button className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
+                  <button onClick={handleGenerateWord} className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
                     📝 Generate Word
                   </button>
                 </div>
