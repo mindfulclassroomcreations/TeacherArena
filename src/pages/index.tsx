@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Layout from '@/components/Layout'
 import Button from '@/components/Button'
 import Card from '@/components/Card'
@@ -33,6 +33,7 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
   const [requestedSubjectsCount, setRequestedSubjectsCount] = useState<string>('10')
+  const [lastGeneratedSubjectsCount, setLastGeneratedSubjectsCount] = useState<string>('10')
   const [subjects, setSubjects] = useState<Item[]>([])
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
@@ -94,7 +95,7 @@ export default function Home() {
   ]
 
   // API handlers
-  const handleGenerateSubjects = async (countryName?: string) => {
+  const handleGenerateSubjects = async (countryName?: string, force: boolean = false) => {
     const country = countryName || selectedCountry
     if (!country) {
       setError('Please select a country first.')
@@ -102,7 +103,7 @@ export default function Home() {
     }
     
     // Don't reload if already have data for this country
-    if (subjects.length > 0 && selectedCountry === country) return
+    if (!force && subjects.length > 0 && selectedCountry === country) return
     
     setIsLoading(true)
     setError(null)
@@ -117,6 +118,7 @@ export default function Home() {
       })
       if (response.items) {
         setSubjects(response.items)
+        setLastGeneratedSubjectsCount(requestedSubjectsCount)
         setSuccess(`Generated ${response.items.length} subjects for ${country}!`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -126,6 +128,14 @@ export default function Home() {
       setIsLoading(false)
     }
   }
+
+  // Auto-generate subjects when entering Step 1 and none exist
+  useEffect(() => {
+    if (currentStep >= 1 && selectedCountry && subjects.length === 0 && !isLoading) {
+      handleGenerateSubjects(selectedCountry, true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, selectedCountry])
 
   const handleGenerateStateCurricula = async () => {
     if (!selectedCountry || !selectedSubject) return
@@ -638,12 +648,16 @@ export default function Home() {
                 placeholder="e.g., 15"
                 min="1"
                 max="50"
+                onBlur={() => {
+                  if (
+                    requestedSubjectsCount &&
+                    requestedSubjectsCount !== lastGeneratedSubjectsCount &&
+                    !isLoading
+                  ) {
+                    handleGenerateSubjects(selectedCountry || undefined, true)
+                  }
+                }}
               />
-            </div>
-            <div>
-              <Button onClick={() => handleGenerateSubjects()} isLoading={isLoading}>
-                Generate {requestedSubjectsCount ? `${requestedSubjectsCount} ` : ''}Subjects
-              </Button>
             </div>
           </div>
         </div>
@@ -657,10 +671,7 @@ export default function Home() {
           items={subjects}
           selectedItem={selectedSubject}
           onSelect={handleSelectSubject}
-          onGenerate={handleGenerateSubjects}
-          isLoading={isLoading}
-          generateButtonText={subjects.length > 0 ? "Generate More Subjects" : "Generate Subjects"}
-          emptyStateText="No subjects generated yet. Click the button below to generate subjects using AI."
+          
         />
       )}
 

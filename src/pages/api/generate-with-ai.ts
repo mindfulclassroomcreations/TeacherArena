@@ -90,6 +90,7 @@ CONTEXT: ${context || 'General focus on high-demand classroom subjects suitable 
 
 REQUIREMENTS
 - ${count ? `Return EXACTLY ${count} subjects` : `Return 12–20 subjects`} commonly taught across Grades 1–12 in ${country}, spanning core and high‑demand elective areas.
+- Always include at least ONE Science-related subject (e.g., "Science", "General Science", "Life Science", "Physical Science", "Earth & Space Science", "STEM/STEAM"). If ${country} explicitly does not include science at the primary/secondary level, you may omit.
 - Optimize for subjects that are well-suited to worksheets, task cards, and Google Forms (clear skills practice, objective assessments).
 - Each item must include: name (string), description (string).
 - Avoid overly narrow topics and post‑secondary subjects; avoid course-level variants unless universally recognized.
