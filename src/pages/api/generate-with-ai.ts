@@ -79,7 +79,7 @@ GENERAL INSTRUCTIONS
 - Keep language concise and neutral.
 `
 
-    switch (type) {
+  switch (type) {
   case 'section-standards':
         userPrompt = `${sharedRules}
 TASK: For the selected curriculum, generate sub-standards for a specific section.
@@ -399,16 +399,52 @@ OUTPUT (object only; will be wrapped in an array by the server)
 `
         break
 
+      case 'lessons-by-substandards':
+        const { subStandards = [], lessonsPerStandard = 5 } = req.body
+        const targetTotal = Math.max(1, (Array.isArray(subStandards) ? subStandards.length : 0) * (Number(lessonsPerStandard) || 5))
+        userPrompt = `${sharedRules}
+ROLE: You are an expert lesson plan creator.
+
+INPUTS
+- Subject: "${subject}"
+- Framework/Standard: "${framework}"
+- Grade Level: "${grade}"
+${region ? `- Region/State: "${region}"` : ''}
+- Section: "${section}"
+- Sub-standards: ${JSON.stringify(subStandards)}
+- Target Lessons Per Sub-standard: ${Number(lessonsPerStandard) || 5}
+- Target Total Lessons: ${targetTotal}
+
+GOAL
+Generate ${targetTotal} short lesson plan outlines distributed across the provided sub-standards (roughly ${Number(lessonsPerStandard) || 5} per sub-standard), aligned to the section and grade.
+
+OUTPUT FORMAT
+Respond with ONLY a JSON array of lesson objects:
+[
+  {
+    "title": "Lesson Title",
+    "description": "Brief lesson description with objectives, key activity, assessment",
+    "standard_code": "SUBSTANDARD CODE"
+  }
+]
+
+REQUIREMENTS
+- Cover each sub-standard with multiple lessons (approximately the requested count per sub-standard)
+- Titles must be unique and concise; descriptions 1–3 sentences
+- Align to the grade level and the sub-standard referenced via standard_code
+`
+        break
+
       default:
         return res.status(400).json({ error: 'Invalid type' })
     }
 
-    const selectedPromptId = (type === 'lesson-discovery' || type === 'lesson-generation-by-strand' || type === 'lessons') 
+    const selectedPromptId = (type === 'lesson-discovery' || type === 'lesson-generation-by-strand' || type === 'lessons' || type === 'lessons-by-substandards') 
       ? LESSON_PROMPT_ID 
       : PROMPT_ID
 
     // Tune temperature per type: keep structured outputs lower
-  const temperature = (type === 'lesson-generation-by-strand') ? 0.7 : 0.3
+  const temperature = (type === 'lesson-generation-by-strand' || type === 'lessons-by-substandards') ? 0.7 : 0.3
 
   // Select model per step (subjects and state-curricula use gpt-4.1-nano as requested)
   const model = (type === 'subjects' || type === 'state-curricula' || type === 'state-standard' || type === 'grades') ? 'gpt-4.1-nano' : 'gpt-4'
@@ -466,6 +502,26 @@ OUTPUT (object only; will be wrapped in an array by the server)
       } else {
         return res.status(500).json({ error: 'AI did not return a valid discovery object' })
       }
+    }
+
+    if (type === 'lessons-by-substandards') {
+      let items = parsedData
+      if (!Array.isArray(items)) {
+        return res.status(500).json({ error: 'AI did not return an array of lessons' })
+      }
+
+      items = items.map((item: any, index: number) => ({
+        name: item.title || item.name || `Lesson ${index + 1}`,
+        title: item.title || item.name || `Lesson ${index + 1}`,
+        description: item.description || '',
+        standard_code: item.standard_code || item.code || ''
+      }))
+
+      return res.status(200).json({
+        success: true,
+        items,
+        count: items.length
+      })
     }
 
     if (type === 'section-standards') {

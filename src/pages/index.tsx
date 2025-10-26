@@ -48,7 +48,9 @@ export default function Home() {
   const [lessons, setLessons] = useState<Item[]>([])
   // Step 5: sub-standards under sections
   const [subStandardsBySection, setSubStandardsBySection] = useState<Record<string, any[]>>({})
+  const [lessonsPerSubStandardBySection, setLessonsPerSubStandardBySection] = useState<Record<string, number>>({})
   const [loadingSectionKey, setLoadingSectionKey] = useState<string | null>(null)
+  const [loadingLessonsSectionKey, setLoadingLessonsSectionKey] = useState<string | null>(null)
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
   const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
   const [selectedCurriculumSections, setSelectedCurriculumSections] = useState<any[]>([])
@@ -608,6 +610,19 @@ export default function Home() {
       })
       if (Array.isArray(response.items)) {
         setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
+        // Initialize default lessons-per-standard for this section if not set
+        const count = response.items.length || 0
+        setLessonsPerSubStandardBySection((prev) => {
+          if (prev[key] != null) return prev
+          const def = (n: number) => {
+            if (n <= 3) return 5
+            if (n <= 10) return 10
+            if (n <= 15) return 15
+            if (n <= 20) return 20
+            return 25
+          }
+          return { ...prev, [key]: def(count) }
+        })
         setSuccess(`Generated ${response.items.length} sub-standards for "${section.title || section.name}"`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -615,6 +630,87 @@ export default function Home() {
       setError('Failed to generate sub-standards for this section. Please try again.')
     } finally {
       setLoadingSectionKey(null)
+    }
+  }
+
+  // Step 5: Generate lessons based on generated sub-standards for a section
+  const handleGenerateLessonsFromSubStandards = async (section: any) => {
+    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    const key = String(section.id || section.name || section.title || '')
+    const subStandards = subStandardsBySection[key] || []
+    if (!Array.isArray(subStandards) || subStandards.length === 0) {
+      setError('Please generate sub-standards for this section first.')
+      return
+    }
+    const def = (n: number) => {
+      if (n <= 3) return 5
+      if (n <= 10) return 10
+      if (n <= 15) return 15
+      if (n <= 20) return 20
+      return 25
+    }
+    const per = lessonsPerSubStandardBySection[key] != null ? lessonsPerSubStandardBySection[key] : def(subStandards.length)
+
+  setIsLoading(true)
+  setLoadingLessonsSectionKey(key)
+    setError(null)
+    try {
+      const response = await generateContent({
+        type: 'lessons-by-substandards' as any,
+        subject: selectedSubject.name,
+        framework: selectedFramework.name,
+        grade: selectedGrade.name,
+        region: selectedRegion || undefined,
+        section: section.title || section.name,
+        subStandards,
+        lessonsPerStandard: per,
+        context
+      } as any)
+      if (Array.isArray(response.items)) {
+        // Create a synthetic strand for this section if missing
+        const makeStrandCode = (s: any) => {
+          const base = String(s.title || s.name || 'SECTION').toUpperCase().replace(/[^A-Z0-9]+/g, '-')
+          return `SEC-${base}`.slice(0, 18)
+        }
+        const strand_code = makeStrandCode(section)
+        const strand_name = String(section.title || section.name || strand_code)
+        // Ensure strands include this synthetic one for grouping in Step 6
+        setStrands((prev) => {
+          if (prev.some((st) => st.strand_code === strand_code)) return prev
+          const num_standards = subStandards.length
+          const target_lesson_count = num_standards * per
+          const newStrand: Strand = {
+            strand_code,
+            strand_name,
+            num_standards,
+            key_topics: subStandards.map((s: any) => String(s.title || s.name || s.code || '').trim()).filter(Boolean).slice(0, 8),
+            target_lesson_count,
+            performance_expectations: []
+          }
+          return [...prev, newStrand]
+        })
+
+        // Tag lessons with strand context
+        const tagged = response.items.map((it: any) => ({
+          ...it,
+          strand_code,
+          strand_name
+        }))
+        setLessons((prev: any[]) => {
+          const existingKeys = new Set(prev.map((l: any) => `${l.strand_code}__${l.title || l.name}`))
+          const deduped = tagged.filter((l: any) => !existingKeys.has(`${l.strand_code}__${l.title || l.name}`))
+          return [...prev, ...deduped]
+        })
+        setCurrentStep(5)
+        scrollToStep6()
+        setSuccess(`Generated ${response.items.length} lessons for "${section.title || section.name}" from sub-standards.`)
+        setTimeout(() => setSuccess(null), 3000)
+      }
+    } catch (err) {
+      setError('Failed to generate lessons from sub-standards. Please try again.')
+    } finally {
+      setIsLoading(false)
+      setLoadingLessonsSectionKey(null)
     }
   }
 
@@ -1495,6 +1591,40 @@ export default function Home() {
                             </div>
                           ) : (
                             <p className="text-xs text-gray-500">No sub-standards yet. Click Generate to create them.</p>
+                          )}
+                          {Array.isArray(subStandardsBySection[String(section.id || section.name || section.title || '')]) && subStandardsBySection[String(section.id || section.name || section.title || '')].length > 0 && (
+                            <div className="mt-3 bg-white border border-gray-200 rounded p-3">
+                              <div className="flex flex-col sm:flex-row gap-3 items-end justify-between">
+                                <div className="w-full sm:w-48">
+                                  <Input
+                                    type="number"
+                                    label="Lessons per sub-standard"
+                                    value={String(lessonsPerSubStandardBySection[String(section.id || section.name || section.title || '')] ?? '')}
+                                    onChange={(e) => {
+                                      const key = String(section.id || section.name || section.title || '')
+                                      const val = parseInt(e.target.value)
+                                      setLessonsPerSubStandardBySection((prev) => ({ ...prev, [key]: Number.isFinite(val) && val > 0 ? val : 0 }))
+                                    }}
+                                    placeholder="e.g., 10"
+                                    min="1"
+                                    max="50"
+                                  />
+                                  <p className="text-[11px] text-gray-500 mt-1">
+                                    Default set by sub-standards count: 0–3→5, 4–10→10, 11–15→15, 16–20→20, 21+→25
+                                  </p>
+                                </div>
+                                <div className="flex-1 text-right">
+                                  <Button
+                                    size="sm"
+                                    variant="primary"
+                                    onClick={(e) => { e.stopPropagation(); handleGenerateLessonsFromSubStandards(section) }}
+                                    isLoading={isLoading && loadingLessonsSectionKey === String(section.id || section.name || section.title || '')}
+                                  >
+                                    Generate Lessons from Sub-standards
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
                          <div className="mt-4 text-right">
