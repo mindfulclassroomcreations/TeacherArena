@@ -138,7 +138,6 @@ export default function AdminUsers() {
                         disabled={loading}
                       />
                       <Button size="sm" variant="outline" onClick={() => applyCustomAdd(u.id, 1)} disabled={loading}>Add</Button>
-                      <Button size="sm" variant="danger" onClick={() => applyCustomAdd(u.id, -1)} disabled={loading}>Deduct</Button>
                       <Button size="sm" variant="primary" onClick={() => applyCustomSet(u.id)} disabled={loading}>Set</Button>
                     </span>
                     <Button size="sm" variant="danger" onClick={() => removeUser(u.id)} disabled={loading}>Remove</Button>
