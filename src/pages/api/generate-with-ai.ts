@@ -81,136 +81,23 @@ GENERAL INSTRUCTIONS
 
     switch (type) {
       case 'subjects':
-        // Use the Responses API with a managed prompt for subjects to ensure strict JSON compliance
-        {
-          const grade_min = 1
-          const grade_max = 12
-          const resource_types = ["worksheets","task cards","Google Forms","quizzes","activities","projects"]
-          const include_electives = true
-          const min_items = 6
-          const max_items = 10
-          const exclude_subjects: string[] = []
-          const language = 'en'
+        userPrompt = `${sharedRules}
+TASK: Generate educational subjects for product research on the TeachersPayTeachers (TPT) marketplace.
+MARKET: ${country} schools; Grades 1–12 (primary to secondary).
+PRODUCT TYPES: Worksheets, Task Cards, Google Forms, and similar printable/Google resources.
+CONTEXT: ${context || 'General focus on high-demand classroom subjects suitable for printable and Google resources.'}
 
-          // Wrapped-object schema to allow strict:true
-          const subjectsSchema = {
-            name: 'subjects_payload',
-            schema: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['subjects'],
-              properties: {
-                subjects: {
-                  type: 'array',
-                  minItems: min_items,
-                  maxItems: max_items,
-                  items: {
-                    type: 'object',
-                    additionalProperties: false,
-                    required: ['name', 'description'],
-                    properties: {
-                      name: { type: 'string', minLength: 2, maxLength: 80 },
-                      description: { type: 'string', minLength: 10, maxLength: 240 },
-                    },
-                  },
-                },
-              },
-            },
-            strict: true,
-          }
+REQUIREMENTS
+- Return 12–20 subjects commonly taught across Grades 1–12 in ${country}, spanning core and high‑demand elective areas.
+- Optimize for subjects that are well-suited to worksheets, task cards, and Google Forms (clear skills practice, objective assessments).
+- Each item must include: name (string), description (string).
+- Avoid overly narrow topics and post‑secondary subjects; avoid course-level variants unless universally recognized.
 
-          try {
-            const response = await (client as any).responses.create({
-              model: 'gpt-4.1-nano',
-              prompt: {
-                id: 'pmpt_68fd9bddcd4c8195b83cc578da7f876e009ccf7e089176e0',
-                version: '1',
-              },
-              // Variables for the managed prompt
-              input: ({
-                country,
-                grade_min,
-                grade_max,
-                resource_types,
-                context: context || '',
-                include_electives,
-                min_items,
-                max_items,
-                exclude_subjects,
-                language,
-              } as any),
-              response_format: {
-                type: 'json_schema',
-                json_schema: subjectsSchema as any,
-              },
-              temperature: 0.3,
-              top_p: 1.0,
-              max_output_tokens: 700,
-            } as any)
-
-            const anyRes: any = response as any
-            let parsed = anyRes.output_parsed
-            if (!parsed) {
-              const text: string = anyRes.output_text || ''
-              // Try to parse the first JSON object from text as fallback
-              const match = text.match(/\{[\s\S]*\}/)
-              if (match) parsed = JSON.parse(match[0])
-            }
-            if (!parsed) {
-              return res.status(500).json({ error: 'AI did not return parseable JSON for subjects' })
-            }
-            const subjectsArray = Array.isArray(parsed) ? parsed : parsed.subjects
-            if (!Array.isArray(subjectsArray)) {
-              return res.status(500).json({ error: 'AI did not return a subjects array' })
-            }
-            const items = subjectsArray.map((item: any, index: number) => ({
-              name: item.name || item.title || `Item ${index + 1}`,
-              title: item.title,
-              description: item.description || '',
-            }))
-            return res.status(200).json({ success: true, items, count: items.length })
-          } catch (responsesError) {
-            console.warn('Responses API (subjects) failed, falling back to chat.completions:', responsesError)
-            // Fallback: use chat.completions with strict prompting and parse JSON
-            try {
-              const fallbackPrompt = `${sharedRules}\nTASK: Generate educational subjects for ${country}.\nCONTEXT: ${context || 'General educational subjects'}\n\nREQUIREMENTS\n- Return ${min_items}–${max_items} subjects commonly taught in ${country} schools spanning different disciplines.\n- Each item must include: name (string), description (string).\n- Avoid grade-level course titles (use broad areas like \"Mathematics\", unless context requires specificity).\n`;
-
-              const chatRes = await client.chat.completions.create({
-                model: 'gpt-4',
-                messages: [
-                  { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON.' },
-                  { role: 'user', content: fallbackPrompt }
-                ],
-                temperature: 0.3,
-                max_tokens: 700
-              })
-              let responseText = chatRes?.choices?.[0]?.message?.content || ''
-              if (!responseText) {
-                return res.status(500).json({ error: 'AI response was empty in fallback' })
-              }
-              let parsedData = null as any
-              try {
-                const jsonMatch = responseText.match(/\[[\s\S]*\]|\{[\s\S]*\}/)
-                parsedData = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(responseText)
-              } catch (e) {
-                return res.status(500).json({ error: 'Failed to parse fallback AI response' })
-              }
-              const subjectsArray = Array.isArray(parsedData) ? parsedData : parsedData.subjects
-              if (!Array.isArray(subjectsArray)) {
-                return res.status(500).json({ error: 'Fallback AI did not return a subjects array' })
-              }
-              const items = subjectsArray.map((item: any, index: number) => ({
-                name: item.name || item.title || `Item ${index + 1}`,
-                title: item.title,
-                description: item.description || '',
-              }))
-              return res.status(200).json({ success: true, items, count: items.length })
-            } catch (fallbackErr) {
-              console.error('Fallback subjects generation failed:', fallbackErr)
-              return res.status(500).json({ error: 'Failed to generate subjects', details: String(fallbackErr) })
-            }
-          }
-        }
+OUTPUT
+[
+  { "name": "Mathematics", "description": "Grade 1–12 numeracy and problem solving (arithmetic, algebra, geometry, data). Strong fit for worksheets and Google Forms quizzes." }
+]
+`
         break
 
       case 'frameworks':
@@ -363,8 +250,11 @@ OUTPUT
     // Tune temperature per type: keep structured outputs lower
     const temperature = (type === 'lesson-generation-by-strand') ? 0.7 : 0.3
 
+    // Select model per step (subjects uses gpt-4.1-nano as requested)
+    const model = type === 'subjects' ? 'gpt-4.1-nano' : 'gpt-4'
+
     const response = await client.chat.completions.create({
-      model: 'gpt-4',
+      model,
       messages: [
         {
           role: 'system',
