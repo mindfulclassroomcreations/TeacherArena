@@ -78,13 +78,15 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
             <div className="flex items-center space-x-4">
               {user && (
-                <Link
+                <a
                   href="/product-generation"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2"
                 >
                   <span>🛍️</span>
                   <span>Products</span>
-                </Link>
+                </a>
               )}
               {user ? (
                 <div className="relative">
