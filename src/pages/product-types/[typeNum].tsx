@@ -40,9 +40,37 @@ export default function ProductTypePage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingLessons, setEditingLessons] = useState<EditingLesson>({})
   const [showGenerateModal, setShowGenerateModal] = useState(false)
+  const categoryButtons = React.useMemo(() => {
+    const map = new Map<string, Set<string>>()
+    groupedLessons.forEach((g) =>
+      g.lessons.forEach((it) => {
+        if (!map.has(it.source.groupId)) map.set(it.source.groupId, new Set<string>())
+        map.get(it.source.groupId)!.add(it.source.subPageId)
+      })
+    )
+    return Array.from(map.entries()).map(([groupId, subs]) => ({
+      groupId,
+      firstSubPageId: Array.from(subs).sort()[0],
+    }))
+  }, [groupedLessons])
+
+  const subPageButtons = React.useMemo(() => {
+    const seen = new Set<string>()
+    const arr: Array<{ groupId: string; subPageId: string }> = []
+    groupedLessons.forEach((g) =>
+      g.lessons.forEach((it) => {
+        const key = `${it.source.groupId}|${it.source.subPageId}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          arr.push({ groupId: it.source.groupId, subPageId: it.source.subPageId })
+        }
+      })
+    )
+    arr.sort((a, b) => `${a.groupId}-${a.subPageId}`.localeCompare(`${b.groupId}-${b.subPageId}`))
+    return arr
+  }, [groupedLessons])
   const [showLessonGenerateModal, setShowLessonGenerateModal] = useState(false)
   const [generatingLessonKey, setGeneratingLessonKey] = useState<string | null>(null)
-  const [allSources, setAllSources] = useState<Set<{ categoryId: string; subPageId: string }>>(new Set())
 
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
@@ -122,7 +150,6 @@ export default function ProductTypePage() {
 
         // Group lessons by sub-standard
         const grouped: GroupedProductLesson[] = []
-        const sources = new Set<string>()
         allLessons.forEach((lessonItem) => {
           const subStandard = lessonItem.source.subStandard
           let group = grouped.find((g) => g.subStandard === subStandard)
@@ -131,13 +158,9 @@ export default function ProductTypePage() {
             grouped.push(group)
           }
           group.lessons.push(lessonItem)
-          // Track unique sources
-          sources.add(JSON.stringify({ categoryId: lessonItem.source.groupId, subPageId: lessonItem.source.subPageId }))
         })
 
         setGroupedLessons(grouped)
-        // Store sources for breadcrumb navigation
-        setAllSources(new Set(Array.from(sources).map(s => JSON.parse(s))))
         // Save to persistent storage
         if (grouped.length > 0) {
           saveLessonsToProductType(grouped)
@@ -206,37 +229,34 @@ export default function ProductTypePage() {
     setShowLessonGenerateModal(true)
   }
 
-  // Get unique categories and sub-pages from all sources
-  const getCategorySubPageLinks = () => {
-    const sourceArray = Array.from(allSources)
-    const uniqueCategories = new Map<string, Set<string>>()
-    sourceArray.forEach((source: any) => {
-      if (!uniqueCategories.has(source.categoryId)) {
-        uniqueCategories.set(source.categoryId, new Set())
-      }
-      uniqueCategories.get(source.categoryId)!.add(source.subPageId)
-    })
-    return uniqueCategories
-  }
-
-  const getCategoryName = (categoryId: string) => {
-    const categoryMap: Record<string, string> = {
-      'group-t': 'Group T',
-      'group-a': 'Group A',
-      'group-b': 'Group B',
-      'group-c': 'Group C',
-      'group-d': 'Group D',
-      'group-e': 'Group E',
-      'group-f': 'Group F',
-      'group-g': 'Group G',
-      'group-h': 'Group H',
-      'group-i': 'Group I',
-      'group-j': 'Group J',
-    }
-    return categoryMap[categoryId] || categoryId
-  }
-
   const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
+
+  const formatGroupLabel = (groupId: string) => {
+    // Expecting ids like "group-t" -> "Group T"
+    const parts = groupId.split('-')
+    const suffix = parts[1] ? parts[1].toUpperCase() : groupId.toUpperCase()
+    return `Group ${suffix}`
+  }
+
+  const formatSubPageLabel = (subPageId: string) => {
+    // Expecting ids like "t-01" -> "T - 01"
+    const parts = subPageId.split('-')
+    if (parts.length === 2) return `${parts[0].toUpperCase()} - ${parts[1]}`
+    return subPageId.toUpperCase()
+  }
+
+  const goToCategory = (groupId: string) => {
+    const entry = categoryButtons.find((c) => c.groupId === groupId)
+    if (entry && entry.firstSubPageId) {
+      router.push(`/products/${groupId}/${entry.firstSubPageId}`)
+    } else {
+      router.push('/product-generation')
+    }
+  }
+
+  const goToSubPage = (groupId: string, subPageId: string) => {
+    router.push(`/products/${groupId}/${subPageId}`)
+  }
 
   if (!typeNum) {
     return (
@@ -275,36 +295,49 @@ export default function ProductTypePage() {
                 </button>
               </Link>
             </div>
-
-            {/* Breadcrumb Navigation */}
-            {allSources.size > 0 && (
-              <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Source Navigation</p>
-                <div className="flex flex-wrap gap-2">
-                  {Array.from(getCategorySubPageLinks().entries()).map(([categoryId, subPages]) => (
-                    <div key={categoryId} className="flex gap-2 items-center">
-                      <Link href={`/products/${categoryId}`}>
-                        <button className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                          📁 {getCategoryName(categoryId)}
-                        </button>
-                      </Link>
-                      {Array.from(subPages).map((subPageId) => (
-                        <Link key={subPageId} href={`/products/${categoryId}/${subPageId}`}>
-                          <button className="px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors font-medium">
-                            📄 {subPageId.toUpperCase()}
-                          </button>
-                        </Link>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
               PRODUCT TYPE - {typeNumber}
             </h1>
             <p className="text-gray-600">Lessons sent for this product type</p>
+            {/* Top navigation buttons for Categories and Sub-Pages */}
+            {totalLessons > 0 && (
+              <div className="mt-4 space-y-3">
+                {categoryButtons.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Categories</p>
+                    <div className="flex flex-wrap gap-2">
+                      {categoryButtons.map((c) => (
+                        <button
+                          key={c.groupId}
+                          onClick={() => goToCategory(c.groupId)}
+                          className="px-3 py-1.5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm"
+                          title={`Go to ${formatGroupLabel(c.groupId)}`}
+                        >
+                          {formatGroupLabel(c.groupId)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {subPageButtons.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Sub-Pages</p>
+                    <div className="flex flex-wrap gap-2">
+                      {subPageButtons.map((s) => (
+                        <button
+                          key={`${s.groupId}-${s.subPageId}`}
+                          onClick={() => goToSubPage(s.groupId, s.subPageId)}
+                          className="px-3 py-1.5 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm"
+                          title={`Go to ${formatSubPageLabel(s.subPageId)}`}
+                        >
+                          {formatSubPageLabel(s.subPageId)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Product Type Details */}
