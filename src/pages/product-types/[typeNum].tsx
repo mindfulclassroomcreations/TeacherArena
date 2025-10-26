@@ -23,11 +23,23 @@ interface ProductTypeLesson {
   }
 }
 
+interface GroupedProductLesson {
+  subStandard: string
+  lessons: ProductTypeLesson[]
+}
+
+interface EditingLesson {
+  [key: string]: LessonItem
+}
+
 export default function ProductTypePage() {
   const router = useRouter()
   const { typeNum } = router.query
-  const [lessons, setLessons] = useState<ProductTypeLesson[]>([])
+  const [groupedLessons, setGroupedLessons] = useState<GroupedProductLesson[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingLessons, setEditingLessons] = useState<EditingLesson>({})
+  const [showGenerateModal, setShowGenerateModal] = useState(false)
 
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
@@ -78,7 +90,19 @@ export default function ProductTypePage() {
           }
         })
 
-        setLessons(allLessons)
+        // Group lessons by sub-standard
+        const grouped: GroupedProductLesson[] = []
+        allLessons.forEach((lessonItem) => {
+          const subStandard = lessonItem.source.subStandard
+          let group = grouped.find((g) => g.subStandard === subStandard)
+          if (!group) {
+            group = { subStandard, lessons: [] }
+            grouped.push(group)
+          }
+          group.lessons.push(lessonItem)
+        })
+
+        setGroupedLessons(grouped)
       } catch (e) {
         console.error('Error loading lessons:', e)
       }
@@ -89,6 +113,54 @@ export default function ProductTypePage() {
   useEffect(() => {
     loadLessons()
   }, [loadLessons])
+
+  const getLessonKey = (index: number, subStandard: string) => `${subStandard}_${index}`
+
+  const handleStartEdit = (lessonKey: string, lesson: LessonItem) => {
+    setEditingId(lessonKey)
+    setEditingLessons({
+      [lessonKey]: { ...lesson }
+    })
+  }
+
+  const handleEditChange = (lessonKey: string, field: keyof LessonItem, value: string) => {
+    setEditingLessons({
+      [lessonKey]: {
+        ...editingLessons[lessonKey],
+        [field]: value
+      }
+    })
+  }
+
+  const handleSaveEdit = (groupIdx: number, lessonIdx: number) => {
+    const lessonKey = getLessonKey(lessonIdx, groupedLessons[groupIdx].subStandard)
+    if (editingLessons[lessonKey]) {
+      const newGrouped = [...groupedLessons]
+      newGrouped[groupIdx].lessons[lessonIdx].lesson = editingLessons[lessonKey]
+      setGroupedLessons(newGrouped)
+    }
+    setEditingId(null)
+    setEditingLessons({})
+    alert('Lesson updated successfully!')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditingLessons({})
+  }
+
+  const handleRemoveLesson = (groupIdx: number, lessonIdx: number) => {
+    if (confirm('Are you sure you want to remove this lesson?')) {
+      const newGrouped = [...groupedLessons]
+      newGrouped[groupIdx].lessons.splice(lessonIdx, 1)
+      if (newGrouped[groupIdx].lessons.length === 0) {
+        newGrouped.splice(groupIdx, 1)
+      }
+      setGroupedLessons(newGrouped)
+    }
+  }
+
+  const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
 
   if (!typeNum) {
     return (
@@ -139,7 +211,7 @@ export default function ProductTypePage() {
               <h3 className="text-lg font-semibold text-purple-900 mb-3">Product Type</h3>
               <ul className="space-y-2 text-sm text-purple-800">
                 <li>• <strong>Type:</strong> {typeNumber}</li>
-                <li>• <strong>Total Lessons:</strong> {lessons.length}</li>
+                <li>• <strong>Total Lessons:</strong> {totalLessons}</li>
                 <li>• <strong>Status:</strong> Active</li>
               </ul>
             </div>
@@ -147,8 +219,11 @@ export default function ProductTypePage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-blue-900 mb-3">Quick Actions</h3>
               <div className="space-y-2">
-                <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
-                  📝 Edit Product
+                <button
+                  onClick={() => setShowGenerateModal(true)}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                >
+                  🔧 Generate Product
                 </button>
                 <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
                   📥 Download
@@ -166,46 +241,158 @@ export default function ProductTypePage() {
             </div>
           </div>
 
+          {/* Generate Product Modal */}
+          {showGenerateModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Product</h3>
+                <p className="text-gray-600 mb-6">
+                  This will generate a product document from all {totalLessons} lesson(s) in this product type.
+                </p>
+                <div className="space-y-2">
+                  <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    Generate PDF
+                  </button>
+                  <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    Generate Excel
+                  </button>
+                  <button className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
+                    Generate Word
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowGenerateModal(false)}
+                  className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Lessons Section */}
-          {lessons.length > 0 ? (
+          {totalLessons > 0 ? (
             <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Lessons ({lessons.length})</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Lessons ({totalLessons})</h2>
               <div className="space-y-4">
-                {lessons.map((item, idx) => (
-                  <div key={idx} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-2">
-                          {item.lesson.title || item.lesson.name || `Lesson ${idx + 1}`}
-                        </h3>
-                        {item.lesson.description && (
-                          <p className="text-sm text-gray-600 mb-3">{item.lesson.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {item.lesson.standard_code && (
-                            <span className="text-xs font-mono text-blue-800 bg-blue-100 px-2 py-1 rounded">
-                              {item.lesson.standard_code}
-                            </span>
-                          )}
-                          {item.lesson.code && (
-                            <span className="text-xs font-mono text-gray-800 bg-gray-200 px-2 py-1 rounded">
-                              {item.lesson.code}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                          <p><strong>Source:</strong> {item.source.groupId.toUpperCase()} &gt; {item.source.subPageId.toUpperCase()}</p>
-                          <p><strong>Sub-Standard:</strong> {item.source.subStandard}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                          Edit
-                        </button>
-                        <button className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
-                          Remove
-                        </button>
-                      </div>
+                {groupedLessons.map((group, groupIdx) => (
+                  <div key={groupIdx} className="bg-yellow-50 border border-yellow-200 rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 bg-yellow-100 border-b border-yellow-200">
+                      <h3 className="font-semibold text-yellow-900">
+                        Sub-Standard: {group.subStandard}
+                      </h3>
+                      <p className="text-xs text-yellow-800">{group.lessons.length} lesson{group.lessons.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {group.lessons.map((item, lessonIdx) => {
+                        const lessonKey = getLessonKey(lessonIdx, group.subStandard)
+                        const isEditing = editingId === lessonKey
+                        const editLesson = editingLessons[lessonKey] || item.lesson
+
+                        return (
+                          <div key={lessonIdx} className="p-4 border border-gray-200 rounded-lg bg-white">
+                            {isEditing ? (
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-sm font-semibold text-gray-700 mb-1">Title</label>
+                                  <input
+                                    type="text"
+                                    value={editLesson.title || ''}
+                                    onChange={(e) => handleEditChange(lessonKey, 'title', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                                  <textarea
+                                    value={editLesson.description || ''}
+                                    onChange={(e) => handleEditChange(lessonKey, 'description', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Standard Code</label>
+                                    <input
+                                      type="text"
+                                      value={editLesson.standard_code || ''}
+                                      onChange={(e) => handleEditChange(lessonKey, 'standard_code', e.target.value)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Code</label>
+                                    <input
+                                      type="text"
+                                      value={editLesson.code || ''}
+                                      onChange={(e) => handleEditChange(lessonKey, 'code', e.target.value)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleSaveEdit(groupIdx, lessonIdx)}
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"
+                                  >
+                                    ✓ Save
+                                  </button>
+                                  <button
+                                    onClick={handleCancelEdit}
+                                    className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-medium text-sm"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="flex items-start justify-between gap-4 mb-2">
+                                  <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-900 mb-1">
+                                      {item.lesson.title || item.lesson.name || `Lesson ${lessonIdx + 1}`}
+                                    </h3>
+                                    {item.lesson.description && (
+                                      <p className="text-sm text-gray-600 mb-2">{item.lesson.description}</p>
+                                    )}
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {item.lesson.standard_code && (
+                                        <span className="text-xs font-mono text-blue-800 bg-blue-100 px-2 py-1 rounded">
+                                          {item.lesson.standard_code}
+                                        </span>
+                                      )}
+                                      {item.lesson.code && (
+                                        <span className="text-xs font-mono text-gray-800 bg-gray-200 px-2 py-1 rounded">
+                                          {item.lesson.code}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded mb-3">
+                                  <p><strong>Source:</strong> {item.source.groupId.toUpperCase()} &gt; {item.source.subPageId.toUpperCase()}</p>
+                                  <p><strong>Sub-Standard:</strong> {item.source.subStandard}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleStartEdit(lessonKey, item.lesson)}
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
+                                  >
+                                    ✏️ Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleRemoveLesson(groupIdx, lessonIdx)}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"
+                                  >
+                                    🗑️ Remove
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 ))}
