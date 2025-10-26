@@ -43,7 +43,7 @@ export default function Layout({ children }: LayoutProps) {
     if (showUserMenu) {
       fetchTokens()
     }
-  }, [showUserMenu, user])
+  }, [showUserMenu, user, session?.access_token])
 
   return (
     <div className="min-h-screen bg-gray-50">

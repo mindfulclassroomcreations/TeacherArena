@@ -50,9 +50,9 @@ export default function CreditsPage() {
         <div className="mt-8">
           <h3 className="text-xl font-semibold text-gray-900 mb-2">Frequently Asked Questions</h3>
           <div className="space-y-2 text-gray-700 text-sm">
-            <p><strong>How many tokens does each worksheet cost?</strong><br/>Token cost varies by worksheet type and complexity. Most worksheets cost 100-200 tokens. You'll be notified of the token cost before generation.</p>
+            <p><strong>How many tokens does each worksheet cost?</strong><br/>Token cost varies by worksheet type and complexity. Most worksheets cost 100-200 tokens. You&apos;ll be notified of the token cost before generation.</p>
             <p><strong>Do tokens expire?</strong><br/>No! Your tokens never expire. Use them anytime at your own pace.</p>
-            <p><strong>Can I get a refund?</strong><br/>Yes. If you're not satisfied with your purchase, contact us within 30 days for a full refund.</p>
+            <p><strong>Can I get a refund?</strong><br/>Yes. If you&apos;re not satisfied with your purchase, contact us within 30 days for a full refund.</p>
             <p><strong>What happens when I run out of tokens?</strong><br/>When your balance runs low, you can purchase more tokens anytime. Recharge your account instantly.</p>
             <p><strong>Is there a monthly subscription?</strong><br/>No subscription required. Pay only for what you use. Buy tokens once and use them whenever you want.</p>
             <p><strong>Do you offer discounts for bulk purchases?</strong><br/>Yes! Larger packages come with built-in discounts. The Mega Pack offers the best value at 20% savings.</p>
