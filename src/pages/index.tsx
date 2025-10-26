@@ -49,6 +49,7 @@ export default function Home() {
   // Step 5: sub-standards under sections
   const [subStandardsBySection, setSubStandardsBySection] = useState<Record<string, any[]>>({})
   const [lessonsBySection, setLessonsBySection] = useState<Record<string, any[]>>({})
+  const [selectedLessonsBySection, setSelectedLessonsBySection] = useState<Record<string, Record<string, boolean>>>({})
   const [lessonsPerSubStandardBySection, setLessonsPerSubStandardBySection] = useState<Record<string, number>>({})
   const [loadingSectionKey, setLoadingSectionKey] = useState<string | null>(null)
   const [loadingLessonsSectionKey, setLoadingLessonsSectionKey] = useState<string | null>(null)
@@ -60,6 +61,80 @@ export default function Home() {
   const [completedLessonsBySection, setCompletedLessonsBySection] = useState<Record<string, number>>({})
   const [completedSelectedLessonsBySection, setCompletedSelectedLessonsBySection] = useState<Record<string, number>>({})
   const [completedSingleLessons, setCompletedSingleLessons] = useState<Record<string, number>>({})
+
+  // Helpers for lesson selection in Step 5
+  const getLessonKey = (ls: any) => {
+    const code = String(ls.standard_code || ls.code || '').toLowerCase().trim()
+    const title = String(ls.title || ls.name || '').toLowerCase().trim()
+    return `${code}__${title}`
+  }
+
+  const toggleLessonSelection = (section: any, lesson: any) => {
+    const secKey = String(section.id || section.name || section.title || '')
+    const lk = getLessonKey(lesson)
+    setSelectedLessonsBySection((prev) => {
+      const map = { ...(prev[secKey] || {}) }
+      map[lk] = !map[lk]
+      return { ...prev, [secKey]: map }
+    })
+  }
+
+  const toggleSelectAllLessonsInGroup = (section: any, groupCode: string, lessonsInGroup: any[]) => {
+    const secKey = String(section.id || section.name || section.title || '')
+    const current = { ...(selectedLessonsBySection[secKey] || {}) }
+    const allSelected = lessonsInGroup.every((ls) => current[getLessonKey(ls)])
+    lessonsInGroup.forEach((ls) => {
+      const lk = getLessonKey(ls)
+      current[lk] = !allSelected
+    })
+    setSelectedLessonsBySection((prev) => ({ ...prev, [secKey]: current }))
+  }
+
+  const toggleSelectAllLessonsInSection = (section: any) => {
+    const secKey = String(section.id || section.name || section.title || '')
+    const all = lessonsBySection[secKey] || []
+    const current = { ...(selectedLessonsBySection[secKey] || {}) }
+    const allSelected = all.length > 0 && all.every((ls: any) => current[getLessonKey(ls)])
+    const next: Record<string, boolean> = {}
+    if (!allSelected) {
+      all.forEach((ls: any) => { next[getLessonKey(ls)] = true })
+    }
+    setSelectedLessonsBySection((prev) => ({ ...prev, [secKey]: next }))
+  }
+
+  const handleAddToProductGeneration = (section: any) => {
+    const secKey = String(section.id || section.name || section.title || '')
+    const all = lessonsBySection[secKey] || []
+    const selectedMap = selectedLessonsBySection[secKey] || {}
+    const selected = all.filter((ls: any) => selectedMap[getLessonKey(ls)])
+    if (selected.length === 0) {
+      setError('Please select at least one lesson to continue to product generation.')
+      return
+    }
+    // Build summary context
+    const summary = {
+      country: selectedCountry,
+      state: selectedRegion,
+      curriculum_name: (() => {
+        const name = String(selectedStateCurriculum?.curriculum_name || '')
+        const isNoSpecial = name.toLowerCase().includes('no special curriculum')
+        if (isNoSpecial && selectedStateStandardDetails?.standard_name) return selectedStateStandardDetails.standard_name
+        return name
+      })(),
+      grade: selectedGrade?.name,
+      section: section.title || section.name,
+      sub_standards: Array.from(new Set(selected.map((ls: any) => String(ls.standard_code || ls.code || '').trim()))).filter(Boolean)
+    }
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('ta_selected_lessons', JSON.stringify(selected))
+        window.localStorage.setItem('ta_selection_context', JSON.stringify(summary))
+        window.open('/product-generation', '_blank')
+      }
+    } catch (e) {
+      setError('Failed to open product generation page. Please check popup blockers.')
+    }
+  }
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
   const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
   const [selectedCurriculumSections, setSelectedCurriculumSections] = useState<any[]>([])
@@ -1894,11 +1969,32 @@ export default function Home() {
                                   return { ss, code, items }
                                 }).filter(g => g.items.length > 0)
                                 const total = sectionLessons.length
+                                const selectedCount = Object.entries(selectedLessonsBySection[secKey] || {}).filter(([k,v]) => !!v).length
                                 return (
                                   <>
-                                    <div className="flex items-center justify-between mb-2">
-                                      <h4 className="text-sm font-semibold text-yellow-900">Lessons ({total})</h4>
-                                      <span className="text-[11px] text-yellow-800">Grouped by sub-standard</span>
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                      <div className="flex items-center gap-3">
+                                        <h4 className="text-sm font-semibold text-yellow-900">Lessons ({total})</h4>
+                                        <label className="inline-flex items-center gap-2 text-xs text-yellow-900">
+                                          <input
+                                            type="checkbox"
+                                            checked={sectionLessons.length > 0 && sectionLessons.every((ls: any) => (selectedLessonsBySection[secKey] || {})[getLessonKey(ls)])}
+                                            onChange={() => toggleSelectAllLessonsInSection(section)}
+                                          />
+                                          Select all in section
+                                        </label>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-[11px] text-yellow-800">Grouped by sub-standard</span>
+                                        <Button
+                                          size="sm"
+                                          variant={selectedCount > 0 ? 'primary' : 'outline'}
+                                          onClick={() => handleAddToProductGeneration(section)}
+                                          disabled={selectedCount === 0}
+                                        >
+                                          Add selected to Product Generation
+                                        </Button>
+                                      </div>
                                     </div>
                                     <div className="space-y-3">
                                       {grouped.length === 0 ? (
@@ -1907,7 +2003,12 @@ export default function Home() {
                                         grouped.map((g, gi) => (
                                           <div key={gi} className="bg-white rounded border border-yellow-200">
                                             <div className="px-3 py-2 border-b border-yellow-200 flex items-center justify-between">
-                                              <div>
+                                              <div className="flex items-center gap-3">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={g.items.length > 0 && g.items.every((ls: any) => (selectedLessonsBySection[secKey] || {})[getLessonKey(ls)])}
+                                                  onChange={() => toggleSelectAllLessonsInGroup(section, g.code, g.items)}
+                                                />
                                                 <p className="text-xs font-semibold text-yellow-900">{g.code}</p>
                                                 <p className="text-sm text-gray-900">{g.ss.title || g.ss.name}</p>
                                               </div>
@@ -1917,7 +2018,14 @@ export default function Home() {
                                               {g.items.map((ls: any, li: number) => (
                                                 <div key={li} className="p-3 bg-yellow-25 rounded border border-yellow-100">
                                                   <div className="flex items-start justify-between gap-3">
-                                                    <p className="font-medium text-gray-900">{ls.title || ls.name}</p>
+                                                    <div className="flex items-start gap-2">
+                                                      <input
+                                                        type="checkbox"
+                                                        checked={!!(selectedLessonsBySection[secKey] || {})[getLessonKey(ls)]}
+                                                        onChange={() => toggleLessonSelection(section, ls)}
+                                                      />
+                                                      <p className="font-medium text-gray-900">{ls.title || ls.name}</p>
+                                                    </div>
                                                     {ls.lesson_code && (
                                                       <span className="text-[11px] font-mono text-yellow-800 bg-yellow-100 px-2 py-1 rounded">{ls.lesson_code}</span>
                                                     )}
