@@ -52,6 +52,8 @@ export default function Home() {
   const [lessonsPerSubStandardBySection, setLessonsPerSubStandardBySection] = useState<Record<string, number>>({})
   const [loadingSectionKey, setLoadingSectionKey] = useState<string | null>(null)
   const [loadingLessonsSectionKey, setLoadingLessonsSectionKey] = useState<string | null>(null)
+  const [lessonsPerSingleSub, setLessonsPerSingleSub] = useState<Record<string, number>>({})
+  const [loadingSingleLessonsKey, setLoadingSingleLessonsKey] = useState<string | null>(null)
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
   const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
   const [selectedCurriculumSections, setSelectedCurriculumSections] = useState<any[]>([])
@@ -682,6 +684,61 @@ export default function Home() {
     } finally {
       setIsLoading(false)
       setLoadingLessonsSectionKey(null)
+    }
+  }
+
+  // Step 5: Generate lessons for a single sub-standard within a section
+  const handleGenerateLessonsForSingleSubStandard = async (section: any, subStandard: any, idx: number) => {
+    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    const secKey = String(section.id || section.name || section.title || '')
+    const subKey = String(subStandard.code || `S${idx + 1}`)
+    const composite = `${secKey}__${subKey}`
+    const subStandards = subStandardsBySection[secKey] || []
+    if (!Array.isArray(subStandards) || subStandards.length === 0) return
+
+    const def = (n: number) => {
+      if (n <= 3) return 5
+      if (n <= 10) return 10
+      if (n <= 15) return 15
+      if (n <= 20) return 20
+      return 25
+    }
+    const fallback = def(subStandards.length)
+    const per = lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : fallback
+
+    setIsLoading(true)
+    setLoadingSingleLessonsKey(composite)
+    setError(null)
+    try {
+      const response = await generateContent({
+        type: 'lessons-by-substandards' as any,
+        country: selectedCountry || undefined,
+        subject: selectedSubject.name,
+        framework: selectedFramework.name,
+        grade: selectedGrade.name,
+        region: selectedRegion || undefined,
+        stateCurriculum: selectedStateCurriculum?.curriculum_name,
+        section: section.title || section.name,
+        subStandards: [subStandard],
+        lessonsPerStandard: Math.max(1, per),
+        context
+      } as any)
+      if (Array.isArray(response.items)) {
+        setLessonsBySection((prev) => {
+          const existing = prev[secKey] || []
+          // de-duplicate by title/name within this section
+          const existingKeys = new Set(existing.map((l: any) => (l.title || l.name || '').toLowerCase()))
+          const toAdd = response.items.filter((l: any) => !existingKeys.has(String(l.title || l.name || '').toLowerCase()))
+          return { ...prev, [secKey]: [...existing, ...toAdd] }
+        })
+        setSuccess(`Generated ${response.items.length} lesson(s) for ${subStandard.code || subStandard.name || subStandard.title}`)
+        setTimeout(() => setSuccess(null), 3000)
+      }
+    } catch (err) {
+      setError('Failed to generate lessons for this sub-standard. Please try again.')
+    } finally {
+      setIsLoading(false)
+      setLoadingSingleLessonsKey(null)
     }
   }
 
@@ -1538,15 +1595,30 @@ export default function Home() {
                           </div>
                           {Array.isArray(subStandardsBySection[String(section.id || section.name || section.title || '')]) && subStandardsBySection[String(section.id || section.name || section.title || '')].length > 0 ? (
                             <div className="overflow-x-auto border border-gray-200 rounded">
-                              <table className="w-full min-w-[560px] text-sm">
+                              <table className="w-full min-w-[720px] text-sm">
                                 <thead>
                                   <tr className="bg-white border-b border-gray-200">
                                     <th className="text-left py-2 px-3 font-bold text-gray-700 w-40">Standard</th>
                                     <th className="text-left py-2 px-3 font-bold text-gray-700">Title</th>
+                                    <th className="text-left py-2 px-3 font-bold text-gray-700 w-64">Actions</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {subStandardsBySection[String(section.id || section.name || section.title || '')].map((ss: any, idx: number) => (
+                                  {subStandardsBySection[String(section.id || section.name || section.title || '')].map((ss: any, idx: number) => {
+                                    const secKey = String(section.id || section.name || section.title || '')
+                                    const subKey = String(ss.code || `S${idx + 1}`)
+                                    const composite = `${secKey}__${subKey}`
+                                    const countForSection = subStandardsBySection[secKey]?.length || 0
+                                    const def = (n: number) => {
+                                      if (n <= 3) return 5
+                                      if (n <= 10) return 10
+                                      if (n <= 15) return 15
+                                      if (n <= 20) return 20
+                                      return 25
+                                    }
+                                    const fallback = def(countForSection)
+                                    const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : fallback)
+                                    return (
                                     <tr key={idx} className="border-b border-gray-100 hover:bg-white">
                                       <td className="py-2 px-3 font-mono text-blue-600 text-xs">{ss.code || `S${idx + 1}`}</td>
                                       <td className="py-2 px-3 text-gray-700">
@@ -1555,8 +1627,32 @@ export default function Home() {
                                           <div className="text-xs text-gray-500 mt-1">{ss.description}</div>
                                         )}
                                       </td>
+                                      <td className="py-2 px-3">
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            max={50}
+                                            value={String(value)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => {
+                                              const v = parseInt(e.target.value)
+                                              setLessonsPerSingleSub((prev) => ({ ...prev, [composite]: Number.isFinite(v) && v > 0 ? v : 1 }))
+                                            }}
+                                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                                          />
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => { e.stopPropagation(); handleGenerateLessonsForSingleSubStandard(section, ss, idx) }}
+                                            isLoading={isLoading && loadingSingleLessonsKey === composite}
+                                          >
+                                            Generate
+                                          </Button>
+                                        </div>
+                                      </td>
                                     </tr>
-                                  ))}
+                                  )})}
                                 </tbody>
                               </table>
                             </div>
