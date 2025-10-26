@@ -49,7 +49,7 @@ export default async function handler(
   }
 
   try {
-  const { type, country, subject, framework, grade, context, totalLessonCount, region } = req.body
+  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount } = req.body
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -81,6 +81,7 @@ GENERAL INSTRUCTIONS
 
     switch (type) {
       case 'subjects':
+        const count = (typeof subjectsCount === 'number' && subjectsCount > 0 && subjectsCount <= 50) ? Math.floor(subjectsCount) : undefined
         userPrompt = `${sharedRules}
 TASK: Generate educational subjects for product research on the TeachersPayTeachers (TPT) marketplace.
 MARKET: ${country} schools; Grades 1–12 (primary to secondary).
@@ -88,7 +89,7 @@ PRODUCT TYPES: Worksheets, Task Cards, Google Forms, and similar printable/Googl
 CONTEXT: ${context || 'General focus on high-demand classroom subjects suitable for printable and Google resources.'}
 
 REQUIREMENTS
-- Return 12–20 subjects commonly taught across Grades 1–12 in ${country}, spanning core and high‑demand elective areas.
+- ${count ? `Return EXACTLY ${count} subjects` : `Return 12–20 subjects`} commonly taught across Grades 1–12 in ${country}, spanning core and high‑demand elective areas.
 - Optimize for subjects that are well-suited to worksheets, task cards, and Google Forms (clear skills practice, objective assessments).
 - Each item must include: name (string), description (string).
 - Avoid overly narrow topics and post‑secondary subjects; avoid course-level variants unless universally recognized.

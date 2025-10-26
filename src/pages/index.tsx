@@ -32,6 +32,7 @@ export default function Home() {
   // State management
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+  const [requestedSubjectsCount, setRequestedSubjectsCount] = useState<string>('')
   const [subjects, setSubjects] = useState<Item[]>([])
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
@@ -101,10 +102,13 @@ export default function Home() {
     setIsLoading(true)
     setError(null)
     try {
+      const countNum = parseInt(requestedSubjectsCount)
+      const subjectsCount = Number.isFinite(countNum) && countNum > 0 ? countNum : undefined
       const response = await generateContent({
         type: 'subjects',
         country: country,
-        context: context || ''
+        context: context || '',
+        subjectsCount
       })
       if (response.items) {
         setSubjects(response.items)
@@ -603,8 +607,6 @@ export default function Home() {
                 onClick={async () => {
                   setSelectedCountry(country.name)
                   setCurrentStep(1)
-                  // Auto-generate subjects for the selected country
-                  setTimeout(() => handleGenerateSubjects(country.name), 100)
                 }}
                 hoverable
               >
@@ -612,6 +614,30 @@ export default function Home() {
                 <p className="text-gray-600 text-sm">{country.description}</p>
               </Card>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Optional control: Subject count before Step 1 */}
+      {currentStep >= 1 && selectedCountry && (
+        <div className="mb-4 bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex items-end gap-4 flex-wrap">
+            <div className="w-48">
+              <Input
+                type="number"
+                label="Number of subjects (optional)"
+                value={requestedSubjectsCount}
+                onChange={(e) => setRequestedSubjectsCount(e.target.value)}
+                placeholder="e.g., 15"
+                min="1"
+                max="50"
+              />
+            </div>
+            <div>
+              <Button onClick={() => handleGenerateSubjects()} isLoading={isLoading}>
+                Generate {requestedSubjectsCount ? `${requestedSubjectsCount} ` : ''}Subjects
+              </Button>
+            </div>
           </div>
         </div>
       )}

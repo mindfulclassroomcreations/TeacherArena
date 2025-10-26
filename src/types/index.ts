@@ -50,6 +50,7 @@ export interface AIGenerationRequest {
   framework?: string
   grade?: string
   context?: string
+  subjectsCount?: number
   totalLessonCount?: number
   strandCode?: string
   strandName?: string
