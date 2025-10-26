@@ -3,6 +3,7 @@ import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Button from '@/components/Button'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 
 interface LessonItem {
   title?: string
@@ -147,6 +148,7 @@ const colorClasses: Record<string, { card: string; title: string; border: string
 }
 
 export default function ProductGenerationPage() {
+  const router = useRouter()
   const [lessons, setLessons] = useState<LessonItem[]>([])
   const [summary, setSummary] = useState<SelectionSummary | null>(null)
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
@@ -163,6 +165,13 @@ export default function ProductGenerationPage() {
       }
     }
   }, [])
+
+  // Auto-expand group from query param ?open=group-id
+  useEffect(() => {
+    if (router && router.query && typeof router.query.open === 'string') {
+      setExpandedGroup(router.query.open)
+    }
+  }, [router.query])
 
   const title = '🛍️ Product Generation'
 

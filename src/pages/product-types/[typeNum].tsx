@@ -42,6 +42,24 @@ export default function ProductTypePage() {
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [showLessonGenerateModal, setShowLessonGenerateModal] = useState(false)
   const [generatingLessonKey, setGeneratingLessonKey] = useState<string | null>(null)
+  
+  // Derived navigation sources: unique categories and sub-pages present in this product type
+  const uniqueCategories = React.useMemo(() => {
+    const set = new Set<string>()
+    groupedLessons.forEach((g) => g.lessons.forEach((l) => set.add(l.source.groupId)))
+    return Array.from(set)
+  }, [groupedLessons])
+
+  const uniqueSubPages = React.useMemo(() => {
+    const map = new Map<string, { groupId: string; subPageId: string }>()
+    groupedLessons.forEach((g) =>
+      g.lessons.forEach((l) => {
+        const key = `${l.source.groupId}__${l.source.subPageId}`
+        if (!map.has(key)) map.set(key, { groupId: l.source.groupId, subPageId: l.source.subPageId })
+      })
+    )
+    return Array.from(map.values())
+  }, [groupedLessons])
 
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
@@ -202,38 +220,6 @@ export default function ProductTypePage() {
 
   const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
 
-  // Unique Categories (by groupId) and Sub-Pages present in this product type
-  const uniqueCategories = React.useMemo(() => {
-    const map = new Map<string, { groupId: string; subPageId: string }>()
-    groupedLessons.forEach((g) =>
-      g.lessons.forEach((item) => {
-        if (!map.has(item.source.groupId)) {
-          // Use the first encountered subPageId as the landing page for the category
-          map.set(item.source.groupId, {
-            groupId: item.source.groupId,
-            subPageId: item.source.subPageId,
-          })
-        }
-      })
-    )
-    return Array.from(map.values())
-  }, [groupedLessons])
-
-  const uniqueSubPages = React.useMemo(() => {
-    const seen = new Set<string>()
-    const list: Array<{ groupId: string; subPageId: string }> = []
-    groupedLessons.forEach((g) =>
-      g.lessons.forEach((item) => {
-        const key = `${item.source.groupId}|${item.source.subPageId}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          list.push({ groupId: item.source.groupId, subPageId: item.source.subPageId })
-        }
-      })
-    )
-    return list
-  }, [groupedLessons])
-
   if (!typeNum) {
     return (
       <ProtectedRoute>
@@ -277,6 +263,50 @@ export default function ProductTypePage() {
             <p className="text-gray-600">Lessons sent for this product type</p>
           </div>
 
+          {/* Sources Navigation */}
+          <div className="mb-8 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Sources</h3>
+            {uniqueCategories.length === 0 && uniqueSubPages.length === 0 ? (
+              <p className="text-sm text-gray-600">No source categories or sub-pages detected yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {uniqueCategories.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Categories</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueCategories.map((catId) => (
+                        <Link key={catId} href={`/product-generation?open=${catId}`}>
+                          <button className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700">
+                            {catId.replace('group-', 'Group ').toUpperCase()}
+                          </button>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uniqueSubPages.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Sub-Pages</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueSubPages.map(({ groupId, subPageId }) => {
+                        const parts = subPageId.split('-')
+                        const label = parts.length === 2 ? `${parts[0].toUpperCase()} - ${parts[1].toUpperCase()}` : subPageId.toUpperCase()
+                        return (
+                          <Link key={`${groupId}-${subPageId}`} href={`/products/${groupId}/${subPageId}`}>
+                            <button className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700">
+                              {label}
+                            </button>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Product Type Details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
@@ -312,41 +342,6 @@ export default function ProductTypePage() {
               </ul>
             </div>
           </div>
-
-          {/* Quick Navigation */}
-          {(uniqueCategories.length > 0 || uniqueSubPages.length > 0) && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Quick Navigation</h3>
-              {uniqueCategories.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Categories</p>
-                  <div className="flex flex-wrap gap-2">
-                    {uniqueCategories.map(({ groupId, subPageId }) => (
-                      <Link key={groupId} href={`/products/${groupId}/${subPageId}`}>
-                        <button className="px-3 py-1.5 text-sm rounded-full bg-purple-600 text-white hover:bg-purple-700">
-                          {groupId.toUpperCase()}
-                        </button>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {uniqueSubPages.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Sub-Pages</p>
-                  <div className="flex flex-wrap gap-2">
-                    {uniqueSubPages.map(({ groupId, subPageId }) => (
-                      <Link key={`${groupId}-${subPageId}`} href={`/products/${groupId}/${subPageId}`}>
-                        <button className="px-3 py-1.5 text-sm rounded-full bg-blue-600 text-white hover:bg-blue-700">
-                          {subPageId.toUpperCase()}
-                        </button>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Generate Product Modal */}
           {showGenerateModal && (
