@@ -1736,15 +1736,28 @@ export default function Home() {
           <div className="mb-6">
             <h2 className="text-3xl font-bold text-gray-900 mb-1">📚 Step 5: Browse Curriculum Standards</h2>
             <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
-            {/* Context Summary for Step 5 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {/* Comprehensive Context Summary for Step 5 - All information from Steps 1-4 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 space-y-3">
+              {/* Step 1: Country & Subject */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Subject</p>
-                  <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">📍 Country (Step 1)</p>
+                  <p className="text-sm text-blue-800">{selectedCountry || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Curriculum</p>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">📚 Subject (Step 1)</p>
+                  <p className="text-sm text-blue-800">{selectedSubject?.name}</p>
+                </div>
+              </div>
+              
+              {/* Step 2: State/Regional Curriculum Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-blue-200 pt-3">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">🗺️ Region (Step 2)</p>
+                  <p className="text-sm text-blue-800">{selectedRegion || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-900 uppercase">📋 Curriculum (Step 2)</p>
                   <p className="text-sm text-blue-800">{(() => {
                     const name = String(selectedStateCurriculum?.curriculum_name || '')
                     const isNoSpecial = name.toLowerCase().includes('no special curriculum')
@@ -1754,18 +1767,24 @@ export default function Home() {
                     return name
                   })()}</p>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Region</p>
-                  <p className="text-sm text-blue-800">{selectedRegion || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Grade</p>
-                  <p className="text-sm text-blue-800">{selectedGrade?.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-900 uppercase">Framework</p>
-                  <p className="text-sm text-blue-800">{selectedFramework?.name}</p>
-                </div>
+                {selectedStateStandardDetails?.standard_name && (
+                  <div>
+                    <p className="text-xs font-semibold text-blue-900 uppercase">📌 Standard (Step 2)</p>
+                    <p className="text-sm text-blue-800">{selectedStateStandardDetails.standard_name}</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Step 3: Grade(s) Selection */}
+              <div className="border-t border-blue-200 pt-3">
+                <p className="text-xs font-semibold text-blue-900 uppercase">🎯 Grade{selectedGrades.length > 1 ? 's' : ''} (Step 3)</p>
+                <p className="text-sm text-blue-800">{selectedGrades.map(g => g.name).join(', ')}</p>
+              </div>
+              
+              {/* Step 4: Standards & Units Framework */}
+              <div className="border-t border-blue-200 pt-3">
+                <p className="text-xs font-semibold text-blue-900 uppercase">📊 Framework/Units (Step 4)</p>
+                <p className="text-sm text-blue-800">{selectedFramework?.name}</p>
               </div>
             </div>
           </div>
