@@ -32,6 +32,13 @@ export default function AdminDashboard() {
           </Link>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Users Management</h2>
+          <p className="text-gray-600 mb-3">Manage roles and tokens for user accounts.</p>
+          <Link href="/admin/users" className="inline-block">
+            <Button>Open</Button>
+          </Link>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Product Generation</h2>
           <p className="text-gray-600 mb-3">Open the product generation workspace in a new tab.</p>
           <Button onClick={() => { if (typeof window !== 'undefined') window.open('/product-generation', '_blank') }}>Open</Button>
