@@ -56,6 +56,10 @@ export default function Home() {
   const [loadingSingleLessonsKey, setLoadingSingleLessonsKey] = useState<string | null>(null)
   const [selectedSubStandardsBySection, setSelectedSubStandardsBySection] = useState<Record<string, Record<string, boolean>>>({})
   const [loadingSelectedLessonsSecKey, setLoadingSelectedLessonsSecKey] = useState<string | null>(null)
+  // Success indicators (flash green after completion)
+  const [completedLessonsBySection, setCompletedLessonsBySection] = useState<Record<string, number>>({})
+  const [completedSelectedLessonsBySection, setCompletedSelectedLessonsBySection] = useState<Record<string, number>>({})
+  const [completedSingleLessons, setCompletedSingleLessons] = useState<Record<string, number>>({})
   const [curriculumSections, setCurriculumSections] = useState<any[]>([])
   const [selectedCurriculumSection, setSelectedCurriculumSection] = useState<any | null>(null)
   const [selectedCurriculumSections, setSelectedCurriculumSections] = useState<any[]>([])
@@ -645,6 +649,12 @@ export default function Home() {
 
   setIsLoading(true)
   setLoadingLessonsSectionKey(key)
+    // Clear prior completed state for this section
+    setCompletedLessonsBySection((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
     setError(null)
     try {
       const response = await generateContent({
@@ -663,6 +673,15 @@ export default function Home() {
       if (Array.isArray(response.items)) {
         // Save lessons under this section only (do not push to Step 6 lists)
         setLessonsBySection((prev) => ({ ...prev, [key]: response.items }))
+        // Mark success for a short duration
+        setCompletedLessonsBySection((prev) => ({ ...prev, [key]: Date.now() }))
+        setTimeout(() => {
+          setCompletedLessonsBySection((prev2) => {
+            const copy = { ...prev2 }
+            delete copy[key]
+            return copy
+          })
+        }, 2500)
         setSuccess(`Generated ${response.items.length} lessons for "${section.title || section.name}" from sub-standards.`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -691,6 +710,12 @@ export default function Home() {
 
     setIsLoading(true)
     setLoadingSingleLessonsKey(composite)
+    // Clear prior completed state for this row
+    setCompletedSingleLessons((prev) => {
+      const next = { ...prev }
+      delete next[composite]
+      return next
+    })
     setError(null)
     try {
       const response = await generateContent({
@@ -714,6 +739,15 @@ export default function Home() {
           const toAdd = response.items.filter((l: any) => !existingKeys.has(String(l.title || l.name || '').toLowerCase()))
           return { ...prev, [secKey]: [...existing, ...toAdd] }
         })
+        // Mark row success briefly
+        setCompletedSingleLessons((prev) => ({ ...prev, [composite]: Date.now() }))
+        setTimeout(() => {
+          setCompletedSingleLessons((prev2) => {
+            const copy = { ...prev2 }
+            delete copy[composite]
+            return copy
+          })
+        }, 2500)
         setSuccess(`Generated ${response.items.length} lesson(s) for ${subStandard.code || subStandard.name || subStandard.title}`)
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -779,6 +813,12 @@ export default function Home() {
 
     setIsLoading(true)
     setLoadingSelectedLessonsSecKey(secKey)
+    // Clear prior completed state for this section batch
+    setCompletedSelectedLessonsBySection((prev) => {
+      const next = { ...prev }
+      delete next[secKey]
+      return next
+    })
     setError(null)
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
     let total = 0
@@ -815,6 +855,15 @@ export default function Home() {
     if (total > 0) {
       setSuccess(`Generated ${total} lesson(s) for ${selectedList.length} sub-standard(s).`)
       setTimeout(() => setSuccess(null), 3000)
+      // Flash success on the batch button
+      setCompletedSelectedLessonsBySection((prev) => ({ ...prev, [secKey]: Date.now() }))
+      setTimeout(() => {
+        setCompletedSelectedLessonsBySection((prev2) => {
+          const copy = { ...prev2 }
+          delete copy[secKey]
+          return copy
+        })
+      }, 2500)
     }
     setIsLoading(false)
     setLoadingSelectedLessonsSecKey(null)
@@ -1617,6 +1666,8 @@ export default function Home() {
                   const isGenSubsLoading = loadingSectionKey === secKey
                   const isSecLessonsLoading = loadingLessonsSectionKey === secKey
                   const isSelectedLessonsLoading = loadingSelectedLessonsSecKey === secKey
+                  const isSecLessonsCompleted = !!completedLessonsBySection[secKey]
+                  const isBatchCompleted = !!completedSelectedLessonsBySection[secKey]
                   const anySecLoading = isGenSubsLoading || isSecLessonsLoading || isSelectedLessonsLoading
                   return (
                   <div
@@ -1678,7 +1729,7 @@ export default function Home() {
                             )}
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant={isGenSubsLoading ? 'outline' : 'outline'}
                               onClick={(e) => { e.stopPropagation(); handleGenerateSubStandards(section) }}
                               isLoading={isGenSubsLoading}
                               className={isGenSubsLoading ? 'animate-pulse ring-2 ring-blue-300' : ''}
@@ -1716,6 +1767,7 @@ export default function Home() {
                                     const subKey = String(ss.code || `S${idx + 1}`)
                                     const composite = `${secKey}__${subKey}`
                                     const value = (lessonsPerSingleSub[composite] != null ? lessonsPerSingleSub[composite] : '')
+                                    const isSingleCompleted = !!completedSingleLessons[composite]
                                     return (
                                     <tr key={idx} className={`border-b border-gray-100 hover:bg-white ${loadingSingleLessonsKey === composite ? 'animate-pulse bg-yellow-50' : ''}`}>
                                       <td className="py-2 px-3">
@@ -1750,12 +1802,12 @@ export default function Home() {
                                           />
                                           <Button
                                             size="sm"
-                                            variant="outline"
+                                            variant={isSingleCompleted ? 'success' : 'outline'}
                                             onClick={(e) => { e.stopPropagation(); handleGenerateLessonsForSingleSubStandard(section, ss, idx) }}
                                             isLoading={isLoading && loadingSingleLessonsKey === composite}
-                                            className={loadingSingleLessonsKey === composite ? 'animate-pulse ring-2 ring-blue-300' : ''}
+                                            className={loadingSingleLessonsKey === composite ? 'animate-pulse ring-2 ring-blue-300' : (isSingleCompleted ? 'ring-2 ring-green-300 animate-pulse' : '')}
                                           >
-                                            Generate
+                                            {isSingleCompleted ? 'Generated ✓' : 'Generate'}
                                           </Button>
                                         </div>
                                       </td>
@@ -1776,16 +1828,16 @@ export default function Home() {
                               <div>
                                 <Button
                                   size="sm"
-                                  variant="primary"
+                                  variant={isSelectedLessonsLoading ? 'primary' : (isBatchCompleted ? 'success' : 'primary')}
                                   onClick={(e) => { e.stopPropagation(); handleGenerateLessonsForSelectedSubStandards(section) }}
                                   isLoading={isLoading && isSelectedLessonsLoading}
-                                  className={isSelectedLessonsLoading ? 'animate-pulse ring-2 ring-blue-300' : ''}
+                                  className={isSelectedLessonsLoading ? 'animate-pulse ring-2 ring-blue-300' : (isBatchCompleted ? 'ring-2 ring-green-300 animate-pulse' : '')}
                                   disabled={(() => {
                                     const secKey = String(section.id || section.name || section.title || '')
                                     return Object.values(selectedSubStandardsBySection[secKey] || {}).filter(Boolean).length === 0
                                   })()}
                                 >
-                                  Generate lessons for selected
+                                  {isBatchCompleted ? 'Generated for selected ✓' : 'Generate lessons for selected'}
                                 </Button>
                               </div>
                             </div>
@@ -1816,12 +1868,12 @@ export default function Home() {
                                 <div className="flex-1 text-right">
                                   <Button
                                     size="sm"
-                                    variant="primary"
+                                    variant={isSecLessonsLoading ? 'primary' : (isSecLessonsCompleted ? 'success' : 'primary')}
                                     onClick={(e) => { e.stopPropagation(); handleGenerateLessonsFromSubStandards(section) }}
                                     isLoading={isLoading && isSecLessonsLoading}
-                                    className={isSecLessonsLoading ? 'animate-pulse ring-2 ring-blue-300' : ''}
+                                    className={isSecLessonsLoading ? 'animate-pulse ring-2 ring-blue-300' : (isSecLessonsCompleted ? 'ring-2 ring-green-300 animate-pulse' : '')}
                                   >
-                                    Generate Lessons from Sub-standards
+                                    {isSecLessonsCompleted ? 'Generated ✓' : 'Generate Lessons from Sub-standards'}
                                   </Button>
                                 </div>
                               </div>
