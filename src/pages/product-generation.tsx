@@ -293,28 +293,8 @@ export default function ProductGenerationPage() {
           </div>
 
           {/* Footer Actions */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-green-900 mb-3">Actions</h3>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="success"
-                onClick={() => alert('Generate products from your selection coming soon!')}
-              >
-                Generate Products
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.localStorage.removeItem('ta_selected_lessons')
-                    window.localStorage.removeItem('ta_selection_context')
-                    setLessons([])
-                    setSummary(null)
-                  }
-                }}
-              >
-                Clear Selection
-              </Button>
               <Link href="/">
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                   ← Back to Builder
