@@ -1516,13 +1516,18 @@ export default function Home() {
                           {gradeCategories.select_all_labels?.elementary || 'All Elementary'}
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                         {gradeCategories.elementary.grades.map((g, idx) => (
                           <Card key={`el-${idx}`} isSelected={(selectedGrade?.name === g.name) || selectedGrades.some(sg => sg.name === g.name)} onClick={() => handleSelectGrade(g)}>
                             <h4 className="font-bold text-gray-900 mb-2">{g.title || g.name}</h4>
                             <p className="text-gray-600 text-sm line-clamp-3">{g.description}</p>
                           </Card>
                         ))}
+                      </div>
+                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                        <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
+                          Generate Units & Standards
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -1535,13 +1540,18 @@ export default function Home() {
                           {gradeCategories.select_all_labels?.middle_school || 'All Middle School'}
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                         {gradeCategories.middle_school.grades.map((g, idx) => (
                           <Card key={`mid-${idx}`} isSelected={(selectedGrade?.name === g.name) || selectedGrades.some(sg => sg.name === g.name)} onClick={() => handleSelectGrade(g)}>
                             <h4 className="font-bold text-gray-900 mb-2">{g.title || g.name}</h4>
                             <p className="text-gray-600 text-sm line-clamp-3">{g.description}</p>
                           </Card>
                         ))}
+                      </div>
+                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                        <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
+                          Generate Units & Standards
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -1554,13 +1564,18 @@ export default function Home() {
                           {gradeCategories.select_all_labels?.high_school || 'All High School'}
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                         {gradeCategories.high_school.grades.map((g, idx) => (
                           <Card key={`hi-${idx}`} isSelected={(selectedGrade?.name === g.name) || selectedGrades.some(sg => sg.name === g.name)} onClick={() => handleSelectGrade(g)}>
                             <h4 className="font-bold text-gray-900 mb-2">{g.title || g.name}</h4>
                             <p className="text-gray-600 text-sm line-clamp-3">{g.description}</p>
                           </Card>
                         ))}
+                      </div>
+                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                        <Button onClick={handleGenerateFrameworks} isLoading={isLoading} variant="primary">
+                          Generate Units & Standards
+                        </Button>
                       </div>
                     </div>
                   )}
