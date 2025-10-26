@@ -42,8 +42,7 @@ export default function ProductTypePage() {
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [showLessonGenerateModal, setShowLessonGenerateModal] = useState(false)
   const [generatingLessonKey, setGeneratingLessonKey] = useState<string | null>(null)
-  const [sourceCategories, setSourceCategories] = useState<Set<string>>(new Set())
-  const [sourceSubPages, setSourceSubPages] = useState<Set<string>>(new Set())
+  const [allSources, setAllSources] = useState<Set<{ categoryId: string; subPageId: string }>>(new Set())
 
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
@@ -71,19 +70,6 @@ export default function ProductTypePage() {
           try {
             const persistedLessons = JSON.parse(persistedData) as GroupedProductLesson[]
             setGroupedLessons(persistedLessons)
-            
-            // Extract categories and sub-pages from persisted lessons
-            const categories = new Set<string>()
-            const subPages = new Set<string>()
-            persistedLessons.forEach((group) => {
-              group.lessons.forEach((item) => {
-                categories.add(item.source.groupId.toUpperCase())
-                subPages.add(item.source.subPageId.toUpperCase())
-              })
-            })
-            setSourceCategories(categories)
-            setSourceSubPages(subPages)
-            
             setLoading(false)
             return
           } catch (e) {
@@ -136,6 +122,7 @@ export default function ProductTypePage() {
 
         // Group lessons by sub-standard
         const grouped: GroupedProductLesson[] = []
+        const sources = new Set<string>()
         allLessons.forEach((lessonItem) => {
           const subStandard = lessonItem.source.subStandard
           let group = grouped.find((g) => g.subStandard === subStandard)
@@ -144,23 +131,17 @@ export default function ProductTypePage() {
             grouped.push(group)
           }
           group.lessons.push(lessonItem)
+          // Track unique sources
+          sources.add(JSON.stringify({ categoryId: lessonItem.source.groupId, subPageId: lessonItem.source.subPageId }))
         })
 
         setGroupedLessons(grouped)
+        // Store sources for breadcrumb navigation
+        setAllSources(new Set(Array.from(sources).map(s => JSON.parse(s))))
         // Save to persistent storage
         if (grouped.length > 0) {
           saveLessonsToProductType(grouped)
         }
-
-        // Extract unique categories and sub-pages
-        const categories = new Set<string>()
-        const subPages = new Set<string>()
-        allLessons.forEach((item) => {
-          categories.add(item.source.groupId.toUpperCase())
-          subPages.add(item.source.subPageId.toUpperCase())
-        })
-        setSourceCategories(categories)
-        setSourceSubPages(subPages)
       } catch (e) {
         console.error('Error loading lessons:', e)
       }
@@ -225,6 +206,36 @@ export default function ProductTypePage() {
     setShowLessonGenerateModal(true)
   }
 
+  // Get unique categories and sub-pages from all sources
+  const getCategorySubPageLinks = () => {
+    const sourceArray = Array.from(allSources)
+    const uniqueCategories = new Map<string, Set<string>>()
+    sourceArray.forEach((source: any) => {
+      if (!uniqueCategories.has(source.categoryId)) {
+        uniqueCategories.set(source.categoryId, new Set())
+      }
+      uniqueCategories.get(source.categoryId)!.add(source.subPageId)
+    })
+    return uniqueCategories
+  }
+
+  const getCategoryName = (categoryId: string) => {
+    const categoryMap: Record<string, string> = {
+      'group-t': 'Group T',
+      'group-a': 'Group A',
+      'group-b': 'Group B',
+      'group-c': 'Group C',
+      'group-d': 'Group D',
+      'group-e': 'Group E',
+      'group-f': 'Group F',
+      'group-g': 'Group G',
+      'group-h': 'Group H',
+      'group-i': 'Group I',
+      'group-j': 'Group J',
+    }
+    return categoryMap[categoryId] || categoryId
+  }
+
   const totalLessons = groupedLessons.reduce((sum, g) => sum + g.lessons.length, 0)
 
   if (!typeNum) {
@@ -264,62 +275,36 @@ export default function ProductTypePage() {
                 </button>
               </Link>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              PRODUCT TYPE - {typeNumber}
-            </h1>
-            <p className="text-gray-600 mb-4">Lessons sent for this product type</p>
 
-            {/* Category and Sub-Page Navigation */}
-            {(sourceCategories.size > 0 || sourceSubPages.size > 0) && (
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Categories */}
-                  {sourceCategories.size > 0 && (
-                    <div>
-                      <p className="text-xs font-bold text-indigo-900 uppercase mb-2">📁 Source Categories</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.from(sourceCategories).sort().map((category) => (
-                          <Link
-                            key={category}
-                            href={`/product-generation`}
-                          >
-                            <button className="px-3 py-1 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors text-sm font-medium">
-                              {category}
-                            </button>
-                          </Link>
-                        ))}
-                      </div>
+            {/* Breadcrumb Navigation */}
+            {allSources.size > 0 && (
+              <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Source Navigation</p>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(getCategorySubPageLinks().entries()).map(([categoryId, subPages]) => (
+                    <div key={categoryId} className="flex gap-2 items-center">
+                      <Link href={`/products/${categoryId}`}>
+                        <button className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                          📁 {getCategoryName(categoryId)}
+                        </button>
+                      </Link>
+                      {Array.from(subPages).map((subPageId) => (
+                        <Link key={subPageId} href={`/products/${categoryId}/${subPageId}`}>
+                          <button className="px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                            📄 {subPageId.toUpperCase()}
+                          </button>
+                        </Link>
+                      ))}
                     </div>
-                  )}
-
-                  {/* Sub-Pages */}
-                  {sourceSubPages.size > 0 && (
-                    <div>
-                      <p className="text-xs font-bold text-blue-900 uppercase mb-2">📄 Source Sub-Pages</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.from(sourceSubPages).sort().map((subPage) => {
-                          // Extract group and number from subpage (e.g., "T-01" -> "t-01")
-                          const groupId = subPage.split('-')[0].toLowerCase()
-                          const pageNum = subPage.split('-')[1] || '01'
-                          const navUrl = `/products/${groupId}/${subPage.toLowerCase()}`
-                          
-                          return (
-                            <Link
-                              key={subPage}
-                              href={navUrl}
-                            >
-                              <button className="px-3 py-1 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-sm font-medium">
-                                {subPage}
-                              </button>
-                            </Link>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
             )}
+
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              PRODUCT TYPE - {typeNumber}
+            </h1>
+            <p className="text-gray-600">Lessons sent for this product type</p>
           </div>
 
           {/* Product Type Details */}
