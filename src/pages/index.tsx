@@ -1479,22 +1479,7 @@ export default function Home() {
                       >
                         Change state
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={() => {
-                          setSelectedRegion(null)
-                        setSelectedStateCurriculum(null)
-                          setSelectedStateStandardDetails(null)
-                          setFrameworks([])
-                          setGrades([])
-                          setStrands([])
-                          setLessons([])
-                        }}
-                      >
-                        Clear selection
-                      </Button>
+                      {/* Clear selection button removed per UI request */}
                     </div>
                   </div>
                   {selectedStateStandardDetails?.coverage_description && (
@@ -1527,20 +1512,7 @@ export default function Home() {
                       >
                         Continue to Step 3
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={() => {
-                          setSelectedStateCurriculum(null)
-                          setFrameworks([])
-                          setGrades([])
-                          setStrands([])
-                          setLessons([])
-                        }}
-                      >
-                        Clear selection
-                      </Button>
+                      {/* Clear selection button removed per UI request */}
                     </div>
                   </div>
                   {Array.isArray(selectedStateCurriculum.states) && selectedStateCurriculum.states.length > 0 && (

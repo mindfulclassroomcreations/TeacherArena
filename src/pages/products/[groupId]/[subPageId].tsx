@@ -666,34 +666,6 @@ export default function ProductPage() {
             {/* Actions Section */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-green-900 mb-4">Actions</h3>
-              
-              {/* Generate Products Button with Dropdown */}
-              <div className="mb-4 relative">
-                <button
-                  onClick={() => setShowProductTypes(!showProductTypes)}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-between"
-                >
-                  <span>🔧 Generate Products</span>
-                  <span className={`transform transition-transform ${showProductTypes ? 'rotate-180' : ''}`}>▼</span>
-                </button>
-
-                {/* Product Type Dropdown */}
-                {showProductTypes && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-purple-300 rounded-lg shadow-lg z-10 p-2 grid grid-cols-2 gap-2">
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((typeNum) => (
-                      <Link key={typeNum} href={`/product-types/${typeNum}`}>
-                        <button
-                          onClick={() => setShowProductTypes(false)}
-                          className="w-full px-3 py-2 bg-purple-100 text-purple-900 rounded hover:bg-purple-200 transition-colors text-sm font-medium"
-                        >
-                          PRODUCT TYPE - {String(typeNum).padStart(2, '0')}
-                        </button>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* Download Products Button */}
               <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                 📥 Download Products
