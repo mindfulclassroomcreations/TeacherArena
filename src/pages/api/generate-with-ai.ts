@@ -49,7 +49,7 @@ export default async function handler(
   }
 
   try {
-    const { type, country, subject, framework, grade, context, totalLessonCount } = req.body
+  const { type, country, subject, framework, grade, context, totalLessonCount, region } = req.body
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -291,6 +291,27 @@ OUTPUT
 `
         break
 
+      case 'state-standard':
+        userPrompt = `${sharedRules}
+TASK: For the subject "${subject}" in ${country}, identify the official or commonly used curriculum standard for the region "${region}".
+
+REQUIREMENTS
+- Output ONE object describing the region-specific standard for this subject.
+- If multiple names exist, include them in alternate_names.
+- If there is no distinct standard for this subject, provide a best-fit description and set standard_name to "No special curriculum (${subject})".
+
+OUTPUT (object only; will be wrapped in an array by the server)
+{
+  "region": "${region}",
+  "standard_name": "string",
+  "alternate_names": ["string"],
+  "coverage_description": "1–3 sentence summary of what the standard covers and its alignment for ${subject}.",
+  "notable_features": ["short bullet features"],
+  "reference_note": "optional short note about source or adoption (no URLs required)"
+}
+`
+        break
+
       default:
         return res.status(400).json({ error: 'Invalid type' })
     }
@@ -303,7 +324,7 @@ OUTPUT
     const temperature = (type === 'lesson-generation-by-strand') ? 0.7 : 0.3
 
   // Select model per step (subjects and state-curricula use gpt-4.1-nano as requested)
-  const model = (type === 'subjects' || type === 'state-curricula') ? 'gpt-4.1-nano' : 'gpt-4'
+  const model = (type === 'subjects' || type === 'state-curricula' || type === 'state-standard') ? 'gpt-4.1-nano' : 'gpt-4'
 
     const response = await client.chat.completions.create({
       model,
@@ -402,6 +423,26 @@ OUTPUT
         items,
         count: items.length
       })
+    }
+
+    if (type === 'state-standard') {
+      let obj = parsedData
+      if (Array.isArray(obj)) {
+        obj = obj[0]
+      }
+      if (typeof obj !== 'object' || obj === null) {
+        return res.status(500).json({ error: 'AI did not return a valid state standard object' })
+      }
+      // Normalize minimal fields
+      const item = {
+        region: obj.region || region || '',
+        standard_name: obj.standard_name || obj.name || 'No special curriculum',
+        alternate_names: Array.isArray(obj.alternate_names) ? obj.alternate_names : [],
+        coverage_description: obj.coverage_description || obj.description || '',
+        notable_features: Array.isArray(obj.notable_features) ? obj.notable_features : [],
+        reference_note: obj.reference_note || ''
+      }
+      return res.status(200).json({ success: true, items: [item], count: 1 })
     }
 
     let items = parsedData

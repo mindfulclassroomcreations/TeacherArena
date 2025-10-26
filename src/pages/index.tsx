@@ -60,6 +60,11 @@ export default function Home() {
   const [selectedLesson, setSelectedLesson] = useState<Item | null>(null)
   // Step 2: track which curriculum cards have expanded state lists
   const [expandedCurriculaStates, setExpandedCurriculaStates] = useState<Record<string, boolean>>({})
+  // Step 2: state standard modal and cache
+  const [showStateStandardModal, setShowStateStandardModal] = useState(false)
+  const [stateStandardDetails, setStateStandardDetails] = useState<any | null>(null)
+  const [loadingStateStandard, setLoadingStateStandard] = useState<string | null>(null)
+  const [stateStandardCache, setStateStandardCache] = useState<Record<string, any>>({})
 
   // Country list
   const countries = [
@@ -408,6 +413,39 @@ export default function Home() {
     }
   }
 
+  // Step 2: Lazy-generate state-specific standard for selected subject
+  const handleViewStateStandard = async (regionName: string) => {
+    if (!selectedCountry || !selectedSubject) return
+    const cacheKey = `${selectedCountry}__${selectedSubject.name}__${regionName}`
+    const cached = stateStandardCache[cacheKey]
+    if (cached) {
+      setStateStandardDetails(cached)
+      setShowStateStandardModal(true)
+      return
+    }
+    setLoadingStateStandard(regionName)
+    try {
+      const response = await generateContent({
+        type: 'state-standard',
+        country: selectedCountry,
+        subject: selectedSubject.name,
+        region: regionName,
+      } as any)
+      if (response.items && response.items[0]) {
+        const details = response.items[0]
+        setStateStandardDetails(details)
+        setShowStateStandardModal(true)
+        setStateStandardCache((prev) => ({ ...prev, [cacheKey]: details }))
+      } else {
+        setError('No standard details found for this region.')
+      }
+    } catch (e) {
+      setError('Failed to load state standard details. Please try again.')
+    } finally {
+      setLoadingStateStandard(null)
+    }
+  }
+
   const handleSelectFramework = (framework: Item) => {
     setSelectedFramework(framework)
     setCurrentStep(4)
@@ -668,9 +706,18 @@ export default function Home() {
                         return (
                           <>
                             {visible.map((state: string, i: number) => (
-                              <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                {state}
-                              </span>
+                              <button
+                                key={i}
+                                type="button"
+                                title={`View ${state} standard for ${selectedSubject?.name}`}
+                                className={`px-2 py-1 text-xs rounded border ${loadingStateStandard === state ? 'bg-blue-200 text-blue-900 border-blue-300' : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewStateStandard(state)
+                                }}
+                              >
+                                {loadingStateStandard === state ? 'Loading…' : state}
+                              </button>
                             ))}
                             {allStates.length > 5 && !isExpanded && (
                               <button
@@ -1315,6 +1362,61 @@ export default function Home() {
               </Button>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* State Standard Details Modal */}
+      <Modal
+        isOpen={showStateStandardModal}
+        onClose={() => setShowStateStandardModal(false)}
+        title={stateStandardDetails?.standard_name ? `${stateStandardDetails.standard_name}` : 'State Standard'}
+        size="lg"
+      >
+        {stateStandardDetails ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-semibold text-gray-600 uppercase">Region</p>
+                <p className="text-gray-800">{stateStandardDetails.region}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-600 uppercase">Subject</p>
+                <p className="text-gray-800">{selectedSubject?.name}</p>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Overview</h4>
+              <p className="text-gray-700 whitespace-pre-wrap">{stateStandardDetails.coverage_description}</p>
+            </div>
+            {Array.isArray(stateStandardDetails.notable_features) && stateStandardDetails.notable_features.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Notable features</h4>
+                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                  {stateStandardDetails.notable_features.map((f: string, idx: number) => (
+                    <li key={idx}>{f}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {Array.isArray(stateStandardDetails.alternate_names) && stateStandardDetails.alternate_names.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Alternate names</h4>
+                <div className="flex flex-wrap gap-2">
+                  {stateStandardDetails.alternate_names.map((n: string, idx: number) => (
+                    <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">{n}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {stateStandardDetails.reference_note && (
+              <p className="text-xs text-gray-500">{stateStandardDetails.reference_note}</p>
+            )}
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowStateStandardModal(false)}>Close</Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-600">No details available.</p>
         )}
       </Modal>
 
