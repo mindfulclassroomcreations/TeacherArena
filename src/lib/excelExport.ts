@@ -214,3 +214,495 @@ export const downloadCompleteCurriculumAsExcel = (
     fileName
   )
 }
+
+// Helpers for organized Step 5 export
+const sanitizeSheetName = (name: string) => {
+  const invalid = /[\\/?*\[\]:]/g
+  let n = String(name || '').replace(invalid, ' ')
+  if (n.length > 31) n = n.slice(0, 31)
+  if (!n.trim()) n = 'Sheet'
+  return n
+}
+
+// Ensure sheet names are unique within a workbook; append numeric suffixes when needed
+const makeUniqueSheetName = (desired: string, used: Set<string>) => {
+  let base = sanitizeSheetName(desired)
+  if (!used.has(base)) {
+    used.add(base)
+    return base
+  }
+  // Try with suffixes: " <n>"
+  let i = 2
+  while (true) {
+    const suffix = ` ${i}`
+    // Ensure total length <= 31
+    const maxBaseLen = 31 - suffix.length
+    let candidate = base
+    if (candidate.length > maxBaseLen) candidate = candidate.slice(0, maxBaseLen)
+    candidate = `${candidate}${suffix}`
+    if (!used.has(candidate)) {
+      used.add(candidate)
+      return candidate
+    }
+    i += 1
+  }
+}
+
+type Step5LessonsBySection = Record<string, Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>>
+type Step5SubStandardsBySection = Record<string, Array<{ code?: string; title?: string; name?: string }>>
+
+// Build a single table per section (no sub-standard grouping)
+const buildSimpleSectionSheet = (
+  sectionTitle: string,
+  lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>
+) => {
+  const rows: any[][] = []
+  const merges: XLSX.Range[] = []
+
+  // Title row merged across four columns
+  rows.push([`Section: ${sectionTitle}`])
+  merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } })
+
+  // Header row
+  rows.push(['No', 'STANDARD', 'TITLE', 'NOTES'])
+
+  // Sort for stable output: by standard code then title
+  const sorted = (lessons || []).slice().sort((a, b) => {
+    const ac = String(a.standard_code || a.code || '').localeCompare(String(b.standard_code || b.code || ''))
+    if (ac !== 0) return ac
+    return String(a.title || a.name || '').localeCompare(String(b.title || b.name || ''))
+  })
+
+  // Data rows with numbering starting at 1
+  sorted.forEach((ls, idx) => {
+    rows.push([
+      idx + 1,
+      String(ls.standard_code || ls.code || ''),
+      String(ls.title || ls.name || ''),
+      String(ls.description || '')
+    ])
+  })
+
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  if (!ws['!merges']) ws['!merges'] = []
+  ws['!merges'].push(...merges)
+  ws['!cols'] = [
+    { wch: 4 }, // No
+    { wch: 12 }, // STANDARD
+    { wch: 40 }, // TITLE
+    { wch: 80 }, // NOTES
+  ]
+  return ws
+}
+
+// Build a single table per section with 3-row metadata header
+const buildSimpleSectionSheetWithMeta = (
+  sectionTitle: string,
+  lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>,
+  subject?: string,
+  framework?: string,
+  grade?: string
+) => {
+  const rows: any[][] = []
+  const merges: XLSX.Range[] = []
+
+  // Top 3 metadata rows
+  rows.push(['Subject Name', String(subject || 'N/A')])
+  rows.push(['Grade level', String(grade || 'N/A')])
+  rows.push(['Curriculum', String(framework || 'N/A')])
+  // Spacer
+  rows.push([''])
+
+  // Section title merged across 4 columns
+  const titleRowIndex = rows.length
+  rows.push([`Section: ${sectionTitle}`])
+  merges.push({ s: { r: titleRowIndex, c: 0 }, e: { r: titleRowIndex, c: 3 } })
+
+  // Header row
+  rows.push(['No', 'STANDARD', 'TITLE', 'NOTES'])
+
+  const sorted = (lessons || []).slice().sort((a, b) => {
+    const ac = String(a.standard_code || a.code || '').localeCompare(String(b.standard_code || b.code || ''))
+    if (ac !== 0) return ac
+    return String(a.title || a.name || '').localeCompare(String(b.title || b.name || ''))
+  })
+
+  sorted.forEach((ls, idx) => {
+    rows.push([
+      idx + 1,
+      String(ls.standard_code || ls.code || ''),
+      String(ls.title || ls.name || ''),
+      String(ls.description || '')
+    ])
+  })
+
+  // MINI BUNDLE row (merge first 3 cells)
+  const miniRowIndex = rows.length
+  rows.push(['MINI BUNDLE'])
+  merges.push({ s: { r: miniRowIndex, c: 0 }, e: { r: miniRowIndex, c: 2 } })
+
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  if (!ws['!merges']) ws['!merges'] = []
+  ws['!merges'].push(...merges)
+  ws['!cols'] = [
+    { wch: 16 }, // label/No
+    { wch: 20 }, // value/STANDARD
+    { wch: 40 }, // TITLE
+    { wch: 80 }, // NOTES
+  ]
+  return ws
+}
+
+// Build a single table sheet with a custom title
+const buildOneTableSheet = (
+  title: string,
+  lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>
+) => {
+  const rows: any[][] = []
+  const merges: XLSX.Range[] = []
+
+  rows.push([title])
+  merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } })
+  rows.push(['No', 'STANDARD', 'TITLE', 'NOTES'])
+
+  const sorted = (lessons || []).slice().sort((a, b) => {
+    const ac = String(a.standard_code || a.code || '').localeCompare(String(b.standard_code || b.code || ''))
+    if (ac !== 0) return ac
+    return String(a.title || a.name || '').localeCompare(String(b.title || b.name || ''))
+  })
+
+  sorted.forEach((ls, idx) => {
+    rows.push([
+      idx + 1,
+      String(ls.standard_code || ls.code || ''),
+      String(ls.title || ls.name || ''),
+      String(ls.description || '')
+    ])
+  })
+
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  if (!ws['!merges']) ws['!merges'] = []
+  ws['!merges'].push(...merges)
+  ws['!cols'] = [
+    { wch: 4 },
+    { wch: 12 },
+    { wch: 40 },
+    { wch: 80 },
+  ]
+  return ws
+}
+
+const buildOrganizedSectionSheet = (
+  sectionTitle: string,
+  lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>,
+  subStandards: Array<{ code?: string; title?: string; name?: string }>
+) => {
+  const rows: any[][] = []
+  const merges: XLSX.Range[] = []
+
+  const norm = (v: any) => String(v || '').trim().toLowerCase()
+  const indexByCode: Record<string, { code: string; title: string; items: typeof lessons }> = {}
+  subStandards.forEach((ss, idx) => {
+    const code = String(ss.code || `S${idx + 1}`)
+    indexByCode[norm(code)] = { code, title: String(ss.title || ss.name || ''), items: [] }
+  })
+  // Distribute lessons by code
+  lessons.forEach((ls) => {
+    const code = norm(ls.standard_code || ls.code || '')
+    if (code && indexByCode[code]) {
+      indexByCode[code].items.push(ls)
+    }
+  })
+
+  const groups = Object.values(indexByCode).filter((g) => g.items.length > 0)
+
+  if (groups.length === 0) {
+    rows.push([`Section: ${sectionTitle}`])
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } })
+    rows.push(['No', 'STANDARD', 'TITLE', 'NOTES'])
+    // No data rows
+  } else {
+    let currentRow = 0
+    groups.forEach((g, gi) => {
+      // Title row, merged across 4 columns
+      const title = `Section: ${sectionTitle} — Sub-Standard: ${g.code}${g.title ? ` — ${g.title}` : ''}`
+      rows.push([title])
+      merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 3 } })
+      currentRow += 1
+
+      // Header
+      rows.push(['No', 'STANDARD', 'TITLE', 'NOTES'])
+      currentRow += 1
+
+      // Data rows with per-table numbering
+      g.items.forEach((ls, idx) => {
+        rows.push([
+          idx + 1,
+          g.code,
+          String(ls.title || ls.name || ''),
+          String(ls.description || '')
+        ])
+        currentRow += 1
+      })
+
+      // Spacer row between tables
+      if (gi < groups.length - 1) {
+        rows.push([''])
+        currentRow += 1
+      }
+    })
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  // Apply merges
+  if (!ws['!merges']) ws['!merges'] = []
+  ws['!merges'].push(...merges)
+  // Column widths
+  ws['!cols'] = [
+    { wch: 4 }, // No
+    { wch: 12 }, // STANDARD
+    { wch: 40 }, // TITLE
+    { wch: 80 }, // NOTES
+  ]
+  return ws
+}
+
+export const downloadStep5OrganizedExcel = (
+  lessonsBySection: Step5LessonsBySection,
+  subStandardsBySection: Step5SubStandardsBySection,
+  sectionNamesByKey: Record<string, string>,
+  subject?: string,
+  framework?: string,
+  grade?: string,
+  sectionOrder?: string[]
+) => {
+  const workbook = XLSX.utils.book_new()
+  const usedNames = new Set<string>()
+
+  // Build one sheet per section with lessons
+  const secKeys = (Array.isArray(sectionOrder) && sectionOrder.length > 0)
+    ? sectionOrder.slice()
+    : Object.keys(lessonsBySection || {})
+  const hasAny = secKeys.some((k) => Array.isArray(lessonsBySection[k]) && lessonsBySection[k].length > 0)
+  if (!hasAny) return
+
+  secKeys.forEach((key, idx) => {
+    const items = lessonsBySection[key] || []
+    if (!Array.isArray(items) || items.length === 0) return
+    const sectionTitle = sectionNamesByKey[key] || `Section ${idx + 1}`
+    const ws = buildSimpleSectionSheet(sectionTitle, items)
+    const sheetName = makeUniqueSheetName(sectionTitle, usedNames)
+    XLSX.utils.book_append_sheet(workbook, ws, sheetName || `Section${idx + 1}`)
+  })
+
+  // Metadata sheet
+  const metadataData = [
+    { Field: 'Subject', Value: subject || 'N/A' },
+    { Field: 'Framework', Value: framework || 'N/A' },
+    { Field: 'Grade Level', Value: grade || 'N/A' },
+    { Field: 'Generated At', Value: new Date().toLocaleString() },
+    { Field: 'Generated By', Value: 'Teacher Arena Lesson Generator' },
+  ]
+  const metadataSheet = XLSX.utils.json_to_sheet(metadataData)
+  metadataSheet['!cols'] = [{ wch: 20 }, { wch: 40 }]
+  XLSX.utils.book_append_sheet(workbook, metadataSheet, 'Info')
+
+  const timestamp = new Date()
+    .toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    .replace(/[\/\s:]/g, '-')
+  const fileName = `step5-lessons-${timestamp}.xlsx`
+  XLSX.writeFile(workbook, fileName)
+}
+
+export const downloadStep5SectionExcel = (
+  sectionKey: string,
+  sectionTitle: string,
+  lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>,
+  subStandards: Array<{ code?: string; title?: string; name?: string }>,
+  subject?: string,
+  framework?: string,
+  grade?: string
+) => {
+  if (!Array.isArray(lessons) || lessons.length === 0) return
+  const workbook = XLSX.utils.book_new()
+  const ws = buildSimpleSectionSheetWithMeta(sectionTitle, lessons, subject, framework, grade)
+  const sheetName = sanitizeSheetName(sectionTitle) || 'Section'
+  XLSX.utils.book_append_sheet(workbook, ws, sheetName)
+
+  const metadataData = [
+    { Field: 'Subject', Value: subject || 'N/A' },
+    { Field: 'Framework', Value: framework || 'N/A' },
+    { Field: 'Grade Level', Value: grade || 'N/A' },
+    { Field: 'Generated At', Value: new Date().toLocaleString() },
+    { Field: 'Generated By', Value: 'Teacher Arena Lesson Generator' },
+  ]
+  const metadataSheet = XLSX.utils.json_to_sheet(metadataData)
+  metadataSheet['!cols'] = [{ wch: 20 }, { wch: 40 }]
+  XLSX.utils.book_append_sheet(workbook, metadataSheet, 'Info')
+
+  const timestamp = new Date()
+    .toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    .replace(/[\/\s:]/g, '-')
+  const fileName = `${sanitizeSheetName(sectionTitle) || 'section'}-lessons-${timestamp}.xlsx`
+  XLSX.writeFile(workbook, fileName)
+}
+
+export const downloadSubStandardExcel = (
+  sectionTitle: string,
+  subStandardCode: string,
+  subStandardTitle: string,
+  lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>,
+  subject?: string,
+  framework?: string,
+  grade?: string
+) => {
+  if (!Array.isArray(lessons) || lessons.length === 0) return
+  const workbook = XLSX.utils.book_new()
+  const pageTitle = `Section: ${sectionTitle} — Sub-Standard: ${subStandardCode}${subStandardTitle ? ` — ${subStandardTitle}` : ''}`
+  const ws = buildOneTableSheet(pageTitle, lessons)
+  const sheetName = sanitizeSheetName(`${subStandardCode}`) || 'SubStandard'
+  XLSX.utils.book_append_sheet(workbook, ws, sheetName)
+
+  const metadataData = [
+    { Field: 'Subject', Value: subject || 'N/A' },
+    { Field: 'Framework', Value: framework || 'N/A' },
+    { Field: 'Grade Level', Value: grade || 'N/A' },
+    { Field: 'Generated At', Value: new Date().toLocaleString() },
+    { Field: 'Generated By', Value: 'Teacher Arena Lesson Generator' },
+  ]
+  const metadataSheet = XLSX.utils.json_to_sheet(metadataData)
+  metadataSheet['!cols'] = [{ wch: 20 }, { wch: 40 }]
+  XLSX.utils.book_append_sheet(workbook, metadataSheet, 'Info')
+
+  const timestamp = new Date()
+    .toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    .replace(/[\/\s:]/g, '-')
+  const fileName = `${sanitizeSheetName(subStandardCode) || 'substandard'}-lessons-${timestamp}.xlsx`
+  XLSX.writeFile(workbook, fileName)
+}
+
+// Combined one-sheet export for Tables page: All sections in a single sheet
+export const downloadStep5CombinedExcel = (
+  lessonsBySection: Step5LessonsBySection,
+  sectionNamesByKey: Record<string, string>,
+  subject?: string,
+  framework?: string,
+  grade?: string,
+  sectionOrder?: string[]
+) => {
+  const workbook = XLSX.utils.book_new()
+
+  const secKeys = (Array.isArray(sectionOrder) && sectionOrder.length > 0)
+    ? sectionOrder.slice()
+    : Object.keys(lessonsBySection || {})
+
+  const hasAny = secKeys.some((k) => Array.isArray(lessonsBySection[k]) && lessonsBySection[k].length > 0)
+  if (!hasAny) return
+
+  const rows: any[][] = []
+  const merges: XLSX.Range[] = []
+  let currentRow = 0
+
+  // Top 3 metadata rows
+  rows.push(['Subject Name', String(subject || 'N/A')])
+  rows.push(['Grade level', String(grade || 'N/A')])
+  rows.push(['Curriculum', String(framework || 'N/A')])
+  rows.push(['']) // spacer
+  currentRow = 4
+
+  secKeys.forEach((key, idx) => {
+    const items = Array.isArray(lessonsBySection[key]) ? lessonsBySection[key] : []
+    if (items.length === 0) return
+    const sectionTitle = sectionNamesByKey[key] || key
+
+    // Section Title merged across 4 columns
+    rows.push([`Section: ${sectionTitle}`])
+    merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 3 } })
+    currentRow += 1
+
+    // Header
+    rows.push(['No', 'STANDARD', 'TITLE', 'NOTES'])
+    currentRow += 1
+
+    const sorted = items.slice().sort((a, b) => {
+      const ac = String(a.standard_code || a.code || '').localeCompare(String(b.standard_code || b.code || ''))
+      if (ac !== 0) return ac
+      return String(a.title || a.name || '').localeCompare(String(b.title || b.name || ''))
+    })
+
+    // Data rows with per-section numbering
+    sorted.forEach((ls, i) => {
+      rows.push([
+        i + 1,
+        String(ls.standard_code || ls.code || ''),
+        String(ls.title || ls.name || ''),
+        String(ls.description || '')
+      ])
+      currentRow += 1
+    })
+
+    // MINI BUNDLE row (merge first 3 cells)
+    rows.push(['MINI BUNDLE'])
+    merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 2 } })
+    currentRow += 1
+
+    // Spacer between sections
+    if (idx < secKeys.length - 1) {
+      rows.push([''])
+      currentRow += 1
+    }
+  })
+
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  if (!ws['!merges']) ws['!merges'] = []
+  ws['!merges'].push(...merges)
+  ws['!cols'] = [
+    { wch: 16 }, // label/No
+    { wch: 20 }, // value/STANDARD
+    { wch: 40 }, // TITLE
+    { wch: 80 }, // NOTES
+  ]
+  XLSX.utils.book_append_sheet(workbook, ws, 'Tables')
+
+  // Info sheet
+  const metadataData = [
+    { Field: 'Subject', Value: subject || 'N/A' },
+    { Field: 'Framework', Value: framework || 'N/A' },
+    { Field: 'Grade Level', Value: grade || 'N/A' },
+    { Field: 'Generated At', Value: new Date().toLocaleString() },
+    { Field: 'Generated By', Value: 'Teacher Arena Lesson Generator' },
+  ]
+  const metadataSheet = XLSX.utils.json_to_sheet(metadataData)
+  metadataSheet['!cols'] = [{ wch: 20 }, { wch: 40 }]
+  XLSX.utils.book_append_sheet(workbook, metadataSheet, 'Info')
+
+  const timestamp = new Date()
+    .toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    .replace(/[\/\s:]/g, '-')
+  const fileName = `tables-combined-${timestamp}.xlsx`
+  XLSX.writeFile(workbook, fileName)
+}

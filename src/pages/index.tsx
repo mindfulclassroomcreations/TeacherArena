@@ -11,7 +11,7 @@ import PaymentModal from '@/components/PaymentModal'
 import SelectionStep from '@/components/SelectionStep'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
-import { downloadLessonsAsExcel, downloadCompleteCurriculumAsExcel } from '@/lib/excelExport'
+import { downloadLessonsAsExcel, downloadCompleteCurriculumAsExcel, downloadStep5OrganizedExcel, downloadStep5SectionExcel, downloadSubStandardExcel } from '@/lib/excelExport'
 import { generateContent } from '@/lib/api'
 
 interface Item {
@@ -53,12 +53,15 @@ export default function Home() {
   const [lessonsBySection, setLessonsBySection] = useState<Record<string, any[]>>({})
   const [selectedLessonsBySection, setSelectedLessonsBySection] = useState<Record<string, Record<string, boolean>>>({})
   const [lessonsPerSubStandardBySection, setLessonsPerSubStandardBySection] = useState<Record<string, number>>({})
+  const [bulkLessonsAmount, setBulkLessonsAmount] = useState<number>(0)
   const [loadingSectionKey, setLoadingSectionKey] = useState<string | null>(null)
   const [loadingLessonsSectionKey, setLoadingLessonsSectionKey] = useState<string | null>(null)
+  const [bulkLoadingLessonsSectionKeys, setBulkLoadingLessonsSectionKeys] = useState<Set<string>>(new Set())
   const [lessonsPerSingleSub, setLessonsPerSingleSub] = useState<Record<string, number>>({})
   const [loadingSingleLessonsKey, setLoadingSingleLessonsKey] = useState<string | null>(null)
   const [selectedSubStandardsBySection, setSelectedSubStandardsBySection] = useState<Record<string, Record<string, boolean>>>({})
   const [loadingSelectedLessonsSecKey, setLoadingSelectedLessonsSecKey] = useState<string | null>(null)
+  const [bulkLoadingSectionKeys, setBulkLoadingSectionKeys] = useState<Set<string>>(new Set())
   // Success indicators (flash green after completion)
   const [completedLessonsBySection, setCompletedLessonsBySection] = useState<Record<string, number>>({})
   const [completedSelectedLessonsBySection, setCompletedSelectedLessonsBySection] = useState<Record<string, number>>({})
@@ -79,6 +82,124 @@ export default function Home() {
       map[lk] = !map[lk]
       return { ...prev, [secKey]: map }
     })
+  }
+
+  // Step 5: Excel exports
+  const handleExportSectionLessons = (section: any) => {
+    try {
+      const secKey = String(section.id || section.name || section.title || '')
+      const sectionLessons = lessonsBySection[secKey] || []
+      if (!Array.isArray(sectionLessons) || sectionLessons.length === 0) return
+      const sectionTitle = String(section.title || section.name || secKey)
+      const subs = subStandardsBySection[secKey] || []
+      downloadStep5SectionExcel(
+        secKey,
+        sectionTitle,
+        sectionLessons,
+        subs,
+        selectedSubject?.name || '',
+        selectedFramework?.name || '',
+        selectedGrade?.name || ''
+      )
+    } catch (e) {
+      console.error('Export section lessons failed', e)
+    }
+  }
+
+  const handleExportAllStep5Lessons = () => {
+    try {
+      const hasAny = Object.values(lessonsBySection || {}).some((arr) => Array.isArray(arr) && arr.length > 0)
+      if (!hasAny) return
+      // Build section name map
+      const sectionNamesByKey: Record<string, string> = {}
+      const sectionOrder: string[] = []
+      curriculumSections.forEach((sec: any) => {
+        const key = String(sec.id || sec.name || sec.title || '')
+        const title = String(sec.title || sec.name || key)
+        sectionNamesByKey[key] = title
+        sectionOrder.push(key)
+      })
+      downloadStep5OrganizedExcel(
+        lessonsBySection,
+        subStandardsBySection,
+        sectionNamesByKey,
+        selectedSubject?.name || '',
+        selectedFramework?.name || '',
+        selectedGrade?.name || '',
+        sectionOrder
+      )
+    } catch (e) {
+      console.error('Export all Step 5 lessons failed', e)
+    }
+  }
+
+  const handleOpenTablesPage = () => {
+    try {
+      // Archive existing Tables payload if present
+      try {
+        const existing = window.localStorage.getItem('ta_tables_data')
+        if (existing) {
+          const archivesRaw = window.localStorage.getItem('ta_tables_archive')
+          const archives = Array.isArray(JSON.parse(archivesRaw || '[]')) ? JSON.parse(archivesRaw || '[]') : []
+          const snapshot = {
+            savedAt: new Date().toISOString(),
+            data: JSON.parse(existing)
+          }
+          archives.unshift(snapshot)
+          // Trim archive to last 10 snapshots to prevent unbounded growth
+          if (archives.length > 10) archives.length = 10
+          window.localStorage.setItem('ta_tables_archive', JSON.stringify(archives))
+        }
+      } catch {
+        // ignore archive errors
+      }
+
+      const sectionNamesByKey: Record<string, string> = {}
+      curriculumSections.forEach((sec: any) => {
+        const key = String(sec.id || sec.name || sec.title || '')
+        const title = String(sec.title || sec.name || key)
+        sectionNamesByKey[key] = title
+      })
+      const payload = {
+        lessonsBySection,
+        subStandardsBySection,
+        sectionNamesByKey,
+        sectionOrder: Object.keys(sectionNamesByKey),
+        subject: selectedSubject?.name || '',
+        framework: selectedFramework?.name || '',
+        grade: selectedGrade?.name || '',
+        // Explicit headers for Tables exports
+        headerSubjectName: selectedFramework?.name || '', // Step 4: Framework/Units
+        headerGradeLevel: selectedGrade?.name || '',      // Step 3: Grade
+        headerCurriculum: (selectedStateCurriculum?.curriculum_name || selectedSubject?.name || ''), // Step 2: Curriculum
+      }
+      window.localStorage.setItem('ta_tables_data', JSON.stringify(payload))
+      window.open('/tables', '_blank')
+    } catch (e) {
+      console.error('Open tables page failed', e)
+    }
+  }
+
+  const handleExportSubStandardLessons = (section: any, ss: any, idx: number) => {
+    try {
+      const secKey = String(section.id || section.name || section.title || '')
+      const sectionTitle = String(section.title || section.name || secKey)
+      const code = String(ss.code || `S${idx + 1}`)
+      const codeN = String(code).trim().toLowerCase()
+      const sectionLessons = (lessonsBySection[secKey] || []).filter((ls: any) => String(ls.standard_code || ls.code || '').trim().toLowerCase() === codeN)
+      if (sectionLessons.length === 0) return
+      downloadSubStandardExcel(
+        sectionTitle,
+        code,
+        String(ss.title || ss.name || ''),
+        sectionLessons,
+        selectedSubject?.name || '',
+        selectedFramework?.name || '',
+        selectedGrade?.name || ''
+      )
+    } catch (e) {
+      console.error('Export sub-standard lessons failed', e)
+    }
   }
 
   const toggleSelectAllLessonsInGroup = (section: any, groupCode: string, lessonsInGroup: any[]) => {
@@ -786,7 +907,96 @@ export default function Home() {
     }
   }
 
+  // Step 5: Generate sub-standards for all curriculum sections (bulk)
+  const handleGenerateSubStandardsForAll = async () => {
+    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (curriculumSections.length === 0) {
+      setError('No curriculum sections available. Generate sections first.')
+      return
+    }
+    setError(null)
+    const loadingKeys = new Set(curriculumSections.map(s => String(s.id || s.name || s.title || '')).filter(Boolean))
+    setBulkLoadingSectionKeys(loadingKeys)
+    let successCount = 0
+    for (const section of curriculumSections) {
+      const key = String(section.id || section.name || section.title || '')
+      if (!key) continue
+      try {
+        const response = await generateContent({
+          type: 'section-standards',
+          country: selectedCountry || undefined,
+          subject: selectedSubject.name,
+          framework: selectedFramework.name,
+          grade: selectedGrade.name,
+          region: selectedRegion || undefined,
+          stateCurriculum: selectedStateCurriculum?.curriculum_name,
+          section: section.title || section.name,
+          context
+        })
+        if (Array.isArray(response.items)) {
+          setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
+          successCount += 1
+        }
+      } catch (err) {
+        // Continue to next section on error
+        console.error(`Failed to generate sub-standards for section "${section.title || section.name}":`, err)
+      }
+    }
+    setBulkLoadingSectionKeys(new Set())
+    if (successCount > 0) {
+      setSuccess(`Generated sub-standards for ${successCount} section${successCount !== 1 ? 's' : ''}.`)
+      setTimeout(() => setSuccess(null), 3000)
+    } else {
+      setError('Failed to generate sub-standards for all sections. Please try again.')
+    }
+  }
+
+  // Step 5: Generate sub-standards for selected curriculum sections (bulk)
+  const handleGenerateSubStandardsForSelected = async () => {
+    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (selectedCurriculumSections.length === 0) {
+      setError('Please select at least one section to generate sub-standards for.')
+      return
+    }
+    setError(null)
+    const loadingKeys = new Set(selectedCurriculumSections.map(s => String(s.id || s.name || s.title || '')).filter(Boolean))
+    setBulkLoadingSectionKeys(loadingKeys)
+    let successCount = 0
+    for (const section of selectedCurriculumSections) {
+      const key = String(section.id || section.name || section.title || '')
+      if (!key) continue
+      try {
+        const response = await generateContent({
+          type: 'section-standards',
+          country: selectedCountry || undefined,
+          subject: selectedSubject.name,
+          framework: selectedFramework.name,
+          grade: selectedGrade.name,
+          region: selectedRegion || undefined,
+          stateCurriculum: selectedStateCurriculum?.curriculum_name,
+          section: section.title || section.name,
+          context
+        })
+        if (Array.isArray(response.items)) {
+          setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
+          successCount += 1
+        }
+      } catch (err) {
+        // Continue to next section on error
+        console.error(`Failed to generate sub-standards for section "${section.title || section.name}":`, err)
+      }
+    }
+    setBulkLoadingSectionKeys(new Set())
+    if (successCount > 0) {
+      setSuccess(`Generated sub-standards for ${successCount} selected section${successCount !== 1 ? 's' : ''}.`)
+      setTimeout(() => setSuccess(null), 3000)
+    } else {
+      setError('Failed to generate sub-standards for selected sections. Please try again.')
+    }
+  }
+
   // Step 5: Generate lessons based on generated sub-standards for a section
+  // Distributes total lessons across all sub-standards
   const handleGenerateLessonsFromSubStandards = async (section: any) => {
     if (!selectedSubject || !selectedFramework || !selectedGrade) return
     const key = String(section.id || section.name || section.title || '')
@@ -795,14 +1005,14 @@ export default function Home() {
       setError('Please generate sub-standards for this section first.')
       return
     }
-    const per = lessonsPerSubStandardBySection[key]
-    if (!Number.isFinite(per as any) || (per as any) <= 0) {
-      setError('Please set "Lessons per sub-standard" for this section before generating lessons.')
+    const totalLessons = lessonsPerSubStandardBySection[key]
+    if (!Number.isFinite(totalLessons as any) || (totalLessons as any) <= 0) {
+      setError('Please set total lessons to generate for this section before generating.')
       return
     }
 
-  setIsLoading(true)
-  setLoadingLessonsSectionKey(key)
+    setIsLoading(true)
+    setLoadingLessonsSectionKey(key)
     // Clear prior completed state for this section
     setCompletedLessonsBySection((prev) => {
       const next = { ...prev }
@@ -811,6 +1021,12 @@ export default function Home() {
     })
     setError(null)
     try {
+      // Distribute lessons across sub-standards: each gets at least 1, extras distributed evenly
+      const numSubStandards = subStandards.length
+      const basePerStandard = Math.floor(totalLessons / numSubStandards)
+      const remainder = totalLessons % numSubStandards
+      const lessonsPerStandard = basePerStandard + (remainder > 0 ? 1 : 0) // Each gets base + extras if any
+
       const response = await generateContent({
         type: 'lessons-by-substandards' as any,
         country: selectedCountry || undefined,
@@ -821,7 +1037,7 @@ export default function Home() {
         stateCurriculum: selectedStateCurriculum?.curriculum_name,
         section: section.title || section.name,
         subStandards,
-        lessonsPerStandard: per,
+        lessonsPerStandard: lessonsPerStandard,
         context
       } as any)
       if (Array.isArray(response.items)) {
@@ -850,6 +1066,116 @@ export default function Home() {
     } finally {
       setIsLoading(false)
       setLoadingLessonsSectionKey(null)
+    }
+  }
+
+  // Step 5: Generate lessons for all curriculum sections (bulk)
+  const handleGenerateLessonsFromSubStandardsForAll = async () => {
+    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (curriculumSections.length === 0) {
+      setError('No curriculum sections available.')
+      return
+    }
+    if (!Number.isFinite(bulkLessonsAmount) || bulkLessonsAmount <= 0) {
+      setError('Please set the number of lessons to generate.')
+      return
+    }
+    setError(null)
+    const loadingKeys = new Set(curriculumSections.map(s => String(s.id || s.name || s.title || '')).filter(Boolean))
+    setBulkLoadingLessonsSectionKeys(loadingKeys)
+    let successCount = 0
+    for (const section of curriculumSections) {
+      const key = String(section.id || section.name || section.title || '')
+      if (!key) continue
+      const subStandards = subStandardsBySection[key] || []
+      if (!Array.isArray(subStandards) || subStandards.length === 0) continue
+      try {
+        const numSubStandards = subStandards.length
+        const basePerStandard = Math.floor(bulkLessonsAmount / numSubStandards)
+        const remainder = bulkLessonsAmount % numSubStandards
+        const lessonsPerStandard = basePerStandard + (remainder > 0 ? 1 : 0)
+        const response = await generateContent({
+          type: 'lessons-by-substandards' as any,
+          country: selectedCountry || undefined,
+          subject: selectedSubject.name,
+          framework: selectedFramework.name,
+          grade: selectedGrade.name,
+          region: selectedRegion || undefined,
+          stateCurriculum: selectedStateCurriculum?.curriculum_name,
+          section: section.title || section.name,
+          subStandards,
+          lessonsPerStandard: lessonsPerStandard,
+          context
+        } as any)
+        if (Array.isArray(response.items)) {
+          setLessonsBySection((prev) => ({ ...prev, [key]: response.items }))
+          successCount += 1
+        }
+      } catch (err) {
+        console.error(`Failed to generate lessons for section "${section.title || section.name}":`, err)
+      }
+    }
+    setBulkLoadingLessonsSectionKeys(new Set())
+    if (successCount > 0) {
+      setSuccess(`Generated lessons for ${successCount} section${successCount !== 1 ? 's' : ''}.`)
+      setTimeout(() => setSuccess(null), 3000)
+    } else {
+      setError('Failed to generate lessons for all sections. Please try again.')
+    }
+  }
+
+  // Step 5: Generate lessons for selected curriculum sections (bulk)
+  const handleGenerateLessonsFromSubStandardsForSelected = async () => {
+    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (selectedCurriculumSections.length === 0) {
+      setError('Please select at least one section to generate lessons for.')
+      return
+    }
+    if (!Number.isFinite(bulkLessonsAmount) || bulkLessonsAmount <= 0) {
+      setError('Please set the number of lessons to generate.')
+      return
+    }
+    setError(null)
+    const loadingKeys = new Set(selectedCurriculumSections.map(s => String(s.id || s.name || s.title || '')).filter(Boolean))
+    setBulkLoadingLessonsSectionKeys(loadingKeys)
+    let successCount = 0
+    for (const section of selectedCurriculumSections) {
+      const key = String(section.id || section.name || section.title || '')
+      if (!key) continue
+      const subStandards = subStandardsBySection[key] || []
+      if (!Array.isArray(subStandards) || subStandards.length === 0) continue
+      try {
+        const numSubStandards = subStandards.length
+        const basePerStandard = Math.floor(bulkLessonsAmount / numSubStandards)
+        const remainder = bulkLessonsAmount % numSubStandards
+        const lessonsPerStandard = basePerStandard + (remainder > 0 ? 1 : 0)
+        const response = await generateContent({
+          type: 'lessons-by-substandards' as any,
+          country: selectedCountry || undefined,
+          subject: selectedSubject.name,
+          framework: selectedFramework.name,
+          grade: selectedGrade.name,
+          region: selectedRegion || undefined,
+          stateCurriculum: selectedStateCurriculum?.curriculum_name,
+          section: section.title || section.name,
+          subStandards,
+          lessonsPerStandard: lessonsPerStandard,
+          context
+        } as any)
+        if (Array.isArray(response.items)) {
+          setLessonsBySection((prev) => ({ ...prev, [key]: response.items }))
+          successCount += 1
+        }
+      } catch (err) {
+        console.error(`Failed to generate lessons for section "${section.title || section.name}":`, err)
+      }
+    }
+    setBulkLoadingLessonsSectionKeys(new Set())
+    if (successCount > 0) {
+      setSuccess(`Generated lessons for ${successCount} selected section${successCount !== 1 ? 's' : ''}.`)
+      setTimeout(() => setSuccess(null), 3000)
+    } else {
+      setError('Failed to generate lessons for selected sections. Please try again.')
     }
   }
 
@@ -1887,6 +2213,34 @@ export default function Home() {
                 <p className="text-xs font-semibold text-blue-900 uppercase">📊 Framework/Units (Step 4)</p>
                 <p className="text-sm text-blue-800">{selectedFramework?.name}</p>
               </div>
+
+              {/* Step 5: Export/Open options */}
+              <div className="border-t border-blue-200 pt-3 flex items-center justify-between">
+                <p className="text-xs text-blue-900">Export or view all generated lessons from Step 5</p>
+                {(() => {
+                  const totalStep5Lessons = Object.values(lessonsBySection || {}).reduce((sum, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0)
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant={totalStep5Lessons > 0 ? 'outline' : 'outline'}
+                        onClick={handleOpenTablesPage}
+                        disabled={totalStep5Lessons === 0}
+                      >
+                        Open Tables (New Tab)
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={totalStep5Lessons > 0 ? 'primary' : 'outline'}
+                        onClick={handleExportAllStep5Lessons}
+                        disabled={totalStep5Lessons === 0}
+                      >
+                        Export All Step 5 (Excel)
+                      </Button>
+                    </div>
+                  )
+                })()}
+              </div>
             </div>
           </div>
 
@@ -1904,6 +2258,63 @@ export default function Home() {
             </div>
           ) : (
             <>
+              {/* Bulk Generation Buttons */}
+              <div className="mb-4 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleGenerateSubStandardsForAll}
+                  disabled={curriculumSections.length === 0}
+                >
+                  Generate Sub-standards for All Tables
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleGenerateSubStandardsForSelected}
+                  disabled={selectedCurriculumSections.length === 0}
+                >
+                  Generate Sub-standards for Selected Tables ({selectedCurriculumSections.length})
+                </Button>
+              </div>
+
+              {/* Bulk Lessons Generation */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Lessons per table:
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={bulkLessonsAmount || ''}
+                      onChange={(e) => setBulkLessonsAmount(parseInt(e.target.value, 10) || 0)}
+                      placeholder="Enter number of lessons"
+                      className="w-full sm:w-32"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={handleGenerateLessonsFromSubStandardsForAll}
+                      disabled={curriculumSections.length === 0 || !bulkLessonsAmount}
+                    >
+                      Generate Lessons for All Tables
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={handleGenerateLessonsFromSubStandardsForSelected}
+                      disabled={selectedCurriculumSections.length === 0 || !bulkLessonsAmount}
+                    >
+                      Generate Lessons for Selected ({selectedCurriculumSections.length})
+                    </Button>
+                  </div>
+                </div>
+              </div>
               <div className="space-y-3">
                 {curriculumSections.map((section, index) => {
                   const isSelected = selectedCurriculumSections.some((s) =>
@@ -1911,17 +2322,18 @@ export default function Home() {
                     ((s.name || s.title) && (section.name || section.title) && (s.name || s.title) === (section.name || section.title))
                   )
                   const secKey = String(section.id || section.name || section.title || '')
-                  const isGenSubsLoading = loadingSectionKey === secKey
+                  const isGenSubsLoading = loadingSectionKey === secKey || bulkLoadingSectionKeys.has(secKey)
                   const isSecLessonsLoading = loadingLessonsSectionKey === secKey
                   const isSelectedLessonsLoading = loadingSelectedLessonsSecKey === secKey
+                  const isBulkLessonsLoading = bulkLoadingLessonsSectionKeys.has(secKey)
                   const isSecLessonsCompleted = !!completedLessonsBySection[secKey]
                   const isBatchCompleted = !!completedSelectedLessonsBySection[secKey]
-                  const anySecLoading = isGenSubsLoading || isSecLessonsLoading || isSelectedLessonsLoading
+                  const anySecLoading = isGenSubsLoading || isSecLessonsLoading || isSelectedLessonsLoading || isBulkLessonsLoading
                   return (
                   <div
                     key={section.id || index}
                     className={`bg-white rounded-lg overflow-hidden transition-all border-2 ${
-                      isSelected ? 'border-blue-600 ring-2 ring-blue-100 shadow-md' : 'border-transparent hover:border-blue-200'
+                      isGenSubsLoading ? 'border-blue-500 ring-2 ring-blue-200 shadow-lg animate-pulse' : (isBulkLessonsLoading ? 'border-purple-500 ring-2 ring-purple-200 shadow-lg animate-pulse' : (isSelected ? 'border-blue-600 ring-2 ring-blue-100 shadow-md' : 'border-transparent hover:border-blue-200'))
                     }`}
                   >
                     {/* Section Header - Clickable */}
@@ -2057,6 +2469,19 @@ export default function Home() {
                                           >
                                             {isSingleCompleted ? 'Generated ✓' : 'Generate'}
                                           </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => { e.stopPropagation(); handleExportSubStandardLessons(section, ss, idx) }}
+                                            disabled={(() => {
+                                              const sectionLessons = lessonsBySection[secKey] || []
+                                              const norm = (v: any) => String(v || '').trim().toLowerCase()
+                                              const codeN = norm(ss.code || `S${idx + 1}`)
+                                              return !Array.isArray(sectionLessons) || sectionLessons.filter((ls: any) => norm(ls.standard_code || ls.code) === codeN).length === 0
+                                            })()}
+                                          >
+                                            Export
+                                          </Button>
                                         </div>
                                       </td>
                                     </tr>
@@ -2099,19 +2524,19 @@ export default function Home() {
                                 <div className="w-full sm:w-48">
                                   <Input
                                     type="number"
-                                    label="Lessons per sub-standard"
+                                    label="Total lessons to generate"
                                     value={String(lessonsPerSubStandardBySection[String(section.id || section.name || section.title || '')] ?? '')}
                                     onChange={(e) => {
                                       const key = String(section.id || section.name || section.title || '')
                                       const val = parseInt(e.target.value)
                                       setLessonsPerSubStandardBySection((prev) => ({ ...prev, [key]: Number.isFinite(val) && val > 0 ? val : 0 }))
                                     }}
-                                    placeholder="e.g., 10"
+                                    placeholder="e.g., 7"
                                     min="1"
                                     max="50"
                                     disabled={isSecLessonsLoading || isSelectedLessonsLoading}
                                   />
-                                  {/* No default value; user must set explicitly */}
+                                  <p className="text-xs text-gray-500 mt-1">Lessons will be distributed across all sub-standards in this section</p>
                                 </div>
                                 <div className="flex-1 text-right">
                                   <Button
@@ -2159,6 +2584,14 @@ export default function Home() {
                                       </div>
                                       <div className="flex items-center gap-3">
                                         <span className="text-[11px] text-yellow-800">Grouped by sub-standard</span>
+                                        <Button
+                                          size="sm"
+                                          variant={total > 0 ? 'outline' : 'outline'}
+                                          onClick={(e) => { e.stopPropagation(); handleExportSectionLessons(section) }}
+                                          disabled={total === 0}
+                                        >
+                                          Export Section (Excel)
+                                        </Button>
                                         <Button
                                           size="sm"
                                           variant={selectedCount > 0 ? 'primary' : 'outline'}
