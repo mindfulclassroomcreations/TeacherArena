@@ -30,6 +30,7 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
+  const [stats, setStats] = useState<{ todayCount: number; lifetimeCount: number; distinctTodayUsers: number; distinctLifetimeUsers: number } | null>(null)
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({})
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -48,7 +49,28 @@ export default function AdminUsers() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  const fetchStats = async () => {
+    try {
+      const { data } = await supabase.auth.getSession()
+      const token = data?.session?.access_token
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY
+      if (adminKey) headers['x-admin-key'] = adminKey
+      const res = await fetch('/api/admin/lesson-stats', { headers })
+      if (res.ok) {
+        const json = await res.json()
+        setStats(json)
+      }
+    } catch (e) {
+      // ignore stats errors in UI, do not block users list
+    }
+  }
+
+  useEffect(() => {
+    load()
+    fetchStats()
+  }, [])
 
   const updateRole = async (id: string, role: UserRole) => {
     setLoading(true)
@@ -145,6 +167,26 @@ export default function AdminUsers() {
           <Button variant="outline" onClick={load} isLoading={loading}>Refresh</Button>
         </div>
       </div>
+        {stats && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div className="rounded-lg border p-4 bg-white shadow-sm">
+              <div className="text-sm text-gray-500">Lessons today</div>
+              <div className="text-2xl font-semibold">{stats.todayCount}</div>
+            </div>
+            <div className="rounded-lg border p-4 bg-white shadow-sm">
+              <div className="text-sm text-gray-500">Lessons lifetime</div>
+              <div className="text-2xl font-semibold">{stats.lifetimeCount}</div>
+            </div>
+            <div className="rounded-lg border p-4 bg-white shadow-sm">
+              <div className="text-sm text-gray-500">Active users today</div>
+              <div className="text-2xl font-semibold">{stats.distinctTodayUsers}</div>
+            </div>
+            <div className="rounded-lg border p-4 bg-white shadow-sm">
+              <div className="text-sm text-gray-500">Users lifetime</div>
+              <div className="text-2xl font-semibold">{stats.distinctLifetimeUsers}</div>
+            </div>
+          </div>
+        )}
       {error && <div className="mb-3 text-red-600 text-sm">{error}</div>}
       <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
         <table className="w-full min-w-[820px] text-sm">
