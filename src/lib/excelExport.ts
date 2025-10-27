@@ -619,27 +619,55 @@ export const downloadStep5CombinedExcel = (
 
   const rows: any[][] = []
   const merges: XLSX.Range[] = []
+  const cellStyles: Record<string, any> = {} // Key: "A1", Value: { fill, font, etc }
   let currentRow = 0
 
-  // Top 3 metadata rows
+  // Define light colors for different tables (rotate through these)
+  const tableColors = [
+    'E8F5E9', // Light green
+    'E3F2FD', // Light blue
+    'FFF3E0', // Light orange
+    'F3E5F5', // Light purple
+    'FCE4EC', // Light pink
+    'E0F2F1', // Light teal
+  ]
+
+  // Top 3 metadata rows (with yellow background)
+  const yellowFill = { fgColor: { rgb: 'FFFF00' }, patternType: 'solid' } // Yellow
   rows.push(['Subject Name', String(subject || 'N/A')])
+  cellStyles['A1'] = { fill: yellowFill, font: { bold: true } }
+  cellStyles['B1'] = { fill: yellowFill }
   rows.push(['Grade level', String(grade || 'N/A')])
+  cellStyles['A2'] = { fill: yellowFill, font: { bold: true } }
+  cellStyles['B2'] = { fill: yellowFill }
   rows.push(['Curriculum', String(framework || 'N/A')])
+  cellStyles['A3'] = { fill: yellowFill, font: { bold: true } }
+  cellStyles['B3'] = { fill: yellowFill }
   rows.push(['']) // spacer
   currentRow = 4
 
-  secKeys.forEach((key, idx) => {
+  secKeys.forEach((key, sectionIdx) => {
     const items = Array.isArray(lessonsBySection[key]) ? lessonsBySection[key] : []
     if (items.length === 0) return
     const sectionTitle = sectionNamesByKey[key] || key
 
+    // Get the color for this table (rotate through colors)
+    const tableColor = tableColors[sectionIdx % tableColors.length]
+    const tableFill = { fgColor: { rgb: tableColor }, patternType: 'solid' }
+
     // Section Title merged across 4 columns
     rows.push([`Section: ${sectionTitle}`])
     merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 3 } })
+    cellStyles[`A${currentRow + 1}`] = { fill: tableFill, font: { bold: true } }
     currentRow += 1
 
     // Header
     rows.push(['No', 'STANDARD', 'TITLE', 'NOTES'])
+    const headerRowIdx = currentRow
+    cellStyles[`A${currentRow + 1}`] = { fill: tableFill, font: { bold: true } }
+    cellStyles[`B${currentRow + 1}`] = { fill: tableFill, font: { bold: true } }
+    cellStyles[`C${currentRow + 1}`] = { fill: tableFill, font: { bold: true } }
+    cellStyles[`D${currentRow + 1}`] = { fill: tableFill, font: { bold: true } }
     currentRow += 1
 
     const sorted = items.slice().sort((a, b) => {
@@ -656,16 +684,23 @@ export const downloadStep5CombinedExcel = (
         String(ls.title || ls.name || ''),
         String(ls.description || '')
       ])
+      cellStyles[`A${currentRow + 1}`] = { fill: tableFill }
+      cellStyles[`B${currentRow + 1}`] = { fill: tableFill }
+      cellStyles[`C${currentRow + 1}`] = { fill: tableFill }
+      cellStyles[`D${currentRow + 1}`] = { fill: tableFill }
       currentRow += 1
     })
 
-    // MINI BUNDLE row (merge first 3 cells)
+    // MINI BUNDLE row (merge first 3 cells) - with purple background
+    const purpleFill = { fgColor: { rgb: 'E1BEE7' }, patternType: 'solid' } // Light purple
     rows.push(['MINI BUNDLE'])
     merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 2 } })
+    cellStyles[`A${currentRow + 1}`] = { fill: purpleFill, font: { bold: true } }
+    cellStyles[`D${currentRow + 1}`] = { fill: purpleFill }
     currentRow += 1
 
     // Spacer between sections
-    if (idx < secKeys.length - 1) {
+    if (sectionIdx < secKeys.length - 1) {
       rows.push([''])
       currentRow += 1
     }
@@ -680,6 +715,15 @@ export const downloadStep5CombinedExcel = (
     { wch: 40 }, // TITLE
     { wch: 80 }, // NOTES
   ]
+
+  // Apply cell styles
+  Object.keys(cellStyles).forEach((cellRef) => {
+    if (!ws[cellRef]) {
+      ws[cellRef] = { v: '', t: 's' }
+    }
+    ws[cellRef].s = cellStyles[cellRef]
+  })
+
   XLSX.utils.book_append_sheet(workbook, ws, 'Tables')
 
   // Info sheet
