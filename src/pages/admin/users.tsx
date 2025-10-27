@@ -228,9 +228,6 @@ export default function AdminUsers() {
                 <td className="py-2 px-3">{perUserStats?.[u.id]?.lifetime ?? 0}</td>
                 <td className="py-2 px-3">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 1000)} disabled={loading}>+1K</Button>
-                    <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 5000)} disabled={loading}>+5K</Button>
-                    <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 10000)} disabled={loading}>+10K</Button>
                     <span className="inline-flex items-center gap-2">
                       <input
                         type="text"
@@ -242,7 +239,6 @@ export default function AdminUsers() {
                         onChange={(e) => setCustomAmount(u.id, e.target.value)}
                         disabled={loading}
                       />
-                      <Button size="sm" variant="outline" onClick={() => applyCustomAdd(u.id, 1)} disabled={loading}>Add</Button>
                       <Button size="sm" variant="primary" onClick={() => applyCustomSet(u.id)} disabled={loading}>Set</Button>
                     </span>
                     <Button size="sm" variant="outline" onClick={() => sendResetLink(u.email || '', u.id)} disabled={loading || !u.email}>Send Reset Link</Button>
