@@ -31,6 +31,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const [stats, setStats] = useState<{ todayCount: number; lifetimeCount: number; distinctTodayUsers: number; distinctLifetimeUsers: number } | null>(null)
+  const [perUserStats, setPerUserStats] = useState<Record<string, { today: number; lifetime: number }> | null>(null)
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({})
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -61,6 +62,11 @@ export default function AdminUsers() {
       if (res.ok) {
         const json = await res.json()
         setStats(json)
+      }
+      const res2 = await fetch('/api/admin/lesson-stats/by-user', { headers })
+      if (res2.ok) {
+        const json2 = await res2.json()
+        setPerUserStats(json2)
       }
     } catch (e) {
       // ignore stats errors in UI, do not block users list
@@ -195,6 +201,8 @@ export default function AdminUsers() {
               <th className="text-left py-2 px-3 font-bold text-gray-700">Email</th>
               <th className="text-left py-2 px-3 font-bold text-gray-700">Role</th>
               <th className="text-left py-2 px-3 font-bold text-gray-700">Tokens</th>
+              <th className="text-left py-2 px-3 font-bold text-gray-700">Lessons Today</th>
+              <th className="text-left py-2 px-3 font-bold text-gray-700">Lessons Lifetime</th>
               <th className="text-left py-2 px-3 font-bold text-gray-700">Actions</th>
             </tr>
           </thead>
@@ -216,6 +224,8 @@ export default function AdminUsers() {
                   </select>
                 </td>
                 <td className="py-2 px-3 font-mono">{u.tokens}</td>
+                <td className="py-2 px-3">{perUserStats?.[u.id]?.today ?? 0}</td>
+                <td className="py-2 px-3">{perUserStats?.[u.id]?.lifetime ?? 0}</td>
                 <td className="py-2 px-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button size="sm" variant="outline" onClick={() => addTokens(u.id, 1000)} disabled={loading}>+1K</Button>
