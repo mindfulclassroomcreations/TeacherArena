@@ -105,7 +105,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const probe = await supabaseAdmin.from('user_profiles').select('id').limit(1)
       const err = (probe as any)?.error as PostgrestError | null
       const profileTable = (err && (err.code === '42P01' || /relation .* does not exist/i.test(err.message))) ? 'profiles' : 'user_profiles'
-      const { id, role, addTokens, setTokens } = req.body || {}
+
+      const { id, role, addTokens, setTokens, email, password, initialTokens, resetPasswordEmail } = req.body || {}
+
+      // Admin create new user
+      if (email && password && !id) {
+        const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+        })
+        if (createErr) return res.status(500).json({ error: createErr.message } as any)
+        const newId = created?.user?.id
+        if (!newId) return res.status(500).json({ error: 'Failed to create user' } as any)
+        // Ensure profile exists with role/tokens
+        const prof = { id: newId, role: role || 'user', tokens: typeof initialTokens === 'number' ? initialTokens : 0 }
+        // Upsert into selected profile table
+        const { error: upsertErr } = await supabaseAdmin.from(profileTable).upsert(prof, { onConflict: 'id' })
+        if (upsertErr) return res.status(500).json({ error: upsertErr.message } as any)
+        return res.status(200).json({ success: true, id: newId })
+      }
+
+      // Generate password reset link for an existing user
+      if (resetPasswordEmail) {
+        const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: resetPasswordEmail,
+        }) as any
+        if (linkErr) return res.status(500).json({ error: linkErr.message } as any)
+        return res.status(200).json({ success: true, resetUrl: linkData?.properties?.action_link || linkData?.action_link })
+      }
+
+      // Updates for an existing user/profile
       if (!id) return res.status(400).json({ error: 'Missing id' } as any)
       const updates: any = {}
       if (role) updates.role = role
@@ -132,7 +163,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const profileTable = (err && (err.code === '42P01' || /relation .* does not exist/i.test(err.message))) ? 'profiles' : 'user_profiles'
       const { id } = req.body || {}
       if (!id) return res.status(400).json({ error: 'Missing id' } as any)
-      // remove profile row; optionally remove auth user via GoTrue admin (requires separate key)
+      // remove auth user and profile row
+      const { error: delAuthErr } = await supabaseAdmin.auth.admin.deleteUser(id)
+      if (delAuthErr) throw delAuthErr
       const { error } = await supabaseAdmin.from(profileTable).delete().eq('id', id)
       if (error) throw error
       return res.status(200).json({ success: true })

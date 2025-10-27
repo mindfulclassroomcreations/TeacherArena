@@ -31,6 +31,11 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({})
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newRole, setNewRole] = useState<UserRole>('user')
+  const [newTokens, setNewTokens] = useState<string>('0')
+  const [resetLinkByUser, setResetLinkByUser] = useState<Record<string, string>>({})
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -84,8 +89,56 @@ export default function AdminUsers() {
     try { await api('DELETE', { id }); await load() } finally { setLoading(false) }
   }
 
+  const createUser = async () => {
+    if (!newEmail || !newPassword) { setError('Email and password are required'); return }
+    setLoading(true); setError(null)
+    try {
+      const initialTokens = parseInt(newTokens || '0', 10) || 0
+      await api('POST', { email: newEmail, password: newPassword, role: newRole, initialTokens })
+      setNewEmail(''); setNewPassword(''); setNewTokens('0'); setNewRole('user')
+      await load()
+    } catch (e: any) {
+      setError(String(e?.message || 'Failed to create user'))
+    } finally { setLoading(false) }
+  }
+
+  const sendResetLink = async (email: string, id: string) => {
+    setLoading(true)
+    try {
+      const resp = await api<{ resetUrl?: string }>('POST', { resetPasswordEmail: email })
+      if (resp?.resetUrl) {
+        setResetLinkByUser((prev) => ({ ...prev, [id]: resp.resetUrl! }))
+        try {
+          await navigator.clipboard.writeText(resp.resetUrl)
+          alert('Reset link copied to clipboard')
+        } catch { /* noop */ }
+      }
+    } finally { setLoading(false) }
+  }
+
   return (
     <Layout>
+      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Add New User</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Input label="Email" type="email" value={newEmail} onChange={(e)=> setNewEmail(e.target.value)} />
+          <Input label="Temporary Password" type="password" value={newPassword} onChange={(e)=> setNewPassword(e.target.value)} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select className="w-full border border-gray-300 rounded px-2 py-2" value={newRole} onChange={(e)=> setNewRole(e.target.value as UserRole)}>
+              <option value="user">User</option>
+              <option value="manager">Manager</option>
+              <option value="designer">Designer</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <Input label="Initial Tokens" type="number" value={newTokens} onChange={(e)=> setNewTokens(e.target.value)} />
+        </div>
+        <div className="mt-3">
+          <Button variant="primary" onClick={createUser} isLoading={loading}>Create User</Button>
+          <p className="text-xs text-gray-500 mt-2">Passwords are never visible after creation. You can send a reset link if needed.</p>
+        </div>
+      </div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
         <div>
@@ -140,6 +193,10 @@ export default function AdminUsers() {
                       <Button size="sm" variant="outline" onClick={() => applyCustomAdd(u.id, 1)} disabled={loading}>Add</Button>
                       <Button size="sm" variant="primary" onClick={() => applyCustomSet(u.id)} disabled={loading}>Set</Button>
                     </span>
+                    <Button size="sm" variant="outline" onClick={() => sendResetLink(u.email || '', u.id)} disabled={loading || !u.email}>Send Reset Link</Button>
+                    {resetLinkByUser[u.id] && (
+                      <a href={resetLinkByUser[u.id]} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-700 underline">Open Reset Link</a>
+                    )}
                     <Button size="sm" variant="danger" onClick={() => removeUser(u.id)} disabled={loading}>Remove</Button>
                   </div>
                 </td>
