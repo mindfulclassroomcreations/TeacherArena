@@ -634,6 +634,28 @@ REQUIREMENTS
           lesson_code: lessonCode
         }
       })
+
+      // Enforce correct standard codes distribution across provided sub-standards
+      try {
+        const { subStandards: reqSubs = [], lessonsPerStandard: reqLps = 5 } = req.body || {}
+        const normalizedSubCodes: string[] = Array.isArray(reqSubs)
+          ? reqSubs.map((s: any) => normalizeStandardCode(s?.code || s?.standard_code || s?.title || s?.name || String(s || ''))).filter(Boolean)
+          : []
+        if (normalizedSubCodes.length > 0) {
+          const per = Math.max(1, Number(reqLps) || 5)
+          items = items.map((it: any, i: number) => {
+            const preferred = normalizedSubCodes[i % normalizedSubCodes.length]
+            const normalizedCurrent = normalizeStandardCode(it.standard_code || '')
+            const std = normalizedSubCodes.includes(normalizedCurrent) ? normalizedCurrent : preferred
+            const seqWithinStd = (Math.floor(i / normalizedSubCodes.length) % per) + 1
+            const lesson_code = `${std}-L${String(seqWithinStd).padStart(2, '0')}`
+            return { ...it, standard_code: std, lesson_code }
+          })
+        }
+      } catch (e) {
+        // If enforcement fails, proceed with AI-provided values
+        console.warn('Standard enforcement skipped:', e)
+      }
       // Deduct tokens equal to the number of lessons generated
       if (userId && supabaseAdmin) {
         try {

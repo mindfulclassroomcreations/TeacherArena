@@ -1,4 +1,6 @@
-import * as XLSX from 'xlsx'
+// Use styled XLSX build to support cell styling in exports
+// Fallback typings are provided in src/types/xlsx-js-style.d.ts
+import * as XLSX from 'xlsx-js-style'
 
 interface ExportData {
   subjects?: Array<{ name: string; description: string }>
@@ -257,7 +259,7 @@ const buildSimpleSectionSheet = (
   lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>
 ) => {
   const rows: any[][] = []
-  const merges: XLSX.Range[] = []
+  const merges: any[] = []
 
   // Title row merged across four columns
   rows.push([`Section: ${sectionTitle}`])
@@ -304,7 +306,7 @@ const buildSimpleSectionSheetWithMeta = (
   grade?: string
 ) => {
   const rows: any[][] = []
-  const merges: XLSX.Range[] = []
+  const merges: any[] = []
 
   // Top 3 metadata rows
   rows.push(['Subject Name', String(subject || 'N/A')])
@@ -359,7 +361,7 @@ const buildOneTableSheet = (
   lessons: Array<{ title?: string; name?: string; description?: string; standard_code?: string; code?: string }>
 ) => {
   const rows: any[][] = []
-  const merges: XLSX.Range[] = []
+  const merges: any[] = []
 
   rows.push([title])
   merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } })
@@ -398,7 +400,7 @@ const buildOrganizedSectionSheet = (
   subStandards: Array<{ code?: string; title?: string; name?: string }>
 ) => {
   const rows: any[][] = []
-  const merges: XLSX.Range[] = []
+  const merges: any[] = []
 
   const norm = (v: any) => String(v || '').trim().toLowerCase()
   const indexByCode: Record<string, { code: string; title: string; items: typeof lessons }> = {}
@@ -618,7 +620,7 @@ export const downloadStep5CombinedExcel = (
   if (!hasAny) return
 
   const rows: any[][] = []
-  const merges: XLSX.Range[] = []
+  const merges: any[] = []
   const cellStyles: Record<string, any> = {} // Key: "A1", Value: { fill, font, etc }
   let currentRow = 0
 
