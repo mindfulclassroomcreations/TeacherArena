@@ -2290,7 +2290,7 @@ export default function Home() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white border-2 border-black"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black border-2 border-black"
                       onClick={handleGenerateLessonsFromSubStandardsForAll}
                       disabled={curriculumSections.length === 0 || !bulkLessonsAmount}
                     >
@@ -2298,7 +2298,7 @@ export default function Home() {
                     </Button>
                     <Button
                       size="sm"
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white border-2 border-black"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black border-2 border-black"
                       onClick={handleGenerateLessonsFromSubStandardsForSelected}
                       disabled={selectedCurriculumSections.length === 0 || !bulkLessonsAmount}
                     >
