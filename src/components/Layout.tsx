@@ -83,7 +83,7 @@ export default function Layout({ children }: LayoutProps) {
                     href="/tables"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-2"
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2"
                   >
                     <span>📋</span>
                     <span>Tables</span>
@@ -92,7 +92,7 @@ export default function Layout({ children }: LayoutProps) {
                     href="/product-generation"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2"
+                    className="px-4 py-2 text-sm font-medium text-white bg-sky-400 hover:bg-sky-500 rounded-lg transition-colors flex items-center gap-2"
                   >
                     <span>🛍️</span>
                     <span>Products</span>

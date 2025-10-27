@@ -2223,19 +2223,11 @@ export default function Home() {
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        variant={totalStep5Lessons > 0 ? 'outline' : 'outline'}
+                        className="bg-green-600 hover:bg-green-700 text-white"
                         onClick={handleOpenTablesPage}
                         disabled={totalStep5Lessons === 0}
                       >
                         Open Tables (New Tab)
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={totalStep5Lessons > 0 ? 'primary' : 'outline'}
-                        onClick={handleExportAllStep5Lessons}
-                        disabled={totalStep5Lessons === 0}
-                      >
-                        Export All Step 5 (Excel)
                       </Button>
                     </div>
                   )
@@ -2298,7 +2290,7 @@ export default function Home() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="primary"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white border-2 border-black"
                       onClick={handleGenerateLessonsFromSubStandardsForAll}
                       disabled={curriculumSections.length === 0 || !bulkLessonsAmount}
                     >
@@ -2306,7 +2298,7 @@ export default function Home() {
                     </Button>
                     <Button
                       size="sm"
-                      variant="primary"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white border-2 border-black"
                       onClick={handleGenerateLessonsFromSubStandardsForSelected}
                       disabled={selectedCurriculumSections.length === 0 || !bulkLessonsAmount}
                     >
@@ -2660,18 +2652,15 @@ export default function Home() {
                   </div>
                 )})}
               </div>
-              <div className="flex justify-between items-center mt-6">
-                <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="outline" size="sm">
-                  Regenerate Standards
-                </Button>
-                <Button onClick={proceedToStep6} variant="primary" size="md" disabled={selectedCurriculumSections.length === 0}>
-                  Continue to Step 6 ({selectedCurriculumSections.length} selected)
-                </Button>
-              </div>
               
               <div className="flex justify-end mt-6">
-                <Button onClick={handleGenerateCurriculumSections} isLoading={isLoading} variant="outline" size="sm">
-                  Regenerate Standards
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleOpenTablesPage}
+                  disabled={Object.values(lessonsBySection || {}).reduce((sum, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0) === 0}
+                >
+                  Open Tables (New Tab)
                 </Button>
               </div>
             </>

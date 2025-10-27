@@ -391,7 +391,7 @@ export default function TablesPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <Button size="sm" variant="outline" onClick={toggleSelectAllSections}>Select All Tables</Button>
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={toggleSelectAllSections}>Select All Tables</Button>
                 <span className="text-sm text-gray-600">
                   {Object.values(selectedSections).filter(Boolean).length} selected
                 </span>
