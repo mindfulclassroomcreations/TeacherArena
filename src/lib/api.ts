@@ -31,8 +31,8 @@ export const getGrades = async (frameworkId: string) => {
   return response.data
 }
 
-export const getLessons = async (gradeId: string) => {
-  const response = await api.get(`/lessons?grade_id=${gradeId}`)
+export const getLessonsByStrand = async (strandId: string) => {
+  const response = await api.get(`/lessons?strand_id=${strandId}`)
   return response.data
 }
 

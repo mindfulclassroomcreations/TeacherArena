@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { supabase as browserSupabase } from '@/lib/supabase'
 
 type ResponseData = {
   success?: boolean
@@ -25,6 +26,17 @@ export default async function handler(
     return
   }
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  const authHeader = req.headers.authorization || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : ''
+  const supabase = token && supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: `Bearer ${token}` } } })
+    : browserSupabase
+
+  const { data: userData } = token ? await supabase.auth.getUser(token) : { data: null as any }
+  const userId = userData?.user?.id || null
+
   if (req.method === 'GET') {
     // Get grades by framework_id
     try {
@@ -38,6 +50,7 @@ export default async function handler(
         .from('grades')
         .select('*')
         .eq('framework_id', framework_id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -49,15 +62,19 @@ export default async function handler(
   } else if (req.method === 'POST') {
     // Create a new grade
     try {
-      const { framework_id, name, description } = req.body
+  const { framework_id, name, description } = req.body
 
       if (!framework_id || !name) {
         return res.status(400).json({ error: 'framework_id and name are required' })
       }
 
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' })
+      }
+
       const { data, error } = await supabase
         .from('grades')
-        .insert([{ framework_id, name, description }])
+        .insert([{ framework_id, name, description, user_id: userId }])
         .select()
 
       if (error) throw error

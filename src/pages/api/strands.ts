@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { supabase as browserSupabase } from '@/lib/supabase'
 
 type ResponseData = {
   success?: boolean
@@ -25,6 +26,17 @@ export default async function handler(
     return
   }
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  const authHeader = req.headers.authorization || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : ''
+  const supabase = token && supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: `Bearer ${token}` } } })
+    : browserSupabase
+
+  const { data: userData } = token ? await supabase.auth.getUser(token) : { data: null as any }
+  const userId = userData?.user?.id || null
+
   if (req.method === 'GET') {
     // Get strands by grade_id
     try {
@@ -38,6 +50,7 @@ export default async function handler(
         .from('strands')
         .select('*')
         .eq('grade_id', grade_id)
+        .eq('user_id', userId)
         .order('strand_code', { ascending: true })
 
       if (error) throw error
@@ -49,16 +62,21 @@ export default async function handler(
   } else if (req.method === 'POST') {
     // Create new strands (batch insert)
     try {
-      const { grade_id, strands } = req.body
+  const { grade_id, strands } = req.body
 
       if (!grade_id || !strands || !Array.isArray(strands)) {
         return res.status(400).json({ error: 'grade_id and strands array are required' })
       }
 
       // Add grade_id to each strand
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' })
+      }
+
       const strandsWithGrade = strands.map(strand => ({
         ...strand,
-        grade_id
+        grade_id,
+        user_id: userId
       }))
 
       const { data, error } = await supabase
