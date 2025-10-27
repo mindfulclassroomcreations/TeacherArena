@@ -171,7 +171,7 @@ export default function ProductGenerationPage() {
     if (router && router.query && typeof router.query.open === 'string') {
       setExpandedGroup(router.query.open)
     }
-  }, [router.query])
+  }, [router, router.query])
 
   const title = '🛍️ Product Generation'
 

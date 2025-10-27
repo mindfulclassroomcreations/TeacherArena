@@ -378,7 +378,7 @@ export default function TablesPage() {
 
         {!payload ? (
           <div className="bg-white border border-gray-200 rounded p-6 text-center">
-            <p className="text-gray-600 mb-4">No data loaded. From Step 5, click "Open Tables (New Tab)" to load your latest tables here.</p>
+            <p className="text-gray-600 mb-4">No data loaded. From Step 5, click &quot;Open Tables (New Tab)&quot; to load your latest tables here.</p>
             <Button variant="primary" onClick={() => window.location.href = '/'}>Go to Generate Lessons</Button>
           </div>
         ) : sectionsWithLessons.length === 0 ? (

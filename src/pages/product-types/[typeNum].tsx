@@ -161,7 +161,7 @@ export default function ProductTypePage() {
       }
       setLoading(false)
     }
-  }, [typeNum])
+  }, [typeNum, saveLessonsToProductType])
 
   useEffect(() => {
     loadLessons()
