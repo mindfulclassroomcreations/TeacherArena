@@ -66,7 +66,7 @@ export default function ProductTypePage() {
   const typeNumber = typeNum ? String(typeNum).padStart(2, '0') : ''
 
   // Save lessons to persistent storage for this product type
-  const saveLessonsToProductType = (lessons: GroupedProductLesson[]) => {
+  const saveLessonsToProductType = React.useCallback((lessons: GroupedProductLesson[]) => {
     if (typeof window !== 'undefined' && typeNum) {
       try {
         const storageKey = `ta_product_type_${typeNum}_lessons`
@@ -75,7 +75,7 @@ export default function ProductTypePage() {
         console.error('Error saving product type lessons:', e)
       }
     }
-  }
+  }, [typeNum])
 
   // Load all lessons sent to this product type from all sub-pages
   const loadLessons = React.useCallback(() => {

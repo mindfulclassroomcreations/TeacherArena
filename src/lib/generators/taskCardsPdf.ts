@@ -166,7 +166,9 @@ export async function generateTaskCardsPdf(lesson: LessonItem, source: LessonSou
   })
 
   const pdfBytes = await doc.save()
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+  // Ensure types are compatible with BlobPart in TS DOM libs
+  const arrayBuffer = (pdfBytes as unknown as Uint8Array).buffer as ArrayBuffer
+  const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
   const safeTitle = (lesson.title || lesson.name || 'Lesson').replace(/[^a-z0-9\-\_]+/gi, '_')
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
