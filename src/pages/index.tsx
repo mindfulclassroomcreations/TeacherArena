@@ -135,15 +135,106 @@ export default function Home() {
 
   const handleOpenTablesPage = () => {
     try {
-      // Archive existing Tables payload if present
+      // Check if user previously cleared Tables for this same content
+      let existingData: any = null
+      let existingRaw: string | null = null
+      let existingCleared = false
+      let deletedFlag = false
+      let deletedSig: string | null = null
       try {
-        const existing = window.localStorage.getItem('ta_tables_data')
-        if (existing) {
+        existingRaw = window.localStorage.getItem('ta_tables_data')
+        if (existingRaw) {
+          existingData = JSON.parse(existingRaw)
+          existingCleared = !!existingData?.userCleared
+        }
+        deletedFlag = window.localStorage.getItem('ta_tables_deleted') === '1'
+        deletedSig = window.localStorage.getItem('ta_tables_deleted_signature')
+      } catch {
+        // ignore
+      }
+
+      // Build new payload context and signature
+      const sectionNamesByKey: Record<string, string> = {}
+      curriculumSections.forEach((sec: any) => {
+        const key = String(sec.id || sec.name || sec.title || '')
+        const title = String(sec.title || sec.name || key)
+        sectionNamesByKey[key] = title
+      })
+      const sectionOrder = Object.keys(sectionNamesByKey)
+      const newLessonsSig = (() => {
+        try { return JSON.stringify(lessonsBySection || {}) } catch { return null }
+      })()
+
+      // If user cleared previous tables and content signature matches, don't overwrite
+      if (deletedFlag && deletedSig && newLessonsSig && deletedSig === newLessonsSig) {
+        window.open('/tables', '_blank')
+        return
+      }
+
+      // Compute only-new lessons (exclude any lessons already present in existing tables)
+      const getLessonKey = (ls: any) => {
+        const code = String(ls.standard_code || ls.code || '').toLowerCase().trim()
+        const title = String(ls.title || ls.name || '').toLowerCase().trim()
+        return `${code}__${title}`
+      }
+      const existingKeysBySection: Record<string, Set<string>> = {}
+      try {
+        const existingBySec = existingData?.lessonsBySection || {}
+        Object.keys(existingBySec || {}).forEach((k) => {
+          const set = new Set<string>()
+          const arr = Array.isArray(existingBySec[k]) ? existingBySec[k] : []
+          arr.forEach((ls: any) => set.add(getLessonKey(ls)))
+          existingKeysBySection[k] = set
+        })
+      } catch {}
+
+      const filteredLessonsBySection: Record<string, any[]> = {}
+      let totalNewCount = 0
+      Object.keys(lessonsBySection || {}).forEach((k) => {
+        const arr = Array.isArray((lessonsBySection as any)[k]) ? (lessonsBySection as any)[k] : []
+        const existSet = existingKeysBySection[k] || new Set<string>()
+        const filtered = arr.filter((ls: any) => !existSet.has(getLessonKey(ls)))
+        if (filtered.length > 0) {
+          filteredLessonsBySection[k] = filtered
+          totalNewCount += filtered.length
+        }
+      })
+
+      // If there are no new lessons to move, just open the current Tables view
+      if (totalNewCount === 0) {
+        window.open('/tables', '_blank')
+        return
+      }
+
+      // Build filtered sub-standards and names for the sections that have new lessons
+      const filteredSectionOrder: string[] = []
+      const filteredNamesByKey: Record<string, string> = {}
+      const filteredSubStandardsBySection: Record<string, any[]> = {}
+      curriculumSections.forEach((sec: any) => {
+        const key = String(sec.id || sec.name || sec.title || '')
+        if (Array.isArray(filteredLessonsBySection[key]) && filteredLessonsBySection[key].length > 0) {
+          filteredSectionOrder.push(key)
+          filteredNamesByKey[key] = sectionNamesByKey[key]
+          // Restrict sub-standards to those that appear in filtered lessons
+          const codes = new Set(
+            filteredLessonsBySection[key].map((ls: any) => String(ls.standard_code || ls.code || '').trim().toLowerCase())
+          )
+          const subs = ((subStandardsBySection as any)[key] || []).filter((ss: any, idx: number) => {
+            const code = String(ss?.code || `S${idx + 1}`).trim().toLowerCase()
+            return codes.has(code)
+          })
+          filteredSubStandardsBySection[key] = subs
+        }
+      })
+
+      // Archive existing Tables payload if present and not a cleared shell
+      try {
+        if (existingRaw && !existingCleared) {
           const archivesRaw = window.localStorage.getItem('ta_tables_archive')
           const archives = Array.isArray(JSON.parse(archivesRaw || '[]')) ? JSON.parse(archivesRaw || '[]') : []
           const snapshot = {
             savedAt: new Date().toISOString(),
-            data: JSON.parse(existing)
+            data: JSON.parse(existingRaw)
           }
           archives.unshift(snapshot)
           // Trim archive to last 10 snapshots to prevent unbounded growth
@@ -154,17 +245,11 @@ export default function Home() {
         // ignore archive errors
       }
 
-      const sectionNamesByKey: Record<string, string> = {}
-      curriculumSections.forEach((sec: any) => {
-        const key = String(sec.id || sec.name || sec.title || '')
-        const title = String(sec.title || sec.name || key)
-        sectionNamesByKey[key] = title
-      })
       const payload = {
-        lessonsBySection,
-        subStandardsBySection,
-        sectionNamesByKey,
-        sectionOrder: Object.keys(sectionNamesByKey),
+        lessonsBySection: filteredLessonsBySection,
+        subStandardsBySection: filteredSubStandardsBySection,
+        sectionNamesByKey: filteredNamesByKey,
+        sectionOrder: filteredSectionOrder,
         subject: selectedSubject?.name || '',
         framework: selectedFramework?.name || '',
         grade: selectedGrade?.name || '',
@@ -173,7 +258,48 @@ export default function Home() {
         headerGradeLevel: selectedGrade?.name || '',      // Step 3: Grade
         headerCurriculum: (selectedStateCurriculum?.curriculum_name || selectedSubject?.name || ''), // Step 2: Curriculum
       }
+      // Remove the moved lessons from Step 5 state and clear their selections
+      try {
+        const nextLessonsBySection: Record<string, any[]> = {}
+        Object.keys(lessonsBySection || {}).forEach((k) => {
+          const original = Array.isArray((lessonsBySection as any)[k]) ? (lessonsBySection as any)[k] : []
+          const moved = Array.isArray(filteredLessonsBySection[k]) ? filteredLessonsBySection[k] : []
+          if (moved.length === 0) {
+            nextLessonsBySection[k] = original
+            return
+          }
+          const movedSet = new Set(moved.map((ls: any) => getLessonKey(ls)))
+          nextLessonsBySection[k] = original.filter((ls: any) => !movedSet.has(getLessonKey(ls)))
+        })
+        setLessonsBySection(nextLessonsBySection)
+
+        const nextSelected: Record<string, Record<string, boolean>> = {}
+        Object.keys(selectedLessonsBySection || {}).forEach((k) => {
+          const moved = Array.isArray(filteredLessonsBySection[k]) ? filteredLessonsBySection[k] : []
+          const prevSelRaw = (selectedLessonsBySection as any)[k]
+          const prevSel: Record<string, boolean> = prevSelRaw ? { ...prevSelRaw } : {}
+          if (moved.length === 0) {
+            nextSelected[k] = prevSel
+            return
+          }
+          const movedSet = new Set(moved.map((ls: any) => getLessonKey(ls)))
+          const cleaned: Record<string, boolean> = {}
+          Object.keys(prevSel || {}).forEach((lk) => { if (!movedSet.has(lk)) cleaned[lk] = prevSel[lk] })
+          nextSelected[k] = cleaned
+        })
+        setSelectedLessonsBySection(nextSelected)
+
+        // Small success toast
+        setSuccess(`${totalNewCount} lesson(s) moved to Tables and removed from Step 5.`)
+        setTimeout(() => setSuccess(null), 2500)
+      } catch {}
+
       window.localStorage.setItem('ta_tables_data', JSON.stringify(payload))
+      // Clear deletion markers since we're intentionally overwriting with (potentially) new content
+      try {
+        window.localStorage.removeItem('ta_tables_deleted')
+        window.localStorage.removeItem('ta_tables_deleted_signature')
+      } catch {}
       window.open('/tables', '_blank')
     } catch (e) {
       console.error('Open tables page failed', e)
@@ -2227,7 +2353,7 @@ export default function Home() {
                         onClick={handleOpenTablesPage}
                         disabled={totalStep5Lessons === 0}
                       >
-                        Open Tables (New Tab)
+                        Move Lessons to Tables
                       </Button>
                     </div>
                   )
@@ -2660,7 +2786,7 @@ export default function Home() {
                   onClick={handleOpenTablesPage}
                   disabled={Object.values(lessonsBySection || {}).reduce((sum, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0) === 0}
                 >
-                  Open Tables (New Tab)
+                  Move Lessons to Tables
                 </Button>
               </div>
             </>

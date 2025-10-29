@@ -128,6 +128,11 @@ export default function TablesPage() {
     try {
       window.localStorage.setItem('ta_tables_data', JSON.stringify(snap.data))
       setPayload(snap.data)
+      // Clearing deletion markers since we're restoring content
+      try {
+        window.localStorage.removeItem('ta_tables_deleted')
+        window.localStorage.removeItem('ta_tables_deleted_signature')
+      } catch {}
     } catch {
       // ignore
     }
@@ -240,7 +245,15 @@ export default function TablesPage() {
 
   const doDeleteAll = () => {
     if (!payload) return
-    const next = { ...payload, lessonsBySection: {}, sectionOrder: [] }
+    // Persist a signature so Step 5 "Open Tables" can avoid re-populating
+    try {
+      const deletedSig = JSON.stringify(payload?.lessonsBySection || {})
+      window.localStorage.setItem('ta_tables_deleted_signature', deletedSig)
+      window.localStorage.setItem('ta_tables_deleted', '1')
+    } catch {
+      // ignore
+    }
+    const next = { ...payload, lessonsBySection: {}, sectionOrder: [], userCleared: true }
     persistPayload(next)
   }
 
@@ -257,11 +270,21 @@ export default function TablesPage() {
     try {
       const arcRaw = window.localStorage.getItem('ta_tables_archive')
       const arc = Array.isArray(JSON.parse(arcRaw || '[]')) ? JSON.parse(arcRaw || '[]') : []
+      // Save a snapshot of the current tables first
       arc.unshift({ savedAt: new Date().toISOString(), data: payload })
       if (arc.length > 10) arc.length = 10
       window.localStorage.setItem('ta_tables_archive', JSON.stringify(arc))
       setArchives(arc)
-      alert('Current tables archived.')
+      // After archiving, clear current tables from view and persist deletion markers
+      try {
+        const deletedSig = JSON.stringify(payload?.lessonsBySection || {})
+        window.localStorage.setItem('ta_tables_deleted_signature', deletedSig)
+        window.localStorage.setItem('ta_tables_deleted', '1')
+      } catch {}
+      const next = { ...payload, lessonsBySection: {}, sectionOrder: [], userCleared: true }
+      persistPayload(next)
+      // Optional: provide a subtle confirmation without blocking UX
+      try { console.info('Archived current tables and cleared current view.') } catch {}
     } catch {
       // ignore
     }
@@ -378,7 +401,7 @@ export default function TablesPage() {
 
         {!payload ? (
           <div className="bg-white border border-gray-200 rounded p-6 text-center">
-            <p className="text-gray-600 mb-4">No data loaded. From Step 5, click &quot;Open Tables (New Tab)&quot; to load your latest tables here.</p>
+            <p className="text-gray-600 mb-4">No data loaded. From Step 5, click &quot;Move Lessons to Tables&quot; to load your latest tables here.</p>
             <Button variant="primary" onClick={() => window.location.href = '/'}>Go to Generate Lessons</Button>
           </div>
         ) : sectionsWithLessons.length === 0 ? (
