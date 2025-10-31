@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getUSAScienceGroupings, getUSAMathGroupings, getUSAELAGroupings, US_STATES } from '@/data/curricula/usa'
-import { getCanadaScienceGroupings } from '@/data/curricula/canada'
-import { getAustraliaScienceGroupings } from '@/data/curricula/australia'
-import { getUKScienceGroupings } from '@/data/curricula/uk'
+import { getCanadaScienceGroupings, getCanadaMathGroupings, getCanadaELAGroupings } from '@/data/curricula/canada'
+import { getAustraliaScienceGroupings, getAustraliaMathGroupings, getAustraliaELAGroupings } from '@/data/curricula/australia'
+import { getUKScienceGroupings, getUKMathGroupings, getUKELAGroupings } from '@/data/curricula/uk'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -49,20 +49,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ success: true, items, count: items.length })
       }
     }
-    // Canada science
-    if (countryLc.includes('canada') && subjectLc.includes('science')) {
-      const items = getCanadaScienceGroupings()
-      return res.status(200).json({ success: true, items, count: items.length })
+    // Canada
+    if (countryLc.includes('canada')) {
+      if (subjectLc.includes('science')) {
+        const items = getCanadaScienceGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
+      if (subjectLc.includes('math')) {
+        const items = getCanadaMathGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
+      if (subjectLc.includes('english') || subjectLc.includes('ela') || subjectLc.includes('language arts')) {
+        const items = getCanadaELAGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
     }
-    // Australia science
-    if (countryLc.includes('australia') && subjectLc.includes('science')) {
-      const items = getAustraliaScienceGroupings()
-      return res.status(200).json({ success: true, items, count: items.length })
+    // Australia
+    if (countryLc.includes('australia')) {
+      if (subjectLc.includes('science')) {
+        const items = getAustraliaScienceGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
+      if (subjectLc.includes('math')) {
+        const items = getAustraliaMathGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
+      if (subjectLc.includes('english') || subjectLc.includes('ela') || subjectLc.includes('language arts')) {
+        const items = getAustraliaELAGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
     }
-    // UK science
-    if ((countryLc.includes('uk') || countryLc.includes('united kingdom') || countryLc.includes('england') || countryLc.includes('scotland') || countryLc.includes('wales') || countryLc.includes('northern ireland')) && subjectLc.includes('science')) {
-      const items = getUKScienceGroupings()
-      return res.status(200).json({ success: true, items, count: items.length })
+    // UK
+    if (countryLc.includes('uk') || countryLc.includes('united kingdom') || countryLc.includes('england') || countryLc.includes('scotland') || countryLc.includes('wales') || countryLc.includes('northern ireland')) {
+      if (subjectLc.includes('science')) {
+        const items = getUKScienceGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
+      if (subjectLc.includes('math')) {
+        const items = getUKMathGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
+      if (subjectLc.includes('english') || subjectLc.includes('ela') || subjectLc.includes('language arts')) {
+        const items = getUKELAGroupings(); return res.status(200).json({ success: true, items, count: items.length })
+      }
     }
 
     // Fallback: use existing AI generator for unsupported combinations

@@ -33,3 +33,41 @@ export function getCanadaScienceGroupings(): CurriculumGrouping[] {
   }
   return [grouping]
 }
+
+export function getCanadaMathGroupings(): CurriculumGrouping[] {
+  const grouping: CurriculumGrouping = {
+    curriculum_name: 'Provincial/Territorial Mathematics Curricula',
+    states: CANADA_PROVINCES_TERRITORIES,
+    description: 'Mathematics curricula are set by provinces/territories. Refer to your ministry of education.',
+    source_url: 'https://www.cmec.ca/',
+    sources: {
+      'Ontario': 'https://www.dcp.edu.gov.on.ca/en/curriculum/elementary-mathematics',
+      'British Columbia': 'https://curriculum.gov.bc.ca/curriculum/mathematics',
+      'Alberta': 'https://www.alberta.ca/k-12-education',
+      'Quebec': 'https://www.quebec.ca/en/education/preschool-elementary-secondary',
+      'Saskatchewan': 'https://www.edonline.sk.ca/bbcswebdav/library/curricula/English/Mathematics/index.html',
+      'Nova Scotia': 'https://curriculum.novascotia.ca/curriculum',
+      'Manitoba': 'https://www.edu.gov.mb.ca/k12/cur/math/index.html'
+    }
+  }
+  return [grouping]
+}
+
+export function getCanadaELAGroupings(): CurriculumGrouping[] {
+  const grouping: CurriculumGrouping = {
+    curriculum_name: 'Provincial/Territorial English Language Arts Curricula',
+    states: CANADA_PROVINCES_TERRITORIES,
+    description: 'ELA curricula are set by provinces/territories. Refer to your ministry of education.',
+    source_url: 'https://www.cmec.ca/',
+    sources: {
+      'Ontario': 'https://www.dcp.edu.gov.on.ca/en/curriculum/elementary-language',
+      'British Columbia': 'https://curriculum.gov.bc.ca/curriculum/english-language-arts',
+      'Alberta': 'https://www.alberta.ca/k-12-education',
+      'Quebec': 'https://www.quebec.ca/en/education/preschool-elementary-secondary',
+      'Saskatchewan': 'https://www.edonline.sk.ca/bbcswebdav/library/curricula/English/English_Language_Arts/index.html',
+      'Nova Scotia': 'https://curriculum.novascotia.ca/curriculum',
+      'Manitoba': 'https://www.edu.gov.mb.ca/k12/cur/ela/index.html'
+    }
+  }
+  return [grouping]
+}
