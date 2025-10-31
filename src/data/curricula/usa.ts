@@ -77,7 +77,143 @@ export function getUSAScienceGroupings(): CurriculumGrouping[] {
     curriculum_name: 'Other State Science Standards',
     states: leftovers,
     description: 'Standards maintained by state education agencies (not explicitly listed above). Refer to your state Department of Education.',
-    source_url: 'https://www.ed.gov/'
+    source_url: 'https://www2.ed.gov/about/contacts/state/index.html'
   }
   return [...USA_SCIENCE_GROUPS, others].filter((g) => g.states.length > 0)
+}
+
+// CCSS groupings (initial conservative seed)
+const CCSS_EXCEPTIONS_COMMON = new Set<string>([
+  'Texas','Virginia','Florida','Indiana','Oklahoma','South Carolina','Nebraska','Alaska'
+])
+const CCSS_MATH_EXTRA_EXCEPTIONS = new Set<string>(['Minnesota'])
+
+export function getUSAMathGroupings(): CurriculumGrouping[] {
+  const exceptions = new Set<string>([...CCSS_EXCEPTIONS_COMMON, ...CCSS_MATH_EXTRA_EXCEPTIONS])
+  const ccssStates = US_STATES.filter((s) => !exceptions.has(s))
+  const groups: CurriculumGrouping[] = [
+    {
+      curriculum_name: 'Common Core State Standards (CCSS) – Mathematics',
+      states: ccssStates,
+      description: 'States that adopted or use CCSS-aligned Mathematics standards (including revisions).',
+      source_url: 'https://www.ccsso.org/'
+    },
+    {
+      curriculum_name: 'Texas Essential Knowledge and Skills (TEKS) – Mathematics',
+      states: ['Texas'],
+      description: 'Texas state standards for Mathematics.',
+      source_url: 'https://tea.texas.gov/academics/curriculum-standards/teks/texas-essential-knowledge-and-skills'
+    },
+    {
+      curriculum_name: 'B.E.S.T. Standards – Mathematics (Florida)',
+      states: ['Florida'],
+      description: 'Florida’s Benchmarks for Excellent Student Thinking (B.E.S.T.) Mathematics standards.',
+      source_url: 'https://www.cpalms.org/Standards/Best_Standards.aspx'
+    },
+    {
+      curriculum_name: 'Standards of Learning (SOL) – Mathematics (Virginia)',
+      states: ['Virginia'],
+      description: 'Virginia SOL for Mathematics.',
+      source_url: 'https://doe.virginia.gov/teaching-learning-assessment/k-12-standards-instruction/mathematics'
+    },
+    {
+      curriculum_name: 'Indiana Academic Standards – Mathematics',
+      states: ['Indiana'],
+      description: 'Indiana state Mathematics standards.',
+      source_url: 'https://www.in.gov/doe/students/indiana-academic-standards/mathematics/'
+    },
+    {
+      curriculum_name: 'Oklahoma Academic Standards – Mathematics',
+      states: ['Oklahoma'],
+      description: 'Oklahoma state Mathematics standards.',
+      source_url: 'https://sde.ok.gov/oklahoma-academic-standards'
+    },
+    {
+      curriculum_name: 'South Carolina College- and Career-Ready Standards – Mathematics',
+      states: ['South Carolina'],
+      description: 'South Carolina Mathematics standards.',
+      source_url: 'https://ed.sc.gov/instruction/standards-learning/mathematics/'
+    },
+    {
+      curriculum_name: 'Nebraska College and Career Ready Standards – Mathematics',
+      states: ['Nebraska'],
+      description: 'Nebraska Mathematics standards.',
+      source_url: 'https://www.education.ne.gov/math/standards/'
+    },
+    {
+      curriculum_name: 'Alaska Mathematics Standards',
+      states: ['Alaska'],
+      description: 'Alaska Mathematics standards.',
+      source_url: 'https://education.alaska.gov/standards/mathematics'
+    },
+    {
+      curriculum_name: 'Minnesota Mathematics Standards',
+      states: ['Minnesota'],
+      description: 'Minnesota Mathematics standards (not CCSS).',
+      source_url: 'https://education.mn.gov/MDE/dse/stds/Math/'
+    }
+  ]
+  return groups
+}
+
+export function getUSAELAGroupings(): CurriculumGrouping[] {
+  const exceptions = new Set<string>([...CCSS_EXCEPTIONS_COMMON])
+  const ccssStates = US_STATES.filter((s) => !exceptions.has(s))
+  const groups: CurriculumGrouping[] = [
+    {
+      curriculum_name: 'Common Core State Standards (CCSS) – English Language Arts',
+      states: ccssStates,
+      description: 'States that adopted or use CCSS-aligned ELA standards (including revisions).',
+      source_url: 'https://www.ccsso.org/'
+    },
+    {
+      curriculum_name: 'Texas Essential Knowledge and Skills (TEKS) – English Language Arts and Reading',
+      states: ['Texas'],
+      description: 'Texas state standards for ELA and Reading.',
+      source_url: 'https://tea.texas.gov/academics/curriculum-standards/teks/texas-essential-knowledge-and-skills'
+    },
+    {
+      curriculum_name: 'B.E.S.T. Standards – English Language Arts (Florida)',
+      states: ['Florida'],
+      description: 'Florida’s B.E.S.T. standards for ELA.',
+      source_url: 'https://www.fldoe.org/academics/standards/best.stml'
+    },
+    {
+      curriculum_name: 'Standards of Learning (SOL) – English (Virginia)',
+      states: ['Virginia'],
+      description: 'Virginia SOL for English.',
+      source_url: 'https://doe.virginia.gov/teaching-learning-assessment/k-12-standards-instruction/english'
+    },
+    {
+      curriculum_name: 'Indiana Academic Standards – English/Language Arts',
+      states: ['Indiana'],
+      description: 'Indiana state ELA standards.',
+      source_url: 'https://www.in.gov/doe/students/indiana-academic-standards/englishlanguage-arts/'
+    },
+    {
+      curriculum_name: 'Oklahoma Academic Standards – English Language Arts',
+      states: ['Oklahoma'],
+      description: 'Oklahoma state ELA standards.',
+      source_url: 'https://sde.ok.gov/oklahoma-academic-standards'
+    },
+    {
+      curriculum_name: 'South Carolina College- and Career-Ready Standards – English Language Arts',
+      states: ['South Carolina'],
+      description: 'South Carolina ELA standards.',
+      source_url: 'https://ed.sc.gov/instruction/standards-learning/english-language-arts/'
+    },
+    {
+      curriculum_name: 'Nebraska College and Career Ready Standards – English Language Arts',
+      states: ['Nebraska'],
+      description: 'Nebraska ELA standards.',
+      source_url: 'https://www.education.ne.gov/ela/standards/'
+    },
+    {
+      curriculum_name: 'Alaska English/Language Arts Standards',
+      states: ['Alaska'],
+      description: 'Alaska ELA standards.',
+      source_url: 'https://education.alaska.gov/standards/englishlanguage-arts'
+    }
+  ]
+  return groups
 }

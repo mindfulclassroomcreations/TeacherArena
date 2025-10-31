@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getUSAScienceGroupings, US_STATES } from '@/data/curricula/usa'
+import { getUSAScienceGroupings, getUSAMathGroupings, getUSAELAGroupings, US_STATES } from '@/data/curricula/usa'
 import { getCanadaScienceGroupings } from '@/data/curricula/canada'
 import { getAustraliaScienceGroupings } from '@/data/curricula/australia'
 import { getUKScienceGroupings } from '@/data/curricula/uk'
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const countryLc = String(country).toLowerCase()
     const subjectLc = String(subject).toLowerCase()
 
-    // USA Science: return curated grouping with official sources
+    // USA curated subjects
     if (countryLc.includes('usa') || countryLc.includes('united states')) {
       if (subjectLc.includes('science')) {
         const items = getUSAScienceGroupings()
@@ -38,6 +38,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Sort by number of states desc
         finalItems = finalItems.slice().sort((a, b) => b.states.length - a.states.length)
         return res.status(200).json({ success: true, items: finalItems, count: finalItems.length })
+        return res.status(200).json({ success: true, items: finalItems, count: finalItems.length })
+      }
+      if (subjectLc.includes('math')) {
+        const items = getUSAMathGroupings()
+        return res.status(200).json({ success: true, items, count: items.length })
+      }
+      if (subjectLc.includes('english') || subjectLc.includes('ela') || subjectLc.includes('language arts')) {
+        const items = getUSAELAGroupings()
+        return res.status(200).json({ success: true, items, count: items.length })
       }
     }
     // Canada science
