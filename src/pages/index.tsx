@@ -12,7 +12,7 @@ import SelectionStep from '@/components/SelectionStep'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
 import { downloadLessonsAsExcel, downloadCompleteCurriculumAsExcel, downloadStep5OrganizedExcel, downloadStep5SectionExcel, downloadSubStandardExcel } from '@/lib/excelExport'
-import { generateContent } from '@/lib/api'
+import { generateContent, getStateCurriculaOfficial } from '@/lib/api'
 
 interface Item {
   id?: string
@@ -567,12 +567,7 @@ export default function Home() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await generateContent({
-        type: 'state-curricula',
-        country: selectedCountry,
-        subject: selectedSubject.name,
-        context: context || ''
-      })
+      const response = await getStateCurriculaOfficial(selectedCountry, selectedSubject.name)
       if (response.items) {
         setStateCurricula(response.items)
         setCurrentStep(3)
@@ -871,12 +866,7 @@ export default function Home() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await generateContent({
-        type: 'state-curricula',
-        country: selectedCountry,
-        subject: selectedSubject.name,
-        context: context || ''
-      })
+      const response = await getStateCurriculaOfficial(selectedCountry, selectedSubject.name)
       if (response.items) {
         setStateCurricula(response.items)
         setSuccess(`State curricula refreshed!`)
@@ -1826,7 +1816,12 @@ export default function Home() {
                     className={`${highlightedCurriculumName === curriculum.curriculum_name && !selectedStateCurriculum ? 'ring-1 ring-blue-300 border-blue-300' : ''}`}
                   >
                     <h3 className="font-bold text-lg text-gray-900 mb-2">{curriculum.curriculum_name}</h3>
-                    <p className="text-gray-600 text-sm mb-3">{curriculum.description}</p>
+                    <p className="text-gray-600 text-sm mb-2">{curriculum.description}</p>
+                    {curriculum.source_url && (
+                      <p className="text-xs text-blue-700 mb-2">
+                        Source: <a className="underline" href={curriculum.source_url} target="_blank" rel="noreferrer">{curriculum.source_url}</a>
+                      </p>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       {(() => {
                         const allStates: string[] = curriculum.states || []
