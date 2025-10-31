@@ -30,15 +30,34 @@ async function main() {
   const ws = wb.Sheets[sheetName]
   const rows = xlsx.utils.sheet_to_json(ws, { defval: '' })
   const mapping = {}
+  // Heuristics: find likely state and URL column names
+  const allHeaders = new Set()
+  rows.forEach((r) => Object.keys(r).forEach((k) => allHeaders.add(String(k))))
+  const headers = Array.from(allHeaders)
+  const headerLc = headers.map((h) => h.toLowerCase())
+  const findHeader = (patterns) => {
+    for (const p of patterns) {
+      const idx = headerLc.findIndex((h) => h.includes(p))
+      if (idx >= 0) return headers[idx]
+    }
+    return null
+  }
+  const stateHeader = findHeader(['state/territory','state','region']) || headers.find((h) => /state|region|territory/i.test(h))
+  const urlHeader = findHeader(['url','website','web','link']) || headers.find((h) => /http|www|url|web|link/i.test(h))
+  if (!stateHeader || !urlHeader) {
+    console.warn('Could not auto-detect columns. Headers found:', headers)
+  }
   for (const row of rows) {
-    const entries = Object.entries(row)
-    const kv = Object.fromEntries(entries.map(([k, v]) => [String(k).toLowerCase().trim(), String(v).trim()]))
-    const state = kv.state || kv['state/territory'] || kv['region'] || ''
-    const url = kv.url || kv.link || kv.website || ''
-    if (!state || !url) continue
-    mapping[state.replace(/\s+/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())] = url
+    const stateRaw = stateHeader ? String(row[stateHeader] || '') : ''
+    const urlRaw = urlHeader ? String(row[urlHeader] || '') : ''
+    if (!stateRaw || !urlRaw) continue
+    const state = stateRaw.replace(/\s+/g, ' ').trim().replace(/\b\w/g, (m) => m.toUpperCase())
+    const url = urlRaw.trim()
+    if (!/^https?:\/\//i.test(url)) continue
+    mapping[state] = url
   }
   fs.writeFileSync(outputPath, JSON.stringify(mapping, null, 2))
+  console.log('Detected headers:', { stateHeader, urlHeader })
   console.log('Wrote', Object.keys(mapping).length, 'entries to', outputPath)
 }
 
