@@ -11,6 +11,8 @@
 // - South Carolina Science: https://ed.sc.gov/instruction/standards-learning/science/
 // - Indiana Academic Standards (Science): https://www.in.gov/doe/students/indiana-academic-standards/science/
 
+import US_SEA from '@/data/us-sea.json'
+
 export const US_STATES = [
   'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia',
   'Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland',
@@ -79,7 +81,14 @@ export function getUSAScienceGroupings(): CurriculumGrouping[] {
     description: 'Standards maintained by state education agencies (not explicitly listed above). Refer to your state Department of Education.',
     source_url: 'https://www2.ed.gov/about/contacts/state/index.html'
   }
-  return [...USA_SCIENCE_GROUPS, others].filter((g) => g.states.length > 0)
+  const withSources = (g: CurriculumGrouping): CurriculumGrouping => {
+    const sources: Record<string, string> = { ...(g.sources || {}) }
+    g.states.forEach((s) => {
+      if (!sources[s] && (US_SEA as any)[s]) sources[s] = (US_SEA as any)[s]
+    })
+    return { ...g, sources }
+  }
+  return [...USA_SCIENCE_GROUPS.map(withSources), withSources(others)].filter((g) => g.states.length > 0)
 }
 
 // CCSS groupings (initial conservative seed)
@@ -153,7 +162,14 @@ export function getUSAMathGroupings(): CurriculumGrouping[] {
       source_url: 'https://education.mn.gov/MDE/dse/stds/Math/'
     }
   ]
-  return groups
+  const withSources = (g: CurriculumGrouping): CurriculumGrouping => {
+    const sources: Record<string, string> = { ...(g.sources || {}) }
+    g.states.forEach((s) => {
+      if (!sources[s] && (US_SEA as any)[s]) sources[s] = (US_SEA as any)[s]
+    })
+    return { ...g, sources }
+  }
+  return groups.map(withSources)
 }
 
 export function getUSAELAGroupings(): CurriculumGrouping[] {
@@ -215,5 +231,12 @@ export function getUSAELAGroupings(): CurriculumGrouping[] {
       source_url: 'https://education.alaska.gov/standards/englishlanguage-arts'
     }
   ]
-  return groups
+  const withSources = (g: CurriculumGrouping): CurriculumGrouping => {
+    const sources: Record<string, string> = { ...(g.sources || {}) }
+    g.states.forEach((s) => {
+      if (!sources[s] && (US_SEA as any)[s]) sources[s] = (US_SEA as any)[s]
+    })
+    return { ...g, sources }
+  }
+  return groups.map(withSources)
 }
