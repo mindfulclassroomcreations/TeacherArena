@@ -11,11 +11,6 @@ export const generateContent = async (request: AIGenerationRequest) => {
   return response.data
 }
 
-export const getStateCurriculaOfficial = async (country: string, subject: string) => {
-  const response = await api.post('/state-curricula', { country, subject })
-  return response.data
-}
-
 export const createSubject = async (data: any) => {
   const response = await api.post('/subjects', data)
   return response.data
