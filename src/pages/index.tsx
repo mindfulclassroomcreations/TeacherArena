@@ -1829,26 +1829,42 @@ export default function Home() {
                         const visible = isExpanded ? allStates : allStates.slice(0, 5)
                         return (
                           <>
-                            {visible.map((state: string, i: number) => (
-                              <button
-                                key={i}
-                                type="button"
-                                title={`View ${state} standard for ${selectedSubject?.name}`}
-                                className={`px-2 py-1 text-xs rounded border ${
-                                  loadingStateStandard === state
-                                    ? 'bg-blue-200 text-blue-900 border-blue-300'
-                                    : highlightedRegion === state
-                                      ? 'bg-blue-600 text-white border-blue-600'
-                                      : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'
-                                }`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewStateStandard(state, curriculum)
-                                }}
-                              >
-                                {loadingStateStandard === state ? 'Loading…' : state}
-                              </button>
-                            ))}
+                            {visible.map((state: string, i: number) => {
+                              const perStateSource: string | undefined = (curriculum as any)?.sources?.[state]
+                              return (
+                                <span key={i} className="inline-flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    title={`View ${state} standard for ${selectedSubject?.name}`}
+                                    className={`px-2 py-1 text-xs rounded border ${
+                                      loadingStateStandard === state
+                                        ? 'bg-blue-200 text-blue-900 border-blue-300'
+                                        : highlightedRegion === state
+                                          ? 'bg-blue-600 text-white border-blue-600'
+                                          : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'
+                                    }`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewStateStandard(state, curriculum)
+                                    }}
+                                  >
+                                    {loadingStateStandard === state ? 'Loading…' : state}
+                                  </button>
+                                  {isExpanded && perStateSource && (
+                                    <a
+                                      href={perStateSource}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title={`Open official source for ${state}`}
+                                      className="text-[11px] text-blue-700 underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      source
+                                    </a>
+                                  )}
+                                </span>
+                              )
+                            })}
                             {allStates.length > 5 && !isExpanded && (
                               <button
                                 type="button"
