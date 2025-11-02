@@ -30,6 +30,58 @@ interface Strand {
   performance_expectations: string[]
 }
 
+// NGSS Middle School Life Science standards data
+const NGSS_MS_LIFE_SCIENCE_DATA = {
+  'MS-LS1': {
+    name: 'MS-LS1: From Molecules to Organisms – Structures and Processes',
+    title: 'From Molecules to Organisms – Structures and Processes',
+    description: 'Understand cellular structure, function, and how organisms grow and develop',
+    standards: [
+      { code: 'MS-LS1-1', name: 'Cells and Organisms', title: 'Cells and Organisms', description: 'Provide evidence that living things are made of cells: one cell or many with various structures.' },
+      { code: 'MS-LS1-2', name: 'Cell Functions', title: 'Cell Functions', description: 'Model how the parts of cells contribute to overall cellular function.' },
+      { code: 'MS-LS1-3', name: 'Body Systems', title: 'Body Systems', description: 'Explain how the body is a system of interacting subsystems made up of groups of cells.' },
+      { code: 'MS-LS1-4', name: 'Reproductive Strategies', title: 'Reproductive Strategies', description: 'Support explanations of how behaviors and structures impact reproductive success.' },
+      { code: 'MS-LS1-5', name: 'Growth Factors', title: 'Growth Factors', description: 'Explain how environmental and genetic factors influence growth.' },
+      { code: 'MS-LS1-6', name: 'Photosynthesis', title: 'Photosynthesis', description: 'Explain the role of photosynthesis in cycling matter and energy flow.' },
+      { code: 'MS-LS1-7', name: 'Cellular Respiration', title: 'Cellular Respiration', description: 'Model how food is broken down through chemical reactions for energy and growth.' }
+    ]
+  },
+  'MS-LS2': {
+    name: 'MS-LS2: Ecosystems – Interactions, Energy, and Dynamics',
+    title: 'Ecosystems – Interactions, Energy, and Dynamics',
+    description: 'Analyze ecosystem interactions, energy flow, and biodiversity',
+    standards: [
+      { code: 'MS-LS2-1', name: 'Resource Impact', title: 'Resource Impact', description: 'Analyze how resource availability affects organisms and populations.' },
+      { code: 'MS-LS2-2', name: 'Species Interactions', title: 'Species Interactions', description: 'Predict patterns of interactions across ecosystems.' },
+      { code: 'MS-LS2-3', name: 'Energy and Matter Flow', title: 'Energy and Matter Flow', description: 'Model cycling of matter and energy in ecosystems.' },
+      { code: 'MS-LS2-4', name: 'Ecosystem Disruptions', title: 'Ecosystem Disruptions', description: 'Argue how changes in ecosystems affect populations.' },
+      { code: 'MS-LS2-5', name: 'Biodiversity Solutions', title: 'Biodiversity Solutions', description: 'Evaluate solutions for maintaining biodiversity and ecosystem services.' }
+    ]
+  },
+  'MS-LS3': {
+    name: 'MS-LS3: Heredity – Inheritance and Variation of Traits',
+    title: 'Heredity – Inheritance and Variation of Traits',
+    description: 'Understand genetic inheritance and trait variation',
+    standards: [
+      { code: 'MS-LS3-1', name: 'Gene Mutations', title: 'Gene Mutations', description: 'Model how mutations affect proteins and traits.' },
+      { code: 'MS-LS3-2', name: 'Sexual vs Asexual Reproduction', title: 'Sexual vs Asexual Reproduction', description: 'Model why sexual reproduction leads to variation and asexual does not.' }
+    ]
+  },
+  'MS-LS4': {
+    name: 'MS-LS4: Biological Evolution – Unity and Diversity',
+    title: 'Biological Evolution – Unity and Diversity',
+    description: 'Explore evidence for evolution and natural selection',
+    standards: [
+      { code: 'MS-LS4-1', name: 'Fossil Patterns', title: 'Fossil Patterns', description: 'Analyze fossil record patterns documenting life\'s history.' },
+      { code: 'MS-LS4-2', name: 'Anatomy Evidence', title: 'Anatomy Evidence', description: 'Use anatomical similarities to infer evolutionary relationships.' },
+      { code: 'MS-LS4-3', name: 'Embryological Development', title: 'Embryological Development', description: 'Compare embryonic development patterns across species.' },
+      { code: 'MS-LS4-4', name: 'Trait Variation and Survival', title: 'Trait Variation and Survival', description: 'Explain how variation increases survival chances.' },
+      { code: 'MS-LS4-5', name: 'Genetic Modification', title: 'Genetic Modification', description: 'Research how technologies influence trait inheritance.' },
+      { code: 'MS-LS4-6', name: 'Natural Selection Math', title: 'Natural Selection Math', description: 'Use math to explain trait frequency changes over time.' }
+    ]
+  }
+}
+
 export default function Home() {
   // State management
   const [currentStep, setCurrentStep] = useState(0)
@@ -976,6 +1028,38 @@ export default function Home() {
     
     // Don't reload if already have data
     if (curriculumSections.length > 0) return
+    
+    // Check if this is NGSS + Life Science + Middle School
+    const isNGSS = selectedFramework.name?.toLowerCase().includes('ngss') || 
+                   selectedFramework.name?.toLowerCase().includes('next generation science')
+    const isLifeScience = selectedFramework.name?.toLowerCase().includes('life science')
+    const isMiddleSchool = selectedGrade.name?.toLowerCase().includes('6th') || 
+                          selectedGrade.name?.toLowerCase().includes('7th') || 
+                          selectedGrade.name?.toLowerCase().includes('8th') || 
+                          selectedGrade.name?.toLowerCase().includes('middle school')
+    
+    if (isNGSS && isLifeScience && isMiddleSchool) {
+      // Pre-populate with NGSS MS Life Science data
+      const sections = [
+        { id: 'MS-LS1', name: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS1'].name, title: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS1'].title, description: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS1'].description },
+        { id: 'MS-LS2', name: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS2'].name, title: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS2'].title, description: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS2'].description },
+        { id: 'MS-LS3', name: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS3'].name, title: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS3'].title, description: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS3'].description },
+        { id: 'MS-LS4', name: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS4'].name, title: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS4'].title, description: NGSS_MS_LIFE_SCIENCE_DATA['MS-LS4'].description }
+      ]
+      
+      const substandardsMap: Record<string, any[]> = {
+        'MS-LS1': NGSS_MS_LIFE_SCIENCE_DATA['MS-LS1'].standards,
+        'MS-LS2': NGSS_MS_LIFE_SCIENCE_DATA['MS-LS2'].standards,
+        'MS-LS3': NGSS_MS_LIFE_SCIENCE_DATA['MS-LS3'].standards,
+        'MS-LS4': NGSS_MS_LIFE_SCIENCE_DATA['MS-LS4'].standards
+      }
+      
+      setCurriculumSections(sections)
+      setSubStandardsBySection(substandardsMap)
+      setSuccess(`Loaded ${sections.length} NGSS MS Life Science sections with standards!`)
+      setTimeout(() => setSuccess(null), 3000)
+      return
+    }
     
     setIsLoading(true)
     setError(null)
