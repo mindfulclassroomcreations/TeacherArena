@@ -559,8 +559,20 @@ REQUIREMENTS
     // Tune temperature per type: keep structured outputs lower
   const temperature = (type === 'lesson-generation-by-strand' || type === 'lessons-by-substandards') ? 0.7 : 0.3
 
-  // Select model per step (subjects and state-curricula use gpt-4.1-nano as requested)
-  const model = 'gpt-4.1-nano'
+  // Enforce model usage per user request:
+  // - Step 4 "Generate Standards Sections" (type: 'frameworks')
+  // - Step 5 "Browse Curriculum Standards" sub-standards (type: 'section-standards')
+  // - Step 5 lesson generation from sub-standards (type: 'lessons-by-substandards')
+  // MUST use only "gpt-5-mini-2025-08-07".
+  // Other types continue to use the default lightweight model.
+  const STEP5_ONLY_MODEL = 'gpt-5-mini-2025-08-07'
+  const DEFAULT_MODEL = 'gpt-4.1-nano'
+  const step5Types = new Set([
+    'frameworks',
+    'section-standards',
+    'lessons-by-substandards',
+  ])
+  const model = step5Types.has(String(type)) ? STEP5_ONLY_MODEL : DEFAULT_MODEL
 
     const response = await client.chat.completions.create({
       model,
