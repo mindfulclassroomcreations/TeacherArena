@@ -569,38 +569,10 @@ REQUIREMENTS
   // Enforce this model for ALL steps/types per request
   const model = STEP5_ONLY_MODEL
 
-    async function getJsonFromOpenAI(): Promise<string> {
-      const systemText = 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
-      // Prefer Responses API for newer models; fall back to Chat Completions if unavailable
-      try {
-        // @ts-ignore - responses API available on modern SDKs
-        const resp = await (client as any).responses.create({
-          model,
-          temperature,
-          max_output_tokens: 2000,
-          response_format: { type: 'json_object' },
-          input: [
-            { role: 'system', content: [{ type: 'text', text: systemText }] },
-            { role: 'user', content: [{ type: 'text', text: userPrompt }] }
-          ]
-        })
-        // Try multiple shapes to extract text
-        let txt: any = resp?.output_text
-        if (!txt && Array.isArray(resp?.output) && resp.output[0]?.content?.[0]?.text) {
-          txt = resp.output[0].content[0].text
-        }
-        if (!txt && Array.isArray(resp?.content) && resp.content[0]?.text) {
-          txt = resp.content[0].text
-        }
-        if (!txt && resp?.choices?.[0]?.message?.content) {
-          txt = resp.choices[0].message.content
-        }
-        if (typeof txt === 'string' && txt.trim()) return txt
-      } catch (e: any) {
-        // Continue to chat completions fallback
-        console.warn('Responses API failed, falling back to Chat Completions:', e?.message || e)
-      }
-      // Fallback: Chat Completions with the same model
+    const systemText = 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
+    
+    let responseText = ''
+    try {
       const completion = await client.chat.completions.create({
         model,
         messages: [
@@ -611,10 +583,14 @@ REQUIREMENTS
         response_format: { type: 'json_object' },
         max_tokens: 2000,
       })
-      return completion?.choices?.[0]?.message?.content || ''
+      responseText = completion?.choices?.[0]?.message?.content || ''
+    } catch (apiError: any) {
+      console.error('OpenAI API error:', apiError?.message || apiError)
+      return res.status(500).json({
+        error: 'AI service error. Please try again.',
+        details: apiError?.message || String(apiError)
+      })
     }
-
-    const responseText = await getJsonFromOpenAI()
 
     if (!responseText) {
       return res.status(500).json({
