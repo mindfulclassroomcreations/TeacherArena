@@ -574,26 +574,42 @@ REQUIREMENTS
   ])
   const model = step5Types.has(String(type)) ? STEP5_ONLY_MODEL : DEFAULT_MODEL
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
-        },
-        {
-          role: 'user',
-          content: userPrompt
-        }
-      ],
-      temperature,
-      max_tokens: 2000,
-    })
-
-    let responseText = ''
-    if (response?.choices?.[0]?.message?.content) {
-      responseText = response.choices[0].message.content
+    async function getJsonFromOpenAI(): Promise<string> {
+      const systemText = 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
+      // Prefer Responses API for newer models; fall back to Chat Completions if unavailable
+      try {
+        // @ts-ignore - responses API available on modern SDKs
+        const resp = await (client as any).responses.create({
+          model,
+          temperature,
+          max_output_tokens: 2000,
+          response_format: { type: 'json_object' },
+          input: [
+            { role: 'system', content: [{ type: 'text', text: systemText }] },
+            { role: 'user', content: [{ type: 'text', text: userPrompt }] }
+          ]
+        })
+        const txt = resp?.output_text || resp?.content?.[0]?.text || resp?.choices?.[0]?.message?.content
+        if (typeof txt === 'string' && txt.trim()) return txt
+      } catch (e: any) {
+        // Continue to chat completions fallback
+        console.warn('Responses API failed, falling back to Chat Completions:', e?.message || e)
+      }
+      // Fallback: Chat Completions with the same model
+      const completion = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: systemText },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature,
+        response_format: { type: 'json_object' },
+        max_tokens: 2000,
+      })
+      return completion?.choices?.[0]?.message?.content || ''
     }
+
+    const responseText = await getJsonFromOpenAI()
 
     if (!responseText) {
       return res.status(500).json({
