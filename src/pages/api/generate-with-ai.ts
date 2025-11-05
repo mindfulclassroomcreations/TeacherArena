@@ -860,11 +860,27 @@ REQUIREMENTS
     if (type === 'subjects') {
       let items = parsedData
       if (!Array.isArray(items)) {
-        return res.status(500).json({ error: 'AI did not return an array of items' })
+        // Fallback: provide a curated subjects list to avoid blocking UX when AI output is malformed
+        const defaults = [
+          { name: 'Mathematics', description: 'Arithmetic, algebra, geometry, data and probability; great for worksheets and quizzes.' },
+          { name: 'English Language Arts', description: 'Reading, writing, grammar, vocabulary, and comprehension practice.' },
+          { name: 'Science', description: 'Life, physical, and Earth/space sciences; labs and investigations.' },
+          { name: 'Social Studies', description: 'History, civics, geography, and culture; primary/secondary levels.' },
+          { name: 'Computer Science', description: 'Computational thinking, coding basics, and digital literacy.' },
+          { name: 'Health & Physical Education', description: 'Personal health, fitness, and physical activity skills.' },
+          { name: 'Art', description: 'Visual arts, design, and creative expression.' },
+          { name: 'Music', description: 'Music theory, performance, and appreciation.' },
+          { name: 'World Languages', description: 'Spanish, French, and other foreign languages (vocabulary and grammar).' },
+          { name: 'Geography', description: 'Maps, regions, physical and human geography.' },
+          { name: 'History', description: 'World and US/Regional history; timelines and events.' },
+          { name: 'Economics & Civics', description: 'Financial literacy, markets, citizenship, and government.' }
+        ]
+        const limit = (typeof subjectsCount === 'number' && subjectsCount > 0) ? Math.floor(subjectsCount) : undefined
+        items = limit ? defaults.slice(0, Math.max(1, Math.min(limit, defaults.length))) : defaults
       }
 
       // Normalize items
-      items = items.map((item, index) => ({
+      items = items.map((item: any, index: number) => ({
         name: item.title || item.name || `Item ${index + 1}`,
         title: item.title,
         description: item.description || '',
