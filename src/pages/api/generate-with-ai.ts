@@ -584,7 +584,17 @@ REQUIREMENTS
             { role: 'user', content: [{ type: 'text', text: userPrompt }] }
           ]
         })
-        const txt = resp?.output_text || resp?.content?.[0]?.text || resp?.choices?.[0]?.message?.content
+        // Try multiple shapes to extract text
+        let txt: any = resp?.output_text
+        if (!txt && Array.isArray(resp?.output) && resp.output[0]?.content?.[0]?.text) {
+          txt = resp.output[0].content[0].text
+        }
+        if (!txt && Array.isArray(resp?.content) && resp.content[0]?.text) {
+          txt = resp.content[0].text
+        }
+        if (!txt && resp?.choices?.[0]?.message?.content) {
+          txt = resp.choices[0].message.content
+        }
         if (typeof txt === 'string' && txt.trim()) return txt
       } catch (e: any) {
         // Continue to chat completions fallback

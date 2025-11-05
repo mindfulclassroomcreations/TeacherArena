@@ -42,6 +42,11 @@ export default api
 api.interceptors.request.use(async (config) => {
   try {
     if (typeof window !== 'undefined') {
+      // Skip auth attachment for public AI endpoint to avoid noisy refresh attempts
+      const url = String(config?.url || '')
+      if (url.includes('/generate-with-ai')) {
+        return config
+      }
       const { data } = await supabase.auth.getSession()
       const token = data?.session?.access_token
       if (token) {
@@ -49,7 +54,9 @@ api.interceptors.request.use(async (config) => {
         ;(config.headers as any)['Authorization'] = `Bearer ${token}`
       }
     }
-  } catch {}
+  } catch {
+    // Silently ignore auth issues on client; requests still proceed unauthenticated
+  }
   return config
 })
 
