@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'OpenAI not configured' })
-  const { model = 'gpt-4.1-nano', webSearch = false, scope, subject, framework, grade, region, sectionName, lesson, lessons, userInstructions }: Body = req.body || {}
+  const { model = 'gpt-4o-mini', webSearch = false, scope, subject, framework, grade, region, sectionName, lesson, lessons, userInstructions }: Body = req.body || {}
     if (!scope) return res.status(400).json({ error: 'Missing scope' })
 
   const baseContext = `You are an expert K-12 curriculum editor. Subject: ${subject || ''}. Framework/Curriculum: ${framework || ''}. Grade: ${grade || ''}. Region/State: ${region || ''}. Section: ${sectionName || ''}.`;
@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // If a Gemini model is provided, coerce to default OpenAI model (Gemini disabled)
-    const effectiveModel = /^gemini\-/i.test(model) ? 'gpt-4.1-nano' : model
+    const effectiveModel = /^gemini\-/i.test(model) ? 'gpt-4o-mini' : model
 
   const content = await callOpenAI()
     let parsed: SuggestionResponse | null = null

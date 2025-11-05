@@ -20,7 +20,7 @@ export default function TablesPage() {
   const [aiScope, setAiScope] = useState<'lesson' | 'section' | 'standard'>('lesson')
   const [aiTarget, setAiTarget] = useState<{ secKey: string; idx?: number | null; secTitle?: string }>({ secKey: '', idx: null, secTitle: '' })
   const [aiStandard, setAiStandard] = useState<string>('')
-  const [aiModel, setAiModel] = useState<string>('gpt-4.1-nano')
+  const [aiModel, setAiModel] = useState<string>('gpt-4o-mini')
   const [aiWebSearch, setAiWebSearch] = useState<boolean>(false)
   const [aiPrompt, setAiPrompt] = useState<string>('')
   const [aiBusy, setAiBusy] = useState<boolean>(false)
@@ -808,10 +808,9 @@ export default function TablesPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">🤖 Model</label>
               <select className="w-full border rounded px-2 py-1" value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
-                <option value="gpt-4.1-nano">gpt-4.1-nano (default)</option>
-                <option value="gpt-4o-mini">gpt-4o-mini</option>
+                <option value="gpt-4o-mini">gpt-4o-mini (default)</option>
                 <option value="gpt-4o">gpt-4o</option>
-                <option value="o4-mini">o4-mini</option>
+                <option value="o1-mini">o1-mini</option>
               </select>
             </div>
             <div className="flex items-end">

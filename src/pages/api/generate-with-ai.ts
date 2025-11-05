@@ -95,7 +95,6 @@ type ResponseData = {
   count?: number
   error?: string
   details?: string
-  model?: string
 }
 
 export default async function handler(
@@ -122,14 +121,7 @@ export default async function handler(
   }
 
   try {
-    console.log('[API Start] Received request to /api/generate-with-ai')
-    console.log('[API Start] Request body type:', typeof req.body)
-    console.log('[API Start] OpenAI API Key exists:', !!process.env.OPENAI_API_KEY)
-    console.log('[API Start] OpenAI API Key length:', process.env.OPENAI_API_KEY?.length || 0)
-    
   const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section, stateCurriculum, subStandards, lessonsPerStandard, targetLessonCount } = req.body
-
-    console.log('[API Start] Parsed type:', type)
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -567,45 +559,28 @@ REQUIREMENTS
     // Tune temperature per type: keep structured outputs lower
   const temperature = (type === 'lesson-generation-by-strand' || type === 'lessons-by-substandards') ? 0.7 : 0.3
 
-  // Enforce model usage per user request:
-  // - Step 4 "Generate Standards Sections" (type: 'frameworks')
-  // - Step 5 "Browse Curriculum Standards" sub-standards (type: 'section-standards')
-  // - Step 5 lesson generation from sub-standards (type: 'lessons-by-substandards')
-  // Use gpt-5-mini for all steps (available on user's OpenAI API)
-  const model = 'gpt-5-mini'
+  // Use a reliable OpenAI model that supports JSON mode
+  const model = 'gpt-4o-mini'
 
-    const systemText = 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
-    
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ],
+      temperature,
+      max_tokens: 2000,
+    })
+
     let responseText = ''
-    try {
-      console.log(`[AI Request] Type: ${type}, Model: ${model}, Temperature: ${temperature}`)
-      const completion = await client.chat.completions.create({
-        model,
-        messages: [
-          { role: 'system', content: systemText },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature,
-        response_format: { type: 'json_object' },
-        max_tokens: 2000,
-      })
-      responseText = completion?.choices?.[0]?.message?.content || ''
-      console.log(`[AI Response] Success, length: ${responseText.length}`)
-    } catch (apiError: any) {
-      console.error('========== AI ERROR START ==========')
-      console.error('[AI Error] Type:', type)
-      console.error('[AI Error] Model:', model)
-      console.error('[AI Error] Message:', apiError?.message)
-      console.error('[AI Error] Code:', apiError?.code)
-      console.error('[AI Error] Status:', apiError?.status)
-      console.error('[AI Error] Response:', apiError?.response?.data)
-      console.error('[AI Error] Full Error:', JSON.stringify(apiError, null, 2))
-      console.error('========== AI ERROR END ==========')
-      return res.status(500).json({
-        error: 'AI service error. Please try again.',
-        details: apiError?.message || String(apiError),
-        model: model
-      })
+    if (response?.choices?.[0]?.message?.content) {
+      responseText = response.choices[0].message.content
     }
 
     if (!responseText) {
@@ -852,27 +827,11 @@ REQUIREMENTS
     if (type === 'subjects') {
       let items = parsedData
       if (!Array.isArray(items)) {
-        // Fallback: provide a curated subjects list to avoid blocking UX when AI output is malformed
-        const defaults = [
-          { name: 'Mathematics', description: 'Arithmetic, algebra, geometry, data and probability; great for worksheets and quizzes.' },
-          { name: 'English Language Arts', description: 'Reading, writing, grammar, vocabulary, and comprehension practice.' },
-          { name: 'Science', description: 'Life, physical, and Earth/space sciences; labs and investigations.' },
-          { name: 'Social Studies', description: 'History, civics, geography, and culture; primary/secondary levels.' },
-          { name: 'Computer Science', description: 'Computational thinking, coding basics, and digital literacy.' },
-          { name: 'Health & Physical Education', description: 'Personal health, fitness, and physical activity skills.' },
-          { name: 'Art', description: 'Visual arts, design, and creative expression.' },
-          { name: 'Music', description: 'Music theory, performance, and appreciation.' },
-          { name: 'World Languages', description: 'Spanish, French, and other foreign languages (vocabulary and grammar).' },
-          { name: 'Geography', description: 'Maps, regions, physical and human geography.' },
-          { name: 'History', description: 'World and US/Regional history; timelines and events.' },
-          { name: 'Economics & Civics', description: 'Financial literacy, markets, citizenship, and government.' }
-        ]
-        const limit = (typeof subjectsCount === 'number' && subjectsCount > 0) ? Math.floor(subjectsCount) : undefined
-        items = limit ? defaults.slice(0, Math.max(1, Math.min(limit, defaults.length))) : defaults
+        return res.status(500).json({ error: 'AI did not return an array of items' })
       }
 
       // Normalize items
-      items = items.map((item: any, index: number) => ({
+      items = items.map((item, index) => ({
         name: item.title || item.name || `Item ${index + 1}`,
         title: item.title,
         description: item.description || '',
