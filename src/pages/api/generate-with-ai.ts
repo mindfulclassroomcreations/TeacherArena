@@ -566,14 +566,8 @@ REQUIREMENTS
   // MUST use only "gpt-5-mini-2025-08-07".
   // Other types continue to use the default lightweight model.
   const STEP5_ONLY_MODEL = 'gpt-5-mini-2025-08-07'
-  // Use a broadly available, reliable default for non-Step5 endpoints
-  const DEFAULT_MODEL = 'gpt-4o-mini'
-  const step5Types = new Set([
-    'frameworks',
-    'section-standards',
-    'lessons-by-substandards',
-  ])
-  const model = step5Types.has(String(type)) ? STEP5_ONLY_MODEL : DEFAULT_MODEL
+  // Enforce this model for ALL steps/types per request
+  const model = STEP5_ONLY_MODEL
 
     async function getJsonFromOpenAI(): Promise<string> {
       const systemText = 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
