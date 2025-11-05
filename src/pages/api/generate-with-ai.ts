@@ -565,8 +565,8 @@ REQUIREMENTS
   // - Step 5 lesson generation from sub-standards (type: 'lessons-by-substandards')
   // MUST use only "gpt-5-mini-2025-08-07".
   // Other types continue to use the default lightweight model.
-  // Use gpt-4o (GPT-5 equivalent, the latest and most capable model)
-  const model = 'gpt-4o'
+  // Use o1-mini (reasoning model, closest to GPT-5 capabilities)
+  const model = 'o1-mini'
 
     const systemText = 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
     
