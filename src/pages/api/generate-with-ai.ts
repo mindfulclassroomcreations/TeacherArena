@@ -95,6 +95,7 @@ type ResponseData = {
   count?: number
   error?: string
   details?: string
+  model?: string
 }
 
 export default async function handler(
@@ -121,7 +122,14 @@ export default async function handler(
   }
 
   try {
+    console.log('[API Start] Received request to /api/generate-with-ai')
+    console.log('[API Start] Request body type:', typeof req.body)
+    console.log('[API Start] OpenAI API Key exists:', !!process.env.OPENAI_API_KEY)
+    console.log('[API Start] OpenAI API Key length:', process.env.OPENAI_API_KEY?.length || 0)
+    
   const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section, stateCurriculum, subStandards, lessonsPerStandard, targetLessonCount } = req.body
+
+    console.log('[API Start] Parsed type:', type)
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -584,15 +592,19 @@ REQUIREMENTS
       responseText = completion?.choices?.[0]?.message?.content || ''
       console.log(`[AI Response] Success, length: ${responseText.length}`)
     } catch (apiError: any) {
+      console.error('========== AI ERROR START ==========')
       console.error('[AI Error] Type:', type)
       console.error('[AI Error] Model:', model)
       console.error('[AI Error] Message:', apiError?.message)
       console.error('[AI Error] Code:', apiError?.code)
       console.error('[AI Error] Status:', apiError?.status)
-      console.error('[AI Error] Full:', JSON.stringify(apiError, null, 2))
+      console.error('[AI Error] Response:', apiError?.response?.data)
+      console.error('[AI Error] Full Error:', JSON.stringify(apiError, null, 2))
+      console.error('========== AI ERROR END ==========')
       return res.status(500).json({
         error: 'AI service error. Please try again.',
-        details: apiError?.message || String(apiError)
+        details: apiError?.message || String(apiError),
+        model: model
       })
     }
 
