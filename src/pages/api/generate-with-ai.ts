@@ -572,6 +572,7 @@ REQUIREMENTS
     
     let responseText = ''
     try {
+      console.log(`[AI Request] Type: ${type}, Model: ${model}, Temperature: ${temperature}`)
       const completion = await client.chat.completions.create({
         model,
         messages: [
@@ -583,8 +584,14 @@ REQUIREMENTS
         max_tokens: 2000,
       })
       responseText = completion?.choices?.[0]?.message?.content || ''
+      console.log(`[AI Response] Success, length: ${responseText.length}`)
     } catch (apiError: any) {
-      console.error('OpenAI API error:', apiError?.message || apiError)
+      console.error('[AI Error] Type:', type)
+      console.error('[AI Error] Model:', model)
+      console.error('[AI Error] Message:', apiError?.message)
+      console.error('[AI Error] Code:', apiError?.code)
+      console.error('[AI Error] Status:', apiError?.status)
+      console.error('[AI Error] Full:', JSON.stringify(apiError, null, 2))
       return res.status(500).json({
         error: 'AI service error. Please try again.',
         details: apiError?.message || String(apiError)
