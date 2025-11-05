@@ -42,20 +42,20 @@ export default api
 api.interceptors.request.use(async (config) => {
   try {
     if (typeof window !== 'undefined') {
-      // Skip auth attachment for public AI endpoint to avoid noisy refresh attempts
-      const url = String(config?.url || '')
-      if (url.includes('/generate-with-ai')) {
-        return config
+      const { data, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error('Session error:', error)
       }
-      const { data } = await supabase.auth.getSession()
       const token = data?.session?.access_token
       if (token) {
         config.headers = config.headers || {}
         ;(config.headers as any)['Authorization'] = `Bearer ${token}`
+      } else {
+        console.warn('No session token found - user may need to log in')
       }
     }
-  } catch {
-    // Silently ignore auth issues on client; requests still proceed unauthenticated
+  } catch (err) {
+    console.error('Error attaching auth token:', err)
   }
   return config
 })
@@ -66,6 +66,11 @@ api.interceptors.response.use(
   async (error) => {
     const status = error?.response?.status
     const msg = error?.response?.data?.error || error?.message
+    
+    if (status === 401) {
+      // Unauthorized - session expired or missing
+      throw new Error('Session expired. Please refresh the page and log in again.')
+    }
     if (status === 402) {
       // Payment required / insufficient tokens
       throw new Error(msg || 'Insufficient tokens. Please add tokens to continue.')
