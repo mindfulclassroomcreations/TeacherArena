@@ -566,7 +566,8 @@ REQUIREMENTS
   // MUST use only "gpt-5-mini-2025-08-07".
   // Other types continue to use the default lightweight model.
   const STEP5_ONLY_MODEL = 'gpt-5-mini-2025-08-07'
-  const DEFAULT_MODEL = 'gpt-4.1-nano'
+  // Use a broadly available, reliable default for non-Step5 endpoints
+  const DEFAULT_MODEL = 'gpt-4o-mini'
   const step5Types = new Set([
     'frameworks',
     'section-standards',
