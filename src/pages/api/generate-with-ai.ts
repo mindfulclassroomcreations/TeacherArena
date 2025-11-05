@@ -563,8 +563,8 @@ REQUIREMENTS
   // - Step 4 "Generate Standards Sections" (type: 'frameworks')
   // - Step 5 "Browse Curriculum Standards" sub-standards (type: 'section-standards')
   // - Step 5 lesson generation from sub-standards (type: 'lessons-by-substandards')
-  // Use gpt-4o (most capable and reliable current model) for all steps
-  const model = 'gpt-4o'
+  // Use gpt-5-mini for all steps (available on user's OpenAI API)
+  const model = 'gpt-5-mini'
 
     const systemText = 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
     
