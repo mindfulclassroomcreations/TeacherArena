@@ -1668,6 +1668,13 @@ export default function Home() {
           >
             Start Over
           </Button>
+          <Button
+            variant="primary"
+            className="bg-white text-blue-700 hover:bg-blue-50 border-white"
+            onClick={() => { window.location.href = '/quick-lessons' }}
+          >
+            ⚡ Quick Lesson Generator
+          </Button>
         </div>
       </div>
 
