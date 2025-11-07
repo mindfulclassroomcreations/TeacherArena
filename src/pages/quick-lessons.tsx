@@ -13,17 +13,23 @@ export default function QuickLessonsPage() {
   const [stateCurriculum, setStateCurriculum] = useState('')
   const [grade, setGrade] = useState('')
   const [subject, setSubject] = useState('')
-  const [subs, setSubs] = useState<Array<{ title?: string; rows: Array<{ code: string; description: string }>; lessons: number }>>([
-    { title: '', rows: [{ code: '', description: '' }], lessons: 1 },
+  const [subs, setSubs] = useState<Array<{ title?: string; rows: Array<{ code: string; description: string }>; lessons: number | '' }>>([
+    { title: '', rows: [{ code: '', description: '' }], lessons: '' },
   ])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<any[]>([])
   const [allLessonsPerTable, setAllLessonsPerTable] = useState<number | ''>('')
 
-  const addSubRow = () => setSubs((prev) => [...prev, { title: '', rows: [{ code: '', description: '' }], lessons: 1 }])
+  const addSubRow = () => setSubs((prev) => [...prev, { title: '', rows: [{ code: '', description: '' }], lessons: '' }])
   const updateSubLessons = (i: number, v: any) => {
-    setSubs(prev => prev.map((s, idx) => idx === i ? { ...s, lessons: Math.max(1, Number(v)||1) } : s))
+    setSubs(prev => prev.map((s, idx) => {
+      if (idx !== i) return s
+      if (v === '' || v === undefined) return { ...s, lessons: '' }
+      const num = Number(v)
+      if (!Number.isFinite(num) || num <= 0) return { ...s, lessons: '' }
+      return { ...s, lessons: num }
+    }))
   }
   const updateSubTitle = (i: number, v: string) => {
     setSubs(prev => prev.map((s, idx) => idx === i ? { ...s, title: v } : s))
@@ -73,7 +79,9 @@ export default function QuickLessonsPage() {
       // Expand selected rows into individual code objects while tracking their parent group (main title table)
       const subStandardsExpanded: Array<any> = []
       indices.forEach((i) => {
-        const total = (overrideLessons !== '' && overrideLessons != null) ? Number(overrideLessons) : (subs[i]?.lessons || 1)
+        const total = (overrideLessons !== '' && overrideLessons != null)
+          ? Number(overrideLessons)
+          : (subs[i]?.lessons === '' ? 1 : subs[i]?.lessons || 1)
         const expanded = expandRows(subs[i]?.rows || [], total, subs[i]?.title || '')
         expanded.forEach(e => subStandardsExpanded.push({ ...e, _parentGroupIndex: i }))
       })
@@ -244,7 +252,6 @@ export default function QuickLessonsPage() {
           <Card>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-medium">Sub-standards</h2>
-              <Button size="sm" variant="outline" onClick={addSubRow}>+ Add another</Button>
             </div>
             <div className="space-y-6">
               {subs.map((s, i) => {
@@ -343,7 +350,7 @@ export default function QuickLessonsPage() {
                   <div className="flex items-end gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Lessons per Table</label>
-                      <Input type="number" min={1} value={s.lessons} onChange={(e: any) => updateSubLessons(i, e.target.value)} />
+                      <Input type="number" min={1} value={s.lessons} onChange={(e: any) => updateSubLessons(i, e.target.value === '' ? '' : e.target.value)} placeholder="e.g. 6" />
                     </div>
                     <div className="flex gap-2 pb-1">
                       <Button size="sm" onClick={() => handleGenerateOne(i)} disabled={busy || !subject || !grade || countCodes(s.rows)===0}>Generate</Button>
@@ -390,6 +397,10 @@ export default function QuickLessonsPage() {
               <div className="pb-1">
                 <Button onClick={handleGenerateAll} disabled={busy || !subject || !grade} isLoading={busy}>Generate All</Button>
               </div>
+            </div>
+            {/* Global Add another button moved to bottom */}
+            <div className="mt-4">
+              <Button size="sm" variant="outline" onClick={addSubRow}>+ Add another table</Button>
             </div>
           </Card>
 
@@ -446,6 +457,10 @@ export default function QuickLessonsPage() {
                     )
                   })
                 })()}
+                {/* Bottom Move to Tables button for convenience */}
+                <div className="pt-2">
+                  <Button size="sm" variant="primary" onClick={moveToTables} disabled={items.length===0}>Move to Tables</Button>
+                </div>
               </div>
             )}
           </Card>
