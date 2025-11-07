@@ -98,8 +98,8 @@ export default function QuickLessonsPage() {
       const subStandardsBySection: Record<string, Array<{ code?: string; title?: string; name?: string }>> = data.subStandardsBySection || {}
       const names: Record<string, string> = data.sectionNamesByKey || {}
       const order: string[] = Array.isArray(data.sectionOrder) ? data.sectionOrder.slice() : []
-      // Group items by original row (_subIndex) and compute a section title per group
-      const groups: Record<string, { title: string; items: any[] }> = {}
+  // Group items by original row (_subIndex) and compute a single section per row
+  const groups: Record<string, { title: string; items: any[] }> = {}
       const makeSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       const makeTitle = (sample: any): string => {
         const t = String(sample?._rowTitle || '').trim()
@@ -119,18 +119,13 @@ export default function QuickLessonsPage() {
         groups[key].items.push(it)
       })
 
-      // Create or merge a section per group using the computed title
-      const usedKeys = new Set(order)
+      // Create or merge exactly ONE section per input row using a stable key
       Object.keys(groups).forEach((gid) => {
         const group = groups[gid]
-        const baseKey = `quick-lessons-${makeSlug(group.title) || `group-${gid}`}`
-        let sectionKey = baseKey
-        let n = 2
-        while (usedKeys.has(sectionKey)) { sectionKey = `${baseKey}-${n++}` }
-        usedKeys.add(sectionKey)
+        const sectionKey = `quick-lessons-row-${gid}`
 
-        if (!order.includes(sectionKey)) order.push(sectionKey)
-        names[sectionKey] = group.title
+  if (!order.includes(sectionKey)) order.push(sectionKey)
+  names[sectionKey] = group.title
 
         const existing = Array.isArray(lessonsBySection[sectionKey]) ? lessonsBySection[sectionKey] : []
         const existingKeys = new Set(existing.map((l: any) => (String(l.title || l.name || '').toLowerCase() + '|' + String(l.standard_code || l.code || '').toLowerCase())))
