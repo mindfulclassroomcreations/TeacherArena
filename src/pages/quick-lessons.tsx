@@ -4,6 +4,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import Button from '@/components/Button'
 import Card from '@/components/Card'
 import Input from '@/components/Input'
+import Textarea from '@/components/Textarea'
 import Alert from '@/components/Alert'
 
 export default function QuickLessonsPage() {
@@ -11,28 +12,51 @@ export default function QuickLessonsPage() {
   const [stateCurriculum, setStateCurriculum] = useState('')
   const [grade, setGrade] = useState('')
   const [subject, setSubject] = useState('')
-  const [subs, setSubs] = useState<Array<{ code: string; description: string; lessons: number }>>([
-    { code: '', description: '', lessons: 1 },
+  const [subs, setSubs] = useState<Array<{ entry: string; lessons: number }>>([
+    { entry: '', lessons: 1 },
   ])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<any[]>([])
 
-  const addSubRow = () => setSubs((prev) => [...prev, { code: '', description: '', lessons: 1 }])
-  const updateSub = (i: number, k: 'code'|'description'|'lessons', v: any) => {
+  const addSubRow = () => setSubs((prev) => [...prev, { entry: '', lessons: 1 }])
+  const updateSub = (i: number, k: 'entry'|'lessons', v: any) => {
     setSubs((prev) => prev.map((s, idx) => idx === i ? { ...s, [k]: k==='lessons' ? Math.max(1, Number(v)||1) : v } : s))
   }
   const removeSub = (i: number) => setSubs((prev) => prev.filter((_, idx) => idx !== i))
 
+  function parseEntry(entry: string, lessons: number): Array<{ code: string; description: string; lessons: number }> {
+    const raw = String(entry || '')
+    if (!raw.trim()) return []
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    let codesPart = raw
+    let desc = ''
+    if (lines.length > 1) {
+      codesPart = lines[0]
+      desc = lines.slice(1).join(' ')
+    }
+    const codeTokens = Array.from(new Set(
+      codesPart.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
+    ))
+    return codeTokens.map(code => ({ code, description: desc, lessons: Math.max(1, Number(lessons)||1) }))
+  }
+
   const generateFor = async (indices: number[]) => {
     try {
       setBusy(true); setError(null)
+      // Expand selected rows into individual sub-standard objects (support multiple codes per row)
+      const subStandardsExpanded = indices.flatMap((i) => parseEntry(subs[i]?.entry || '', subs[i]?.lessons || 1))
+      if (subStandardsExpanded.length === 0) {
+        setError('Please enter at least one valid code to generate lessons.')
+        setBusy(false)
+        return
+      }
       const payload = {
         country: country || undefined,
         stateCurriculum: stateCurriculum || undefined,
         grade: grade || '',
         subject: subject || '',
-        subStandards: subs.filter((_, i) => indices.includes(i)).map(s => ({ code: s.code, description: s.description, lessons: s.lessons }))
+        subStandards: subStandardsExpanded
       }
       const r = await fetch('/api/quick-lessons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const j = await r.json()
@@ -133,13 +157,15 @@ export default function QuickLessonsPage() {
             <div className="space-y-3">
               {subs.map((s, i) => (
                 <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                  <div className="sm:col-span-3">
-                    <label className="block text-sm font-medium text-gray-700">Code</label>
-                    <Input value={s.code} onChange={(e: any) => updateSub(i, 'code', e.target.value)} placeholder="e.g., HS-LS1.A" />
-                  </div>
-                  <div className="sm:col-span-7">
-                    <label className="block text-sm font-medium text-gray-700">Description (optional)</label>
-                    <Input value={s.description} onChange={(e: any) => updateSub(i, 'description', e.target.value)} placeholder="Short description to guide lesson focus" />
+                  <div className="sm:col-span-10">
+                    <label className="block text-sm font-medium text-gray-700">Codes and Description (optional)</label>
+                    <Textarea
+                      value={s.entry}
+                      onChange={(e: any) => updateSub(i, 'entry', e.target.value)}
+                      placeholder={"Enter codes (comma or newline separated). Optional: add description on a new line.\nExample:\nHS-LS1.A, HS-LS1.B\nCell structure and function"}
+                      rows={3}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Tip: First line = codes (comma or newline separated). Next lines = optional description.</p>
                   </div>
                   <div className="sm:col-span-1">
                     <label className="block text-sm font-medium text-gray-700">Lessons</label>
