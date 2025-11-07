@@ -162,8 +162,9 @@ export default function QuickLessonsPage() {
                     <Textarea
                       value={s.entry}
                       onChange={(e: any) => updateSub(i, 'entry', e.target.value)}
-                      placeholder={"Enter codes (comma or newline separated). Optional: add description on a new line.\nExample:\nHS-LS1.A, HS-LS1.B\nCell structure and function"}
-                      rows={3}
+                      placeholder={"Enter codes (comma or newline separated). Optional: add description on new lines below.\nExample:\nHS-LS1.A, HS-LS1.B, HS-LS1.C\nCell structure and function focus for inquiry labs"}
+                      rows={6}
+                      className="min-h-[150px]"
                     />
                     <p className="text-xs text-gray-500 mt-1">Tip: First line = codes (comma or newline separated). Next lines = optional description.</p>
                   </div>
