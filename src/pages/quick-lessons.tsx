@@ -140,7 +140,7 @@ export default function QuickLessonsPage() {
         headerGradeLevel: grade,
         userCleared: false,
       }
-      window.localStorage.setItem('ta_tables_data', JSON.stringify(nextPayload))
+  window.localStorage.setItem('ta_tables_data', JSON.stringify(nextPayload))
       // Clear deletion markers to allow showing content
       try {
         window.localStorage.removeItem('ta_tables_deleted')
@@ -152,6 +152,8 @@ export default function QuickLessonsPage() {
       } catch {
         window.location.href = '/tables'
       }
+      // Clear generated items from this page to avoid duplicates and reflect move
+      try { setItems([]) } catch {}
     } catch (e) {
       setError('Failed to move to Tables. Please try again.')
     }
