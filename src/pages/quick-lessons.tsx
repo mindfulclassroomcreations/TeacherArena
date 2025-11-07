@@ -97,6 +97,7 @@ export default function QuickLessonsPage() {
       const lsRaw = window.localStorage.getItem('ta_tables_data')
       const data = lsRaw ? JSON.parse(lsRaw) : {}
       const lessonsBySection: Record<string, any[]> = data.lessonsBySection || {}
+      const subStandardsBySection: Record<string, Array<{ code?: string; title?: string; name?: string }>> = data.subStandardsBySection || {}
       const names: Record<string, string> = data.sectionNamesByKey || {}
       const order: string[] = Array.isArray(data.sectionOrder) ? data.sectionOrder.slice() : []
 
@@ -111,9 +112,24 @@ export default function QuickLessonsPage() {
       })
       lessonsBySection[sectionKey] = [...existing, ...toAdd]
 
+      // Build sub-standards list for this section (same structure used by main page)
+      const prevSubs = Array.isArray(subStandardsBySection[sectionKey]) ? subStandardsBySection[sectionKey] : []
+      const prevCodes = new Set(prevSubs.map((s: any) => String(s.code || '').toLowerCase()))
+      const newSubs: Array<{ code: string; title?: string }> = []
+      ;(lessonsBySection[sectionKey] || []).forEach((l: any) => {
+        const c = String(l.standard_code || l.code || '').trim()
+        if (!c) return
+        const key = c.toLowerCase()
+        if (prevCodes.has(key)) return
+        prevCodes.add(key)
+        newSubs.push({ code: c })
+      })
+      subStandardsBySection[sectionKey] = [...prevSubs, ...newSubs]
+
       const nextPayload = {
         ...data,
         lessonsBySection,
+        subStandardsBySection,
         sectionNamesByKey: names,
         sectionOrder: order,
         subject,
@@ -122,6 +138,7 @@ export default function QuickLessonsPage() {
         headerSubjectName: subject,
         headerCurriculum: stateCurriculum || country || '',
         headerGradeLevel: grade,
+        userCleared: false,
       }
       window.localStorage.setItem('ta_tables_data', JSON.stringify(nextPayload))
       // Clear deletion markers to allow showing content
