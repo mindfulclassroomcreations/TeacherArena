@@ -6,6 +6,7 @@ import Card from '@/components/Card'
 import Input from '@/components/Input'
 import Textarea from '@/components/Textarea'
 import Alert from '@/components/Alert'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 export default function QuickLessonsPage() {
   const [country, setCountry] = useState('')
@@ -18,6 +19,7 @@ export default function QuickLessonsPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<any[]>([])
+  const [allLessonsPerTable, setAllLessonsPerTable] = useState<number | ''>('')
 
   const addSubRow = () => setSubs((prev) => [...prev, { title: '', rows: [{ code: '', description: '' }], lessons: 1 }])
   const updateSubLessons = (i: number, v: any) => {
@@ -49,17 +51,32 @@ export default function QuickLessonsPage() {
     return rows.map(r => r.code.trim()).filter(c => c).length
   }
 
-  function expandRows(rows: Array<{ code: string; description: string }>, lessons: number, title?: string) {
-    return rows
-      .map(r => ({ code: r.code.trim(), description: r.description.trim(), lessons: Math.max(1, Number(lessons)||1), title: String(title||'').trim() }))
-      .filter(r => r.code)
+  function expandRows(rows: Array<{ code: string; description: string }>, totalLessonsForTable: number, title?: string) {
+    const cleaned = rows.map(r => ({ code: r.code.trim(), description: r.description.trim() })).filter(r => r.code)
+    const k = cleaned.length
+    const L = Math.max(1, Number(totalLessonsForTable) || 1)
+    if (k === 0) return []
+    const base = Math.floor(L / k)
+    let extra = L % k
+    const distributed = cleaned.map((r, idx) => {
+      const per = base + (extra > 0 ? 1 : 0)
+      if (extra > 0) extra -= 1
+      return { code: r.code, description: r.description, lessons: per, title: String(title || '').trim() }
+    })
+    // If L < k, some per will be 0; keep only rows that received >=1 lesson
+    return distributed.filter(r => r.lessons > 0)
   }
 
-  const generateFor = async (indices: number[]) => {
+  const generateFor = async (indices: number[], overrideLessons?: number | '') => {
     try {
       setBusy(true); setError(null)
-      // Expand selected rows into individual sub-standard objects (support multiple codes per row)
-  const subStandardsExpanded = indices.flatMap((i) => expandRows(subs[i]?.rows || [], subs[i]?.lessons || 1, subs[i]?.title || ''))
+      // Expand selected rows into individual code objects while tracking their parent group (main title table)
+      const subStandardsExpanded: Array<any> = []
+      indices.forEach((i) => {
+        const total = (overrideLessons !== '' && overrideLessons != null) ? Number(overrideLessons) : (subs[i]?.lessons || 1)
+        const expanded = expandRows(subs[i]?.rows || [], total, subs[i]?.title || '')
+        expanded.forEach(e => subStandardsExpanded.push({ ...e, _parentGroupIndex: i }))
+      })
       if (subStandardsExpanded.length === 0) {
         setError('Please enter at least one valid code to generate lessons.')
         setBusy(false)
@@ -76,7 +93,16 @@ export default function QuickLessonsPage() {
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || 'Failed to generate')
       const generated: any[] = Array.isArray(j?.items) ? j.items : []
-      // Group back under sub-index
+      // Re-map each generated lesson's _subIndex (currently per-code) to the parent group index
+      generated.forEach((it, idx) => {
+        const originalIdx = Number(it?._subIndex)
+        const parent = subStandardsExpanded[originalIdx]?._parentGroupIndex
+        if (parent !== undefined) {
+          it._subIndex = parent
+          // ensure consistent row title on client side for grouping
+          it._rowTitle = subs[parent]?.title || subStandardsExpanded[originalIdx]?.title || it._rowTitle
+        }
+      })
       setItems((prev) => {
         const next = [...prev]
         generated.forEach((it) => next.push(it))
@@ -87,7 +113,7 @@ export default function QuickLessonsPage() {
     } finally { setBusy(false) }
   }
 
-  const handleGenerateAll = () => generateFor(subs.map((_, i) => i))
+  const handleGenerateAll = () => generateFor(subs.map((_, i) => i), allLessonsPerTable)
   const handleGenerateOne = (i: number) => generateFor([i])
 
   const moveToTables = () => {
@@ -169,11 +195,17 @@ export default function QuickLessonsPage() {
         window.localStorage.removeItem('ta_tables_deleted')
         window.localStorage.removeItem('ta_tables_deleted_signature')
       } catch {}
-      // Navigate to tables in a new tab (after synchronous localStorage save)
+      // Navigate to tables (prefer new tab). Use absolute URL to avoid dev asset 404s.
       try {
-        window.open('/tables', '_blank')
+        const url = new URL('/tables', window.location.origin).toString()
+        const w = window.open(url, '_blank')
+        if (!w) {
+          window.location.href = url
+        }
       } catch {
-        window.location.href = '/tables'
+        try {
+          window.location.href = '/tables'
+        } catch {}
       }
       // Clear generated items from this page to avoid duplicates and reflect move
       try { setItems([]) } catch {}
@@ -215,7 +247,9 @@ export default function QuickLessonsPage() {
               <Button size="sm" variant="outline" onClick={addSubRow}>+ Add another</Button>
             </div>
             <div className="space-y-6">
-              {subs.map((s, i) => (
+              {subs.map((s, i) => {
+                const groupItems = items.filter(it => Number(it?._subIndex) === i)
+                return (
                 <div key={i} className="border rounded-md p-3 bg-white/50 space-y-3">
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -308,7 +342,7 @@ export default function QuickLessonsPage() {
                   </div>
                   <div className="flex items-end gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Lessons per Code</label>
+                      <label className="block text-sm font-medium text-gray-700">Lessons per Table</label>
                       <Input type="number" min={1} value={s.lessons} onChange={(e: any) => updateSubLessons(i, e.target.value)} />
                     </div>
                     <div className="flex gap-2 pb-1">
@@ -316,11 +350,46 @@ export default function QuickLessonsPage() {
                       <Button size="sm" variant="outline" onClick={() => removeSub(i)} disabled={busy}>Remove Group</Button>
                     </div>
                   </div>
+                  {/* Inline generated lessons display for this table */}
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-sm font-semibold text-gray-800">Generated Lessons (this table)</h3>
+                      <span className="text-xs text-gray-500">{groupItems.length} lesson{groupItems.length!==1?'s':''}</span>
+                    </div>
+                    {busy && groupItems.length === 0 && countCodes(s.rows) > 0 && (
+                      <div className="flex items-center gap-2 text-xs text-gray-600 mb-2"><LoadingSpinner size="sm" /><span>Generating…</span></div>
+                    )}
+                    {groupItems.length === 0 ? (
+                      <p className="text-xs text-gray-500">No lessons yet.</p>
+                    ) : (
+                      <div className="divide-y border rounded bg-white/60">
+                        {groupItems.map((it: any, idx: number) => (
+                          <div key={`g-${i}-${idx}`} className="py-2 px-3">
+                            <div className="text-xs text-gray-500">{it.standard_code}</div>
+                            <div className="text-sm font-medium">{it.title}</div>
+                            <div className="text-xs text-gray-700">{it.description}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ))}
+                )})}
             </div>
-            <div className="mt-3 flex gap-2">
-              <Button onClick={handleGenerateAll} disabled={busy || !subject || !grade}>Generate All</Button>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Lessons per Table (for Generate All)</label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={allLessonsPerTable as any}
+                  onChange={(e: any) => setAllLessonsPerTable(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)||1))}
+                  placeholder="Leave blank to use each table's setting"
+                />
+              </div>
+              <div className="pb-1">
+                <Button onClick={handleGenerateAll} disabled={busy || !subject || !grade} isLoading={busy}>Generate All</Button>
+              </div>
             </div>
           </Card>
 
@@ -329,10 +398,24 @@ export default function QuickLessonsPage() {
               <h2 className="text-lg font-medium">Generated Lessons</h2>
               <Button size="sm" variant="primary" onClick={moveToTables} disabled={items.length===0}>Move to Tables</Button>
             </div>
+            {busy && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                <LoadingSpinner />
+                <span>Generating lessons…</span>
+              </div>
+            )}
             {items.length === 0 ? (
               <p className="text-sm text-gray-500">No lessons yet. Generate to see results here.</p>
             ) : (
               <div className="space-y-4">
+                {(() => {
+                  // Summary
+                  const groupIds = Array.from(new Set(items.map((it: any) => String(it?._subIndex ?? '0'))))
+                  const total = items.length
+                  return (
+                    <div className="text-sm text-gray-700">{groupIds.length} table{groupIds.length!==1?'s':''} • {total} lesson{total!==1?'s':''}</div>
+                  )
+                })()}
                 {(() => {
                   const groups: Record<string, any[]> = {}
                   items.forEach((it: any) => {
