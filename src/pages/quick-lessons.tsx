@@ -332,15 +332,37 @@ export default function QuickLessonsPage() {
             {items.length === 0 ? (
               <p className="text-sm text-gray-500">No lessons yet. Generate to see results here.</p>
             ) : (
-              <div className="divide-y">
-                {items.map((it, idx) => (
-                  <div key={idx} className="py-2">
-                    {it._rowTitle ? <div className="text-xs text-gray-400 italic">{it._rowTitle}</div> : null}
-                    <div className="text-sm text-gray-500">{it.standard_code}</div>
-                    <div className="font-medium">{it.title}</div>
-                    <div className="text-sm text-gray-700">{it.description}</div>
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {(() => {
+                  const groups: Record<string, any[]> = {}
+                  items.forEach((it: any) => {
+                    const k = String(it?._subIndex ?? 0)
+                    if (!groups[k]) groups[k] = []
+                    groups[k].push(it)
+                  })
+                  const keys = Object.keys(groups).sort((a,b) => Number(a)-Number(b))
+                  return keys.map((k) => {
+                    const arr = groups[k]
+                    const title = String(arr?.[0]?._rowTitle || `Group ${Number(k)+1}`)
+                    return (
+                      <div key={`grp-${k}`} className="border rounded p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-gray-900">{title}</h3>
+                          <span className="text-xs text-gray-600">{arr.length} lesson{arr.length!==1?'s':''}</span>
+                        </div>
+                        <div className="divide-y">
+                          {arr.map((it: any, idx: number) => (
+                            <div key={`row-${k}-${idx}`} className="py-2">
+                              <div className="text-sm text-gray-500">{it.standard_code}</div>
+                              <div className="font-medium">{it.title}</div>
+                              <div className="text-sm text-gray-700">{it.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             )}
           </Card>
