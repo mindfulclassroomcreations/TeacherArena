@@ -1662,15 +1662,13 @@ export default function Home() {
         </p>
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <Button 
-            variant="outline" 
-            className="bg-transparent text-white border-white hover:bg-blue-700"
+            variant="purple"
             onClick={handleReset}
           >
             Start Over
           </Button>
           <Button
-            variant="primary"
-            className="bg-white text-blue-700 hover:bg-blue-50 border-white"
+            variant="purple"
             onClick={() => { window.location.href = '/quick-lessons' }}
           >
             ⚡ Quick Lesson Generator
