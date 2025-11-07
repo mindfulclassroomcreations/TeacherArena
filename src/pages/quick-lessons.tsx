@@ -92,39 +92,67 @@ export default function QuickLessonsPage() {
 
   const moveToTables = () => {
     try {
-      const sectionKey = 'quick-lessons'
-      const sectionTitle = 'Quick Lessons'
       const lsRaw = window.localStorage.getItem('ta_tables_data')
       const data = lsRaw ? JSON.parse(lsRaw) : {}
       const lessonsBySection: Record<string, any[]> = data.lessonsBySection || {}
       const subStandardsBySection: Record<string, Array<{ code?: string; title?: string; name?: string }>> = data.subStandardsBySection || {}
       const names: Record<string, string> = data.sectionNamesByKey || {}
       const order: string[] = Array.isArray(data.sectionOrder) ? data.sectionOrder.slice() : []
-
-      if (!order.includes(sectionKey)) order.push(sectionKey)
-      names[sectionKey] = sectionTitle
-
-      const existing = Array.isArray(lessonsBySection[sectionKey]) ? lessonsBySection[sectionKey] : []
-      const existingKeys = new Set(existing.map((l: any) => (String(l.title || l.name || '').toLowerCase() + '|' + String(l.standard_code || l.code || '').toLowerCase())))
-      const toAdd = items.filter((l) => {
-        const key = (String(l.title || '').toLowerCase() + '|' + String(l.standard_code || '').toLowerCase())
-        return !existingKeys.has(key)
+      // Group items by original row (_subIndex) and compute a section title per group
+      const groups: Record<string, { title: string; items: any[] }> = {}
+      const makeSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      const makeTitle = (sample: any): string => {
+        const t = String(sample?._rowTitle || '').trim()
+        if (t) return t
+        const code = String(sample?.standard_code || sample?.code || '').trim()
+        if (subject && code) return `${subject} - ${code}`
+        if (code) return `Lessons for ${code}`
+        return 'Quick Lessons Group'
+      }
+      // Fallback if items array is empty
+      if (!Array.isArray(items) || items.length === 0) {
+        throw new Error('No generated lessons to move.')
+      }
+      items.forEach((it: any) => {
+        const key = String(it?._subIndex ?? 0)
+        if (!groups[key]) groups[key] = { title: makeTitle(it), items: [] }
+        groups[key].items.push(it)
       })
-      lessonsBySection[sectionKey] = [...existing, ...toAdd]
 
-      // Build sub-standards list for this section (same structure used by main page)
-      const prevSubs = Array.isArray(subStandardsBySection[sectionKey]) ? subStandardsBySection[sectionKey] : []
-      const prevCodes = new Set(prevSubs.map((s: any) => String(s.code || '').toLowerCase()))
-      const newSubs: Array<{ code: string; title?: string }> = []
-      ;(lessonsBySection[sectionKey] || []).forEach((l: any) => {
-        const c = String(l.standard_code || l.code || '').trim()
-        if (!c) return
-        const key = c.toLowerCase()
-        if (prevCodes.has(key)) return
-        prevCodes.add(key)
-        newSubs.push({ code: c })
+      // Create or merge a section per group using the computed title
+      const usedKeys = new Set(order)
+      Object.keys(groups).forEach((gid) => {
+        const group = groups[gid]
+        const baseKey = `quick-lessons-${makeSlug(group.title) || `group-${gid}`}`
+        let sectionKey = baseKey
+        let n = 2
+        while (usedKeys.has(sectionKey)) { sectionKey = `${baseKey}-${n++}` }
+        usedKeys.add(sectionKey)
+
+        if (!order.includes(sectionKey)) order.push(sectionKey)
+        names[sectionKey] = group.title
+
+        const existing = Array.isArray(lessonsBySection[sectionKey]) ? lessonsBySection[sectionKey] : []
+        const existingKeys = new Set(existing.map((l: any) => (String(l.title || l.name || '').toLowerCase() + '|' + String(l.standard_code || l.code || '').toLowerCase())))
+        const toAdd = group.items.filter((l: any) => {
+          const k = (String(l.title || '').toLowerCase() + '|' + String(l.standard_code || '').toLowerCase())
+          return !existingKeys.has(k)
+        })
+        lessonsBySection[sectionKey] = [...existing, ...toAdd]
+
+        const prevSubs = Array.isArray(subStandardsBySection[sectionKey]) ? subStandardsBySection[sectionKey] : []
+        const prevCodes = new Set(prevSubs.map((s: any) => String(s.code || '').toLowerCase()))
+        const newSubs: Array<{ code: string; title?: string }> = []
+        group.items.forEach((l: any) => {
+          const c = String(l.standard_code || l.code || '').trim()
+          if (!c) return
+          const key = c.toLowerCase()
+          if (prevCodes.has(key)) return
+          prevCodes.add(key)
+          newSubs.push({ code: c })
+        })
+        subStandardsBySection[sectionKey] = [...prevSubs, ...newSubs]
       })
-      subStandardsBySection[sectionKey] = [...prevSubs, ...newSubs]
 
       const nextPayload = {
         ...data,
