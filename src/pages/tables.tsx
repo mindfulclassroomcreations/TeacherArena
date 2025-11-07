@@ -604,13 +604,13 @@ export default function TablesPage() {
         {!payload ? (
           <div className="bg-white border border-gray-200 rounded p-6 text-center">
             <p className="text-gray-600 mb-4">No data loaded. From Step 5, click &quot;Move Lessons to Tables&quot; to load your latest tables here.</p>
-            <Button variant="primary" onClick={() => window.location.href = '/'}>Go to Generate Lessons</Button>
+            <Button variant="purple" onClick={() => window.location.href = '/'}>Go to Generate Lessons</Button>
           </div>
         ) : sectionsWithLessons.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded p-6 text-center">
             <p className="text-gray-600 mb-2">All lessons have been deleted or archived.</p>
             <p className="text-gray-500 text-sm mb-4">Generate new lessons from Step 5 to populate the tables.</p>
-            <Button variant="primary" onClick={() => window.location.href = '/'}>Go to Generate Lessons</Button>
+            <Button variant="purple" onClick={() => window.location.href = '/'}>Go to Generate Lessons</Button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -626,7 +626,7 @@ export default function TablesPage() {
                     </label>
                   )
                 })()}
-                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={toggleSelectAllSections}>Select All Sections</Button>
+                <Button size="sm" variant="purple" onClick={toggleSelectAllSections}>Select All Sections</Button>
                 <span className="text-sm text-gray-600">
                   {Object.values(selectedSections).filter(Boolean).length} selected
                 </span>
