@@ -12,49 +12,54 @@ export default function QuickLessonsPage() {
   const [stateCurriculum, setStateCurriculum] = useState('')
   const [grade, setGrade] = useState('')
   const [subject, setSubject] = useState('')
-  const [subs, setSubs] = useState<Array<{ title?: string; entry: string; lessons: number }>>([
-    { title: '', entry: '', lessons: 1 },
+  const [subs, setSubs] = useState<Array<{ title?: string; rows: Array<{ code: string; description: string }>; lessons: number }>>([
+    { title: '', rows: [{ code: '', description: '' }], lessons: 1 },
   ])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<any[]>([])
 
-  const addSubRow = () => setSubs((prev) => [...prev, { title: '', entry: '', lessons: 1 }])
-  const updateSub = (i: number, k: 'title'|'entry'|'lessons', v: any) => {
-    setSubs((prev) => prev.map((s, idx) => idx === i ? { ...s, [k]: k==='lessons' ? Math.max(1, Number(v)||1) : v } : s))
+  const addSubRow = () => setSubs((prev) => [...prev, { title: '', rows: [{ code: '', description: '' }], lessons: 1 }])
+  const updateSubLessons = (i: number, v: any) => {
+    setSubs(prev => prev.map((s, idx) => idx === i ? { ...s, lessons: Math.max(1, Number(v)||1) } : s))
+  }
+  const updateSubTitle = (i: number, v: string) => {
+    setSubs(prev => prev.map((s, idx) => idx === i ? { ...s, title: v } : s))
   }
   const removeSub = (i: number) => setSubs((prev) => prev.filter((_, idx) => idx !== i))
-
-  function countCodes(entry: string): number {
-    const raw = String(entry || '')
-    if (!raw.trim()) return 0
-    const first = (raw.split(/\r?\n/)[0] || '').trim()
-    if (!first) return 0
-    const tokens = Array.from(new Set(first.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)))
-    return tokens.length
+  const addCodeRow = (i: number) => {
+    setSubs(prev => prev.map((s, idx) => idx === i ? { ...s, rows: [...s.rows, { code: '', description: '' }] } : s))
+  }
+  const updateCodeRow = (subIdx: number, rowIdx: number, field: 'code' | 'description', value: string) => {
+    setSubs(prev => prev.map((s, i) => {
+      if (i !== subIdx) return s
+      const rows = s.rows.map((r, ri) => ri === rowIdx ? { ...r, [field]: value } : r)
+      return { ...s, rows }
+    }))
+  }
+  const removeCodeRow = (subIdx: number, rowIdx: number) => {
+    setSubs(prev => prev.map((s, i) => {
+      if (i !== subIdx) return s
+      const rows = s.rows.filter((_, ri) => ri !== rowIdx)
+      return { ...s, rows: rows.length > 0 ? rows : [{ code: '', description: '' }] }
+    }))
   }
 
-  function parseEntry(entry: string, lessons: number, title?: string): Array<{ code: string; description: string; lessons: number; title?: string }> {
-    const raw = String(entry || '')
-    if (!raw.trim()) return []
-    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-    let codesPart = raw
-    let desc = ''
-    if (lines.length > 1) {
-      codesPart = lines[0]
-      desc = lines.slice(1).join(' ')
-    }
-    const codeTokens = Array.from(new Set(
-      codesPart.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
-    ))
-    return codeTokens.map(code => ({ code, description: desc, lessons: Math.max(1, Number(lessons)||1), title: String(title || '').trim() }))
+  function countCodes(rows: Array<{ code: string }>): number {
+    return rows.map(r => r.code.trim()).filter(c => c).length
+  }
+
+  function expandRows(rows: Array<{ code: string; description: string }>, lessons: number, title?: string) {
+    return rows
+      .map(r => ({ code: r.code.trim(), description: r.description.trim(), lessons: Math.max(1, Number(lessons)||1), title: String(title||'').trim() }))
+      .filter(r => r.code)
   }
 
   const generateFor = async (indices: number[]) => {
     try {
       setBusy(true); setError(null)
       // Expand selected rows into individual sub-standard objects (support multiple codes per row)
-  const subStandardsExpanded = indices.flatMap((i) => parseEntry(subs[i]?.entry || '', subs[i]?.lessons || 1, subs[i]?.title || ''))
+  const subStandardsExpanded = indices.flatMap((i) => expandRows(subs[i]?.rows || [], subs[i]?.lessons || 1, subs[i]?.title || ''))
       if (subStandardsExpanded.length === 0) {
         setError('Please enter at least one valid code to generate lessons.')
         setBusy(false)
@@ -165,37 +170,71 @@ export default function QuickLessonsPage() {
             </div>
             <div className="space-y-6">
               {subs.map((s, i) => (
-                <div key={i} className="border rounded-md p-3 bg-white/50">
-                  <div className="mb-2">
+                <div key={i} className="border rounded-md p-3 bg-white/50 space-y-3">
+                  <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-sm font-medium text-gray-700">Main Title (optional)</label>
-                      <span className="text-xs text-gray-600 bg-gray-100 rounded px-2 py-0.5">Codes: {countCodes(s.entry)}</span>
+                      <span className="text-xs text-gray-600 bg-gray-100 rounded px-2 py-0.5">Codes: {countCodes(s.rows)}</span>
                     </div>
                     <Input
                       value={s.title || ''}
-                      onChange={(e: any) => updateSub(i, 'title', e.target.value)}
+                      onChange={(e: any) => updateSubTitle(i, e.target.value)}
                       placeholder="e.g., Cell Biology Inquiry Series"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Codes and Description (optional)</label>
-                    <Textarea
-                      value={s.entry}
-                      onChange={(e: any) => updateSub(i, 'entry', e.target.value)}
-                      placeholder={"Enter codes (comma or newline separated). Optional: add description on new lines below.\nExample:\nHS-LS1.A, HS-LS1.B, HS-LS1.C\nCell structure and function focus for inquiry labs"}
-                      rows={10}
-                      className="min-h-[220px]"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Tip: First line = codes. Subsequent lines = description.</p>
-                  </div>
-                  <div className="mt-3 flex items-end gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Lessons</label>
-                      <Input type="number" min={1} value={s.lessons} onChange={(e: any) => updateSub(i, 'lessons', e.target.value)} />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Codes & Descriptions (one per row)</label>
+                    <div className="overflow-x-auto border border-gray-200 rounded">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left px-2 py-1 font-medium text-gray-700 w-48">Code</th>
+                            <th className="text-left px-2 py-1 font-medium text-gray-700">Description (optional)</th>
+                            <th className="px-2 py-1 w-20"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {s.rows.map((r, ri) => (
+                            <tr key={ri} className="border-t border-gray-100">
+                              <td className="px-2 py-1 align-top">
+                                <Input
+                                  value={r.code}
+                                  onChange={(e: any) => updateCodeRow(i, ri, 'code', e.target.value)}
+                                  placeholder="HS-LS1.A"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Textarea
+                                  value={r.description}
+                                  onChange={(e: any) => updateCodeRow(i, ri, 'description', e.target.value)}
+                                  rows={2}
+                                  placeholder="Brief focus or clarification"
+                                  className="min-h-[56px]"
+                                />
+                              </td>
+                              <td className="px-2 py-1 align-top">
+                                <div className="flex flex-col gap-1">
+                                  <Button size="sm" variant="outline" onClick={() => removeCodeRow(i, ri)} disabled={s.rows.length === 1 || busy}>✕</Button>
+                                  {ri === s.rows.length - 1 && (
+                                    <Button size="sm" variant="outline" onClick={() => addCodeRow(i)} disabled={busy}>+ Add</Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div className="flex gap-2 pt-5">
-                      <Button size="sm" onClick={() => handleGenerateOne(i)} disabled={busy || !subject || !grade}>Generate</Button>
-                      <Button size="sm" variant="outline" onClick={() => removeSub(i)} disabled={busy}>Remove</Button>
+                    <p className="text-xs text-gray-500 mt-1">Add each standard code on its own row with optional description.</p>
+                  </div>
+                  <div className="flex items-end gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Lessons per Code</label>
+                      <Input type="number" min={1} value={s.lessons} onChange={(e: any) => updateSubLessons(i, e.target.value)} />
+                    </div>
+                    <div className="flex gap-2 pb-1">
+                      <Button size="sm" onClick={() => handleGenerateOne(i)} disabled={busy || !subject || !grade || countCodes(s.rows)===0}>Generate</Button>
+                      <Button size="sm" variant="outline" onClick={() => removeSub(i)} disabled={busy}>Remove Group</Button>
                     </div>
                   </div>
                 </div>
