@@ -25,6 +25,15 @@ export default function QuickLessonsPage() {
   }
   const removeSub = (i: number) => setSubs((prev) => prev.filter((_, idx) => idx !== i))
 
+  function countCodes(entry: string): number {
+    const raw = String(entry || '')
+    if (!raw.trim()) return 0
+    const first = (raw.split(/\r?\n/)[0] || '').trim()
+    if (!first) return 0
+    const tokens = Array.from(new Set(first.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)))
+    return tokens.length
+  }
+
   function parseEntry(entry: string, lessons: number, title?: string): Array<{ code: string; description: string; lessons: number; title?: string }> {
     const raw = String(entry || '')
     if (!raw.trim()) return []
@@ -158,7 +167,10 @@ export default function QuickLessonsPage() {
               {subs.map((s, i) => (
                 <div key={i} className="border rounded-md p-3 bg-white/50">
                   <div className="mb-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Main Title (optional)</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-gray-700">Main Title (optional)</label>
+                      <span className="text-xs text-gray-600 bg-gray-100 rounded px-2 py-0.5">Codes: {countCodes(s.entry)}</span>
+                    </div>
                     <Input
                       value={s.title || ''}
                       onChange={(e: any) => updateSub(i, 'title', e.target.value)}
