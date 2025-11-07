@@ -199,11 +199,39 @@ export default function QuickLessonsPage() {
                             <tr key={ri}>
                               <td className="border border-gray-300 text-center text-xs text-gray-600 px-2 py-1">{ri + 1}</td>
                               <td className="border border-gray-300 px-0 py-0 align-top">
-                                <Input
+                                <input
                                   value={r.code}
                                   onChange={(e: any) => updateCodeRow(i, ri, 'code', e.target.value)}
-                                  placeholder="HS-LS1.A"
-                                  className="w-full border-0 rounded-none focus:ring-0 focus:outline-none bg-transparent px-2 py-1"
+                                  placeholder="HS-LS1-6"
+                                  className="w-full border-0 rounded-none focus:ring-0 focus:outline-none bg-transparent px-2 py-1 text-sm"
+                                  onPaste={(e) => {
+                                    const text = e.clipboardData.getData('text')
+                                    if (!text.includes('\n')) return
+                                    e.preventDefault()
+                                    // Parse lines: code[TAB or spaces]description
+                                    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
+                                    if (lines.length === 0) return
+                                    setSubs(prev => prev.map((group, gi) => {
+                                      if (gi !== i) return group
+                                      const before = group.rows.slice(0, ri)
+                                      const after = group.rows.slice(ri + 1)
+                                      const parsed = lines.map(line => {
+                                        const parts = line.split(/\t|\s{2,}|\s-\s/)
+                                        // Fallback: first token up to first space, rest description
+                                        let code = ''
+                                        let desc = ''
+                                        if (parts.length >= 2) {
+                                          code = parts[0].trim()
+                                          desc = parts.slice(1).join(' ').trim()
+                                        } else {
+                                          const m = line.match(/^(\S+)(?:\s+)(.*)$/)
+                                          if (m) { code = m[1]; desc = m[2] } else { code = line }
+                                        }
+                                        return { code, description: desc }
+                                      })
+                                      return { ...group, rows: [...before, ...parsed, ...after] }
+                                    }))
+                                  }}
                                 />
                               </td>
                               <td className="border border-gray-300 px-0 py-0">
