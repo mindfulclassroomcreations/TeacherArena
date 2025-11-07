@@ -184,44 +184,49 @@ export default function QuickLessonsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Codes & Descriptions (one per row)</label>
-                    <div className="overflow-x-auto border border-gray-200 rounded">
-                      <table className="w-full text-sm">
+                    <div className="overflow-x-auto border border-gray-300 rounded">
+                      <table className="w-full text-sm border-collapse">
                         <thead>
-                          <tr className="bg-gray-50">
-                            <th className="text-left px-2 py-1 font-medium text-gray-700 w-48">Code</th>
-                            <th className="text-left px-2 py-1 font-medium text-gray-700">Description (optional)</th>
-                            <th className="px-2 py-1 w-20"></th>
+                          <tr>
+                            <th className="border border-gray-300 bg-gray-50 text-gray-700 font-medium w-10 text-center px-2 py-1">#</th>
+                            <th className="border border-gray-300 bg-gray-50 text-gray-700 font-medium w-56 px-2 py-1">A</th>
+                            <th className="border border-gray-300 bg-gray-50 text-gray-700 font-medium px-2 py-1">B</th>
+                            <th className="border border-gray-300 bg-gray-50 w-12 px-2 py-1"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {s.rows.map((r, ri) => (
-                            <tr key={ri} className="border-t border-gray-100">
-                              <td className="px-2 py-1 align-top">
+                            <tr key={ri}>
+                              <td className="border border-gray-300 text-center text-xs text-gray-600 px-2 py-1">{ri + 1}</td>
+                              <td className="border border-gray-300 px-0 py-0 align-top">
                                 <Input
                                   value={r.code}
                                   onChange={(e: any) => updateCodeRow(i, ri, 'code', e.target.value)}
                                   placeholder="HS-LS1.A"
+                                  className="w-full border-0 rounded-none focus:ring-0 focus:outline-none bg-transparent px-2 py-1"
                                 />
                               </td>
-                              <td className="px-2 py-1">
+                              <td className="border border-gray-300 px-0 py-0">
                                 <Textarea
                                   value={r.description}
                                   onChange={(e: any) => updateCodeRow(i, ri, 'description', e.target.value)}
-                                  rows={2}
+                                  rows={1}
                                   placeholder="Brief focus or clarification"
-                                  className="min-h-[56px]"
+                                  className="w-full min-h-[36px] border-0 rounded-none focus:ring-0 focus:outline-none bg-transparent px-2 py-1"
                                 />
                               </td>
-                              <td className="px-2 py-1 align-top">
-                                <div className="flex flex-col gap-1">
-                                  <Button size="sm" variant="outline" onClick={() => removeCodeRow(i, ri)} disabled={s.rows.length === 1 || busy}>✕</Button>
-                                  {ri === s.rows.length - 1 && (
-                                    <Button size="sm" variant="outline" onClick={() => addCodeRow(i)} disabled={busy}>+ Add</Button>
-                                  )}
-                                </div>
+                              <td className="border border-gray-300 px-2 py-1 align-top text-center">
+                                <Button size="sm" variant="outline" onClick={() => removeCodeRow(i, ri)} disabled={s.rows.length === 1 || busy}>✕</Button>
                               </td>
                             </tr>
                           ))}
+                          <tr>
+                            <td className="border border-gray-300 px-2 py-1 text-center text-xs text-gray-400">{s.rows.length + 1}</td>
+                            <td className="border border-gray-300 px-2 py-1" colSpan={2}>
+                              <Button size="sm" variant="outline" onClick={() => addCodeRow(i)} disabled={busy}>+ Add row</Button>
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1"></td>
+                          </tr>
                         </tbody>
                       </table>
                     </div>
