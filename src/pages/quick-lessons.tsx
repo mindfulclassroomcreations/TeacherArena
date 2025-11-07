@@ -12,20 +12,20 @@ export default function QuickLessonsPage() {
   const [stateCurriculum, setStateCurriculum] = useState('')
   const [grade, setGrade] = useState('')
   const [subject, setSubject] = useState('')
-  const [subs, setSubs] = useState<Array<{ entry: string; lessons: number }>>([
-    { entry: '', lessons: 1 },
+  const [subs, setSubs] = useState<Array<{ title?: string; entry: string; lessons: number }>>([
+    { title: '', entry: '', lessons: 1 },
   ])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<any[]>([])
 
-  const addSubRow = () => setSubs((prev) => [...prev, { entry: '', lessons: 1 }])
-  const updateSub = (i: number, k: 'entry'|'lessons', v: any) => {
+  const addSubRow = () => setSubs((prev) => [...prev, { title: '', entry: '', lessons: 1 }])
+  const updateSub = (i: number, k: 'title'|'entry'|'lessons', v: any) => {
     setSubs((prev) => prev.map((s, idx) => idx === i ? { ...s, [k]: k==='lessons' ? Math.max(1, Number(v)||1) : v } : s))
   }
   const removeSub = (i: number) => setSubs((prev) => prev.filter((_, idx) => idx !== i))
 
-  function parseEntry(entry: string, lessons: number): Array<{ code: string; description: string; lessons: number }> {
+  function parseEntry(entry: string, lessons: number, title?: string): Array<{ code: string; description: string; lessons: number; title?: string }> {
     const raw = String(entry || '')
     if (!raw.trim()) return []
     const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
@@ -38,14 +38,14 @@ export default function QuickLessonsPage() {
     const codeTokens = Array.from(new Set(
       codesPart.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
     ))
-    return codeTokens.map(code => ({ code, description: desc, lessons: Math.max(1, Number(lessons)||1) }))
+    return codeTokens.map(code => ({ code, description: desc, lessons: Math.max(1, Number(lessons)||1), title: String(title || '').trim() }))
   }
 
   const generateFor = async (indices: number[]) => {
     try {
       setBusy(true); setError(null)
       // Expand selected rows into individual sub-standard objects (support multiple codes per row)
-      const subStandardsExpanded = indices.flatMap((i) => parseEntry(subs[i]?.entry || '', subs[i]?.lessons || 1))
+  const subStandardsExpanded = indices.flatMap((i) => parseEntry(subs[i]?.entry || '', subs[i]?.lessons || 1, subs[i]?.title || ''))
       if (subStandardsExpanded.length === 0) {
         setError('Please enter at least one valid code to generate lessons.')
         setBusy(false)
@@ -154,27 +154,37 @@ export default function QuickLessonsPage() {
               <h2 className="text-lg font-medium">Sub-standards</h2>
               <Button size="sm" variant="outline" onClick={addSubRow}>+ Add another</Button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-6">
               {subs.map((s, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                  <div className="sm:col-span-10">
+                <div key={i} className="border rounded-md p-3 bg-white/50">
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Main Title (optional)</label>
+                    <Input
+                      value={s.title || ''}
+                      onChange={(e: any) => updateSub(i, 'title', e.target.value)}
+                      placeholder="e.g., Cell Biology Inquiry Series"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700">Codes and Description (optional)</label>
                     <Textarea
                       value={s.entry}
                       onChange={(e: any) => updateSub(i, 'entry', e.target.value)}
                       placeholder={"Enter codes (comma or newline separated). Optional: add description on new lines below.\nExample:\nHS-LS1.A, HS-LS1.B, HS-LS1.C\nCell structure and function focus for inquiry labs"}
-                      rows={6}
-                      className="min-h-[150px]"
+                      rows={10}
+                      className="min-h-[220px]"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Tip: First line = codes (comma or newline separated). Next lines = optional description.</p>
+                    <p className="text-xs text-gray-500 mt-1">Tip: First line = codes. Subsequent lines = description.</p>
                   </div>
-                  <div className="sm:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700">Lessons</label>
-                    <Input type="number" min={1} value={s.lessons} onChange={(e: any) => updateSub(i, 'lessons', e.target.value)} />
-                  </div>
-                  <div className="sm:col-span-1 flex gap-2">
-                    <Button size="sm" onClick={() => handleGenerateOne(i)} disabled={busy || !subject || !grade}>Generate</Button>
-                    <Button size="sm" variant="outline" onClick={() => removeSub(i)} disabled={busy}>Remove</Button>
+                  <div className="mt-3 flex items-end gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Lessons</label>
+                      <Input type="number" min={1} value={s.lessons} onChange={(e: any) => updateSub(i, 'lessons', e.target.value)} />
+                    </div>
+                    <div className="flex gap-2 pt-5">
+                      <Button size="sm" onClick={() => handleGenerateOne(i)} disabled={busy || !subject || !grade}>Generate</Button>
+                      <Button size="sm" variant="outline" onClick={() => removeSub(i)} disabled={busy}>Remove</Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -195,6 +205,7 @@ export default function QuickLessonsPage() {
               <div className="divide-y">
                 {items.map((it, idx) => (
                   <div key={idx} className="py-2">
+                    {it._rowTitle ? <div className="text-xs text-gray-400 italic">{it._rowTitle}</div> : null}
                     <div className="text-sm text-gray-500">{it.standard_code}</div>
                     <div className="font-medium">{it.title}</div>
                     <div className="text-sm text-gray-700">{it.description}</div>
