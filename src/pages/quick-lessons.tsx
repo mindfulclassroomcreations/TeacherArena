@@ -146,8 +146,12 @@ export default function QuickLessonsPage() {
         window.localStorage.removeItem('ta_tables_deleted')
         window.localStorage.removeItem('ta_tables_deleted_signature')
       } catch {}
-      // Navigate to tables
-      window.location.href = '/tables'
+      // Navigate to tables in a new tab (after synchronous localStorage save)
+      try {
+        window.open('/tables', '_blank')
+      } catch {
+        window.location.href = '/tables'
+      }
     } catch (e) {
       setError('Failed to move to Tables. Please try again.')
     }
