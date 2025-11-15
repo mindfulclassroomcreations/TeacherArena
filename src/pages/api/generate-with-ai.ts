@@ -585,12 +585,11 @@ REQUIREMENTS
   // Always use a single model across the app
   const model = 'gpt-5-mini-2025-08-07'
 
-    // For object-shaped outputs (and a few array-heavy ones prone to non-JSON), enforce JSON object format
+    // Only enforce JSON object format for types that return an object
     const needsJsonObject = (
       type === 'lesson-discovery' ||
       type === 'grades' ||
-      type === 'state-standard' ||
-      type === 'state-curricula'
+      type === 'state-standard'
     )
     const response = await client.chat.completions.create({
       model,
