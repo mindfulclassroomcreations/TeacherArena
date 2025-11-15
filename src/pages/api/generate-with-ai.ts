@@ -607,8 +607,6 @@ REQUIREMENTS
           content: userPrompt
         }
       ],
-      // Newer chat models use max_completion_tokens instead of max_tokens
-      max_completion_tokens: 2000,
       ...(needsJsonObject ? { response_format: { type: 'json_object' as const } } : {}),
     })
 
@@ -618,6 +616,11 @@ REQUIREMENTS
     }
 
     if (!responseText) {
+      const meta = {
+        finish_reason: response?.choices?.[0]?.finish_reason,
+        usage: response?.usage || undefined,
+      }
+      console.error('Empty AI response meta:', meta)
       return res.status(500).json({
         error: 'AI response was empty or unreadable. Please try again.',
       })
