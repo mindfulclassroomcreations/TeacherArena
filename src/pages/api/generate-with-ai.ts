@@ -107,7 +107,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   )
 
   // Handle OPTIONS request
@@ -165,6 +165,29 @@ export default async function handler(
     }
 
   let userPrompt = ''
+
+  // Helper: Some models may wrap arrays inside an object like { items: [...] }.
+  // This utility normalizes such responses into arrays when the API expects an array.
+  const ensureArray = (data: any): any[] | null => {
+    if (Array.isArray(data)) return data
+    if (data && typeof data === 'object') {
+      // Common wrapper key
+      if (Array.isArray((data as any).items)) return (data as any).items
+      // Other likely keys the model might use
+      const candidateKeys = ['subjects', 'data', 'list', 'results', 'grades', 'major_parts']
+      for (const key of candidateKeys) {
+        const v = (data as any)[key]
+        if (Array.isArray(v)) return v
+      }
+      // Find any array of objects with a likely item shape (name/title)
+      for (const v of Object.values(data)) {
+        if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && (('name' in v[0]) || ('title' in v[0]))) {
+          return v as any[]
+        }
+      }
+    }
+    return null
+  }
 
   // Shared guidance injected into each prompt for higher compliance
   const sharedRules = `
@@ -562,6 +585,8 @@ REQUIREMENTS
   // Always use a single model across the app
   const model = 'gpt-5-mini-2025-08-07'
 
+    // For object-shaped outputs, enforce JSON object format to reduce parsing errors
+    const needsJsonObject = (type === 'lesson-discovery' || type === 'grades' || type === 'state-standard')
     const response = await client.chat.completions.create({
       model,
       messages: [
@@ -576,6 +601,7 @@ REQUIREMENTS
       ],
       temperature,
       max_tokens: 2000,
+      ...(needsJsonObject ? { response_format: { type: 'json_object' as const } } : {}),
     })
 
     let responseText = ''
@@ -591,11 +617,17 @@ REQUIREMENTS
 
     let parsedData = null
     try {
-      const jsonMatch = responseText.match(/\[[\s\S]*\]|\{[\s\S]*\}/)
+      // Strip common code fences if present
+      let cleaned = String(responseText || '').trim()
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '')
+        if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3)
+      }
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]|\{[\s\S]*\}/)
       if (jsonMatch) {
         parsedData = JSON.parse(jsonMatch[0])
       } else {
-        parsedData = JSON.parse(responseText)
+        parsedData = JSON.parse(cleaned)
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', responseText)
@@ -618,8 +650,8 @@ REQUIREMENTS
     }
 
     if (type === 'lessons-by-substandards') {
-      let items = parsedData
-      if (!Array.isArray(items)) {
+      let items = ensureArray(parsedData)
+      if (!items) {
         return res.status(500).json({ error: 'AI did not return an array of lessons' })
       }
 
@@ -673,8 +705,8 @@ REQUIREMENTS
     }
 
     if (type === 'section-standards') {
-      let items = parsedData
-      if (!Array.isArray(items)) {
+      let items = ensureArray(parsedData)
+      if (!items) {
         return res.status(500).json({ error: 'AI did not return an array of sub-standards' })
       }
 
@@ -693,8 +725,8 @@ REQUIREMENTS
     }
 
     if (type === 'lesson-generation-by-strand') {
-      let items = parsedData
-      if (!Array.isArray(items)) {
+      let items = ensureArray(parsedData)
+      if (!items) {
         return res.status(500).json({ error: 'AI did not return an array of lessons' })
       }
 
@@ -779,8 +811,8 @@ REQUIREMENTS
     }
 
     if (type === 'state-curricula') {
-      let items = parsedData
-      if (!Array.isArray(items)) {
+      let items = ensureArray(parsedData)
+      if (!items) {
         return res.status(500).json({ error: 'AI did not return an array of state curricula' })
       }
 
@@ -825,8 +857,8 @@ REQUIREMENTS
 
     // Type-specific handling: subjects must include at least one Science-related item (for supported countries)
     if (type === 'subjects') {
-      let items = parsedData
-      if (!Array.isArray(items)) {
+      let items = ensureArray(parsedData)
+      if (!items) {
         return res.status(500).json({ error: 'AI did not return an array of items' })
       }
 
@@ -887,8 +919,8 @@ REQUIREMENTS
     }
 
     // Default normalization for other types
-    let items = parsedData
-    if (!Array.isArray(items)) {
+    let items = ensureArray(parsedData)
+    if (!items) {
       return res.status(500).json({ error: 'AI did not return an array of items' })
     }
 
