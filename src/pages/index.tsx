@@ -601,7 +601,8 @@ export default function Home() {
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
-      setError('Failed to retrieve state curricula. Please try again.')
+      const msg = String((err as any)?.message || 'Failed to retrieve state curricula. Please try again.')
+      setError(msg)
     } finally {
       setIsLoading(false)
     }
