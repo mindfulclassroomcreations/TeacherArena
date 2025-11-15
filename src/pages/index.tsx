@@ -13,6 +13,7 @@ import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
 import { downloadLessonsAsExcel, downloadCompleteCurriculumAsExcel, downloadStep5OrganizedExcel, downloadStep5SectionExcel, downloadSubStandardExcel } from '@/lib/excelExport'
 import { generateContent } from '@/lib/api'
+import { DEFAULT_MODEL } from '@/lib/openai'
 import { supabase } from '@/lib/supabase'
 
 interface Item {
@@ -32,6 +33,13 @@ interface Strand {
 }
 
 export default function Home() {
+  // Small inline badge to show which AI model is used for generation
+  const ModelBadge = ({ className = '' }: { className?: string }) => (
+    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border border-gray-300 bg-gray-50 text-gray-700 ${className}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+      Model: {DEFAULT_MODEL}
+    </span>
+  )
   // Helper to ensure session is valid before API calls
   const ensureValidSession = async (): Promise<boolean> => {
     try {
@@ -1726,10 +1734,11 @@ export default function Home() {
                 max="50"
               />
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               <Button onClick={() => handleGenerateSubjects()} isLoading={isLoading}>
                 Generate {requestedSubjectsCount ? `${requestedSubjectsCount} ` : ''}Subjects
               </Button>
+              <ModelBadge />
             </div>
           </div>
         </div>
@@ -1801,10 +1810,11 @@ export default function Home() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">🗺️ Step 2: Select State/Provincial Curriculum</h2>
                 <p className="text-gray-600 mb-4">Choose the state curriculum standards you want to follow, or create a custom grouping.</p>
               </div>
-              <div className="pt-1">
+              <div className="pt-1 flex items-center gap-2">
                 <Button variant="outline" size="sm" className="border-black text-black hover:bg-gray-50" onClick={() => setShowCustomGroupModal(true)}>
                   + Create Custom Curriculum
                 </Button>
+                <ModelBadge />
               </div>
             </div>
             
@@ -2056,7 +2066,10 @@ export default function Home() {
       {currentStep >= 3 && selectedSubject && selectedStateCurriculum && (
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">🎯 Step 3: Select a Grade Level</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">🎯 Step 3: Select a Grade Level</h2>
+              <ModelBadge />
+            </div>
             <p className="text-gray-600 mb-4">Choose a grade level for {selectedSubject.name}.</p>
             
             {/* Context Display */}
@@ -2214,7 +2227,10 @@ export default function Home() {
       {currentStep >= 4 && selectedSubject && selectedStateCurriculum && selectedGrade && (
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-1">📋 Step 4: Browse Standards and Units</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-3xl font-bold text-gray-900 mb-1">📋 Step 4: Browse Standards and Units</h2>
+              <ModelBadge />
+            </div>
             <p className="text-gray-600 text-sm">Select curriculum units for your lesson plan</p>
             {/* Comprehensive Context Summary for Step 4 - All information from Steps 1-3 */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 space-y-3">
@@ -2324,7 +2340,10 @@ export default function Home() {
       {currentStep >= 4 && selectedFramework && (
         <div id="step-5" className="mb-8">
           <div className="mb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-1">📚 Step 5: Browse Curriculum Standards</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-3xl font-bold text-gray-900 mb-1">📚 Step 5: Browse Curriculum Standards</h2>
+              <ModelBadge />
+            </div>
             <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
             {/* Comprehensive Context Summary for Step 5 - All information from Steps 1-4 */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 space-y-3">
@@ -2838,7 +2857,10 @@ export default function Home() {
           <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">📊 Step 6: Curriculum Strands & Lessons</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">📊 Step 6: Curriculum Strands & Lessons</h2>
+                  <ModelBadge />
+                </div>
                 <p className="text-gray-600">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
               </div>
               <div className="text-right">
