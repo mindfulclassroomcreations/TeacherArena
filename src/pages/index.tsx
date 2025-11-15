@@ -2417,7 +2417,7 @@ export default function Home() {
               <p className="text-sm text-gray-500">Generating unit topics...</p>
             )}
             {unitTopics.length === 0 && !isLoading && (
-              <p className="text-sm text-gray-600">No unit topics generated yet. Click "Generate Unit Topics" to get high-level clusters for this subject.</p>
+              <p className="text-sm text-gray-600">No unit topics generated yet. Click &quot;Generate Unit Topics&quot; to get high-level clusters for this subject.</p>
             )}
             {unitTopics.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
