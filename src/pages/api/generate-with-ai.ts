@@ -498,13 +498,16 @@ REQUIREMENTS
 - Provide 3–12 groupings depending on ${country}.
 
 OUTPUT
-[
-  {
-    "curriculum_name": "Common Core State Standards (CCSS) – Science",
-    "states": ["California", "New York"],
-    "description": "Science learning standards adopted or adapted by multiple states (discipline core ideas, practices, and crosscutting concepts)."
-  }
-]
+Respond with ONLY a JSON object using this exact shape:
+{
+  "items": [
+    {
+      "curriculum_name": "Common Core State Standards (CCSS) – Science",
+      "states": ["California", "New York"],
+      "description": "Science learning standards adopted or adapted by multiple states (discipline core ideas, practices, and crosscutting concepts)."
+    }
+  ]
+}
 `
         break
 
@@ -585,11 +588,12 @@ REQUIREMENTS
   // Always use a single model across the app
   const model = 'gpt-5-mini-2025-08-07'
 
-    // Only enforce JSON object format for types that return an object
+    // Enforce JSON object format where prompts ask for object output
     const needsJsonObject = (
       type === 'lesson-discovery' ||
       type === 'grades' ||
-      type === 'state-standard'
+      type === 'state-standard' ||
+      type === 'state-curricula'
     )
     const response = await client.chat.completions.create({
       model,
