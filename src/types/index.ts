@@ -57,6 +57,8 @@ export interface AIGenerationRequest {
   targetLessonCount?: number
   keyTopics?: string[]
   performanceExpectations?: string[]
+  // Optional model override for each step
+  model?: string
   // For state-standard
   region?: string
   // For all steps: selected curriculum grouping (e.g., TEKS, SOL)

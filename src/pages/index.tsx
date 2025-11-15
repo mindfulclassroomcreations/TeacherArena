@@ -13,7 +13,7 @@ import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
 import { downloadLessonsAsExcel, downloadCompleteCurriculumAsExcel, downloadStep5OrganizedExcel, downloadStep5SectionExcel, downloadSubStandardExcel } from '@/lib/excelExport'
 import { generateContent } from '@/lib/api'
-import { DEFAULT_MODEL } from '@/lib/openai'
+import { DEFAULT_MODEL, ALLOWED_MODELS } from '@/lib/ai-constants'
 import { supabase } from '@/lib/supabase'
 
 interface Item {
@@ -33,12 +33,32 @@ interface Strand {
 }
 
 export default function Home() {
-  // Small inline badge to show which AI model is used for generation
-  const ModelBadge = ({ className = '' }: { className?: string }) => (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border border-gray-300 bg-gray-50 text-gray-700 ${className}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
-      Model: {DEFAULT_MODEL}
-    </span>
+  // User-selectable model (applies to all steps). Default is the recommended model.
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL)
+  // Attractive, button-like model selector used in each step header
+  const ModelSelector = ({ className = '' }: { className?: string }) => (
+    <div className={`inline-flex items-center gap-2 ${className}`}>
+      <span className="hidden sm:inline text-xs font-semibold tracking-wide text-purple-800">Model</span>
+      <div className="relative">
+        <select
+          aria-label="AI model selector"
+          title={selectedModel}
+          value={selectedModel}
+          onChange={(e) => setSelectedModel(e.target.value)}
+          className="appearance-none pr-8 pl-3 py-1.5 rounded-full border-2 border-purple-400 bg-white text-gray-900 text-sm font-mono shadow-sm focus:outline-none focus:ring-4 focus:ring-purple-200 hover:border-purple-500"
+        >
+          {ALLOWED_MODELS.map((m) => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+        {/* Chevron */}
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-purple-600">▾</span>
+      </div>
+      {/* Prominent, clearly visible current model badge (hidden on very small screens to avoid crowding) */}
+      <span className="hidden md:inline-flex items-center gap-1 rounded-full border border-purple-300 bg-purple-50 text-purple-800 text-[11px] font-mono px-2 py-1">
+        Using: {selectedModel}
+      </span>
+    </div>
   )
   // Helper to ensure session is valid before API calls
   const ensureValidSession = async (): Promise<boolean> => {
@@ -64,6 +84,7 @@ export default function Home() {
   const [subjects, setSubjects] = useState<Item[]>([])
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [frameworks, setFrameworks] = useState<Item[]>([])
+  const [unitTopics, setUnitTopics] = useState<Item[]>([])
   const [grades, setGrades] = useState<Item[]>([])
   // Step 3: categorized grades (Elementary, Middle school, High school)
   const [gradeCategories, setGradeCategories] = useState<{
@@ -570,6 +591,7 @@ export default function Home() {
         type: 'subjects',
         country: country,
         context: context || '',
+        model: selectedModel,
         subjectsCount
       })
       if (response.items) {
@@ -600,7 +622,8 @@ export default function Home() {
         type: 'state-curricula',
         country: selectedCountry,
         subject: selectedSubject.name,
-        context: context || ''
+        context: context || '',
+        model: selectedModel
       })
       if (response.items) {
         setStateCurricula(response.items)
@@ -630,7 +653,8 @@ export default function Home() {
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
         region: selectedRegion || undefined,
-        context: context
+        context: context,
+        model: selectedModel
       })
       if (response.items) {
         setFrameworks(response.items)
@@ -639,6 +663,34 @@ export default function Home() {
       }
     } catch (err) {
       setError('Failed to generate frameworks. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGenerateUnitTopics = async () => {
+    if (!selectedSubject) return
+    // Avoid re-fetch if already loaded
+    if (unitTopics.length > 0) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await generateContent({
+        type: 'unit-topics',
+        country: selectedCountry || undefined,
+        subject: selectedSubject.name,
+        grade: selectedGrade?.name || undefined,
+        region: selectedRegion || undefined,
+        context: context,
+        model: selectedModel
+      })
+      if (response.items) {
+        setUnitTopics(response.items)
+        setSuccess(`Generated ${response.items.length} unit topics!`)
+        setTimeout(() => setSuccess(null), 3000)
+      }
+    } catch (err) {
+      setError('Failed to generate unit topics. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -659,7 +711,8 @@ export default function Home() {
         subject: selectedSubject.name,
         framework: selectedFramework?.name,
         region: selectedRegion || undefined,
-        context: context
+        context: context,
+        model: selectedModel
       })
       if (response.items) {
         setGrades(response.items)
@@ -714,7 +767,8 @@ export default function Home() {
         framework: selectedFramework.name,
         grade: selectedGrade.name,
         region: selectedRegion || undefined,
-        totalLessonCount: parseInt(totalLessonCount) || 45
+        totalLessonCount: parseInt(totalLessonCount) || 45,
+        model: selectedModel
       })
       if (response.items && response.items[0]?.major_parts) {
         setStrands(response.items[0].major_parts)
@@ -744,7 +798,8 @@ export default function Home() {
         strandName: strand.strand_name,
         targetLessonCount: strand.target_lesson_count,
         keyTopics: strand.key_topics,
-        performanceExpectations: strand.performance_expectations
+        performanceExpectations: strand.performance_expectations,
+        model: selectedModel
       })
       if (response.items) {
         // Tag lessons with strand context for grouping later
@@ -812,7 +867,8 @@ export default function Home() {
               strandName: strand.strand_name,
               targetLessonCount: strand.target_lesson_count,
               keyTopics: strand.key_topics,
-              performanceExpectations: strand.performance_expectations
+              performanceExpectations: strand.performance_expectations,
+              model: selectedModel
             })
             if (response.items && Array.isArray(response.items)) {
               const tagged = response.items.map((it: any) => ({
@@ -905,7 +961,8 @@ export default function Home() {
         type: 'state-curricula',
         country: selectedCountry,
         subject: selectedSubject.name,
-        context: context || ''
+        context: context || '',
+        model: selectedModel
       })
       if (response.items) {
         setStateCurricula(response.items)
@@ -967,6 +1024,7 @@ export default function Home() {
         country: selectedCountry,
         subject: selectedSubject.name,
         region: regionName,
+        model: selectedModel,
       } as any)
       if (response.items && response.items[0]) {
         const details = response.items[0]
@@ -1015,7 +1073,9 @@ export default function Home() {
         framework: selectedFramework.name,
         grade: selectedGrade.name,
         region: selectedRegion || undefined,
-        context: context
+        stateStandardName: selectedStateStandardDetails?.standard_name,
+        context: context,
+        model: selectedModel
       })
       if (response.items) {
         setCurriculumSections(response.items)
@@ -1048,7 +1108,8 @@ export default function Home() {
         region: selectedRegion || undefined,
         stateCurriculum: selectedStateCurriculum?.curriculum_name,
         section: section.title || section.name,
-        context
+        context,
+        model: selectedModel
       })
       if (Array.isArray(response.items)) {
         setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
@@ -1087,7 +1148,8 @@ export default function Home() {
           region: selectedRegion || undefined,
           stateCurriculum: selectedStateCurriculum?.curriculum_name,
           section: section.title || section.name,
-          context
+          context,
+          model: selectedModel
         })
         if (Array.isArray(response.items)) {
           setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
@@ -1131,7 +1193,8 @@ export default function Home() {
           region: selectedRegion || undefined,
           stateCurriculum: selectedStateCurriculum?.curriculum_name,
           section: section.title || section.name,
-          context
+          context,
+          model: selectedModel
         })
         if (Array.isArray(response.items)) {
           setSubStandardsBySection((prev) => ({ ...prev, [key]: response.items }))
@@ -1194,7 +1257,8 @@ export default function Home() {
         section: section.title || section.name,
         subStandards,
         lessonsPerStandard: lessonsPerStandard,
-        context
+        context,
+        model: selectedModel
       } as any)
       if (Array.isArray(response.items)) {
         // Save lessons under this section only (do not push to Step 6 lists)
@@ -1261,7 +1325,8 @@ export default function Home() {
           section: section.title || section.name,
           subStandards,
           lessonsPerStandard: lessonsPerStandard,
-          context
+          context,
+          model: selectedModel
         } as any)
         if (Array.isArray(response.items)) {
           setLessonsBySection((prev) => ({ ...prev, [key]: response.items }))
@@ -1316,7 +1381,8 @@ export default function Home() {
           section: section.title || section.name,
           subStandards,
           lessonsPerStandard: lessonsPerStandard,
-          context
+          context,
+          model: selectedModel
         } as any)
         if (Array.isArray(response.items)) {
           setLessonsBySection((prev) => ({ ...prev, [key]: response.items }))
@@ -1376,7 +1442,8 @@ export default function Home() {
         section: section.title || section.name,
         subStandards: [subStandard],
         lessonsPerStandard: Math.max(1, per),
-        context
+        context,
+        model: selectedModel
       } as any)
       if (Array.isArray(response.items)) {
         setLessonsBySection((prev) => {
@@ -1494,7 +1561,8 @@ export default function Home() {
           section: section.title || section.name,
           subStandards: [item.ss],
           lessonsPerStandard: per,
-          context
+          context,
+          model: selectedModel
         } as any)
         if (Array.isArray(response.items)) {
           total += response.items.length
@@ -1738,7 +1806,7 @@ export default function Home() {
               <Button onClick={() => handleGenerateSubjects()} isLoading={isLoading}>
                 Generate {requestedSubjectsCount ? `${requestedSubjectsCount} ` : ''}Subjects
               </Button>
-              <ModelBadge />
+              <ModelSelector />
             </div>
           </div>
         </div>
@@ -1814,7 +1882,7 @@ export default function Home() {
                 <Button variant="outline" size="sm" className="border-black text-black hover:bg-gray-50" onClick={() => setShowCustomGroupModal(true)}>
                   + Create Custom Curriculum
                 </Button>
-                <ModelBadge />
+                <ModelSelector />
               </div>
             </div>
             
@@ -2068,7 +2136,7 @@ export default function Home() {
           <div className="mb-6">
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">🎯 Step 3: Select a Grade Level</h2>
-              <ModelBadge />
+              <ModelSelector />
             </div>
             <p className="text-gray-600 mb-4">Choose a grade level for {selectedSubject.name}.</p>
             
@@ -2229,7 +2297,7 @@ export default function Home() {
           <div className="mb-6">
             <div className="flex items-center gap-2">
               <h2 className="text-3xl font-bold text-gray-900 mb-1">📋 Step 4: Browse Standards and Units</h2>
-              <ModelBadge />
+              <ModelSelector />
             </div>
             <p className="text-gray-600 text-sm">Select curriculum units for your lesson plan</p>
             {/* Comprehensive Context Summary for Step 4 - All information from Steps 1-3 */}
@@ -2277,6 +2345,38 @@ export default function Home() {
                 <p className="text-sm text-blue-800">{selectedGrades.map(g => g.name).join(', ')}</p>
               </div>
             </div>
+          </div>
+
+          {/* Unit Topics (generated separately) */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">🗂️ Main Unit Topics
+                {unitTopics.length > 0 && (
+                  <span className="text-xs font-mono bg-purple-100 text-purple-700 px-2 py-0.5 rounded">{unitTopics.length} topics</span>
+                )}
+              </h3>
+              <Button onClick={handleGenerateUnitTopics} isLoading={isLoading} variant={unitTopics.length === 0 ? 'primary' : 'outline'} size="sm">
+                {unitTopics.length === 0 ? 'Generate Unit Topics' : 'Regenerate'}
+              </Button>
+            </div>
+            {isLoading && unitTopics.length === 0 && (
+              <p className="text-sm text-gray-500">Generating unit topics...</p>
+            )}
+            {unitTopics.length === 0 && !isLoading && (
+              <p className="text-sm text-gray-600">No unit topics generated yet. Click "Generate Unit Topics" to get high-level clusters for this subject.</p>
+            )}
+            {unitTopics.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {unitTopics.map((ut, i) => (
+                  <div key={i} className="p-4 rounded-lg border bg-white hover:border-purple-300 transition">
+                    <h4 className="font-semibold text-gray-900 mb-1">{ut.name || ut.title}</h4>
+                    {ut.description && (
+                      <p className="text-xs text-gray-600 leading-relaxed">{ut.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {isLoading && frameworks.length === 0 ? (
@@ -2342,7 +2442,7 @@ export default function Home() {
           <div className="mb-6">
             <div className="flex items-center gap-2">
               <h2 className="text-3xl font-bold text-gray-900 mb-1">📚 Step 5: Browse Curriculum Standards</h2>
-              <ModelBadge />
+              <ModelSelector />
             </div>
             <p className="text-gray-600 text-sm">View and select curriculum standard sections</p>
             {/* Comprehensive Context Summary for Step 5 - All information from Steps 1-4 */}
@@ -2503,6 +2603,7 @@ export default function Home() {
                   const isSecLessonsCompleted = !!completedLessonsBySection[secKey]
                   const isBatchCompleted = !!completedSelectedLessonsBySection[secKey]
                   const anySecLoading = isGenSubsLoading || isSecLessonsLoading || isSelectedLessonsLoading || isBulkLessonsLoading
+                  const displayTitle = `Unit ${index + 1} - ${String(section.title || section.name || '').trim()}`
                   return (
                   <div
                     key={section.id || index}
@@ -2521,7 +2622,7 @@ export default function Home() {
                       }`}
                     >
                       <div className="text-left flex-1">
-                        <h3 className="font-semibold text-gray-900">{section.title || section.name}</h3>
+                        <h3 className="font-semibold text-gray-900">{displayTitle}</h3>
                         {section.id && (
                           <p className="text-xs text-blue-600 font-mono mt-1">{section.id}</p>
                         )}
@@ -2859,7 +2960,7 @@ export default function Home() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-2xl font-bold text-gray-900 mb-1">📊 Step 6: Curriculum Strands & Lessons</h2>
-                  <ModelBadge />
+                  <ModelSelector />
                 </div>
                 <p className="text-gray-600">Lessons for Grade &quot;{selectedGrade?.name}&quot;</p>
               </div>

@@ -1,3 +1,4 @@
+// Server-only OpenAI client. Do NOT import this from client-side code.
 import { OpenAI } from 'openai'
 
 const client = new OpenAI({

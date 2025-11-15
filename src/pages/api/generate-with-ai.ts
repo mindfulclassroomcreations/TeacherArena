@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { OpenAI } from 'openai'
+import { ALLOWED_MODELS, DEFAULT_MODEL } from '@/lib/ai-constants'
 import { createClient } from '@supabase/supabase-js'
 
 // Disable body parser size limit
@@ -39,6 +40,68 @@ function normalizeStandardCode(input: string | undefined | null): string {
   }
   // Otherwise, return original untouched to avoid breaking state-specific formats (TEKS, SOL, etc.)
   return raw
+}
+
+// Build a simple teacher-facing fallback code when the model mixes subjects
+function buildFallbackCode(params: { subject?: string; grade?: string; section?: string; index: number }) {
+  const { subject = '', grade = '', section = '', index } = params
+  const acronym = ((): string => {
+    const s = subject.toLowerCase()
+    if (s.includes('science')) return 'SCI'
+    if (s.includes('math')) return 'MATH'
+    if (s.includes('english') || s.includes('ela') || s.includes('language')) return 'ELA'
+    if (s.includes('social') || s.includes('history') || s.includes('civics')) return 'SS'
+    if (s.includes('computer') || s.includes('technology') || s.includes('ict') || s.includes('cs')) return 'CS'
+    return (subject || 'STD').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'STD'
+  })()
+  const gradeBand = String(grade || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 4)
+  const sec = String(section || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+  const letter = String.fromCharCode('A'.charCodeAt(0) + (index % 26))
+  return [acronym, gradeBand || 'GR', sec || 'SEC', letter].filter(Boolean).join('-')
+}
+
+// Curriculum family detection and code validators
+type CurriculumFamily = 'NGSS' | 'TEKS' | 'SOL' | 'OTHER'
+
+function detectCurriculumFamily(name?: string, region?: string): CurriculumFamily {
+  const s = `${name || ''} ${region || ''}`.toLowerCase()
+  if (/(ngss|next generation science|nyssls|ste\b|ngsss)/.test(s)) return 'NGSS'
+  if (/(teks|texas\b)/.test(s)) return 'TEKS'
+  if (/(sol|virginia\b)/.test(s)) return 'SOL'
+  return 'OTHER'
+}
+
+function isCodeAllowedByFamily(code: string, family: CurriculumFamily, subject?: string): boolean {
+  const up = String(code || '').toUpperCase()
+  if (!up) return false
+  switch (family) {
+    case 'NGSS':
+      // HS-LS1.A or 3-ESS2.C
+      return /^(HS|MS|K|[1-9]|1[0-2])\-(LS|PS|ESS|ETS)\d(\.[A-Z])?$/.test(up)
+    case 'TEKS':
+      // 5.7A style across subjects; allow BIO./CHEM./PHYS. prefixes for HS
+      return /^(K|[1-9]|1[0-2])\.[0-9]+[A-Z]$/.test(up) || /^(BIO|CHEM|PHYS|SCI)\.[0-9]+(\.[A-Z])?$/.test(up)
+    case 'SOL':
+      // 6.2a or BIO.1.a (accept both upper/lower final letter)
+      return /^(K|[1-9]|1[0-2])\.[0-9]+[A-Z]$/i.test(up) || /^(BIO|CHEM|PHYS|SCI)\.[0-9]+(\.[A-Z])?$/i.test(up)
+    default:
+      // Generic acceptance: our own teacher-facing prefixes per subject to avoid cross-mixing
+      const subj = String(subject || '').toLowerCase()
+      const acr = subj.includes('science') ? 'SCI' : subj.includes('math') ? 'MATH' : (subj.includes('english') || subj.includes('ela') || subj.includes('language')) ? 'ELA' : (subj.includes('social') || subj.includes('history') || subj.includes('civics')) ? 'SS' : subj.includes('computer') || subj.includes('technology') || subj.includes('ict') || subj.includes('cs') ? 'CS' : 'STD'
+      const re = new RegExp(`^${acr}\-`)
+      return re.test(up)
+  }
+}
+
+// Heuristic subject-aware checker retained for Science-specific fallbacks
+function isLikelyScienceCode(code: string): boolean {
+  const up = String(code || '').toUpperCase()
+  if (!up) return false
+  if (/^(HS|MS|K|[1-9]|1[0-2])\-(LS|PS|ESS|ETS)\d(\.[A-Z])?$/.test(up)) return true
+  if (/^(K|[1-9]|1[0-2])\.[0-9]+[A-Z]$/.test(up)) return true
+  if (/^(BIO|CHEM|PHYS|SCI)\./.test(up)) return true
+  if (/^SCI\-/.test(up)) return true
+  return false
 }
 
 // Supabase admin client for token enforcement
@@ -121,7 +184,7 @@ export default async function handler(
   }
 
   try {
-  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section, stateCurriculum, subStandards, lessonsPerStandard, targetLessonCount } = req.body
+  const { type, country, subject, framework, grade, context, totalLessonCount, region, subjectsCount, section, stateCurriculum, subStandards, lessonsPerStandard, targetLessonCount, stateStandardName, model: reqModel } = req.body
 
     if (!type) {
       return res.status(400).json({ error: 'Missing required field: type' })
@@ -200,7 +263,44 @@ GENERAL INSTRUCTIONS
 `
 
   switch (type) {
+  case 'unit-topics':
+        userPrompt = `${sharedRules}
+TASK: Generate main curriculum unit topic clusters for lesson planning.
+
+INPUTS
+- Subject: "${subject}"
+- Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
+${grade ? `- Grade Level: "${grade}"` : ''}
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+
+REQUIREMENTS
+- Return 8–12 high-level unit topics (major conceptual groupings) appropriate for ${grade || 'K–12'} ${subject}.
+- Each item must include: name (string), description (string).
+- Name should be short (2–5 words) and classroom-friendly; description 1 concise sentence focusing on learning focus.
+- Avoid duplicates or overly narrow single-lesson themes; focus on reusable multi-week clusters.
+- Prefer units that map well to worksheet/task card / Google Forms style resources.
+
+OUTPUT
+[
+  { "name": "Foundations of Measurement", "description": "Introduce core measurement concepts, tools, and real-world estimation." }
+]
+`
+        break
   case 'section-standards':
+        const familySS = detectCurriculumFamily(stateCurriculum || framework, region)
+        const codeFamilyRules = (() => {
+          switch (familySS) {
+            case 'NGSS':
+              return `For NGSS/NGSS-aligned adoptions, USE DCI-style codes like "HS-LS1.A", "MS-PS2.B", "3-ESS2.C" (with the hyphen). Do NOT output TEKS/SOL codes.`
+            case 'TEKS':
+              return `For Texas TEKS, USE codes like "5.7A" (grade.strandLetter) and for high school courses allow prefixes like "BIO.6B". Do NOT output NGSS/SOL codes.`
+            case 'SOL':
+              return `For Virginia SOL, USE codes like "6.2a" or high school forms like "BIO.1.a". Do NOT output NGSS/TEKS codes.`
+            default:
+              return `Use only the official local format for the selected curriculum. Do NOT guess NGSS/TEKS/SOL if not applicable.`
+          }
+        })()
         userPrompt = `${sharedRules}
 TASK: For the selected curriculum, generate sub-standards for a specific section.
 
@@ -224,11 +324,18 @@ REQUIREMENTS
 - Base sub-standards strictly on the official curriculum/state standard for the given country/region.
 - Prefer official government or state education websites (e.g., TEKS, SOL, NGSS-aligned state pages) as the reference basis.
 - Do NOT invent standards; mirror real structure/names where possible.
+- STRICT UNIT BOUNDARY: Only include sub-standards that logically fall INSIDE the pedagogical scope of the section "${section}". If a candidate would clearly belong to another unit/section (even if related), EXCLUDE it.
+- GRADE & CURRICULUM ALIGNMENT: All sub-standards must be appropriate for grade ${grade} and reflect the selected curriculum family. Do not output advanced high-school only content if grade is elementary, etc.
+- CONFIDENCE RULE: If you are not highly confident at least 4 valid in-section sub-standards exist, return an empty JSON array [] instead of guessing.
+- NO CROSS-UNIT REFERENCES: Names or descriptions must NOT explicitly reference other units/sections by name (e.g., "This prepares for Forces & Motion" if that is a different unit).
+- NO MIXED SUBJECTS: Stay strictly within ${subject}—no cross-curricular blend unless inherently part of the official standard wording.
 
 CODE FORMAT RULES
 - Preserve official punctuation and separators in codes (hyphens and dots). Do NOT drop hyphens.
 - If the framework is NGSS-style (or a state adoption like NYSSLS, MA STE), use DCI-style identifiers when applicable, e.g., "HS-LS1.A", "MS-PS2.B", "3-ESS2.C" (NOT "HSLS1.A").
 - If the framework uses state-specific formats (e.g., TEKS, SOL), follow those exactly and do not convert formats.
+  - ${codeFamilyRules}
+  - STRICT SUBJECT ENFORCEMENT: The subject is ${subject}. Do NOT output codes from other subjects. If you are uncertain about the official code for THIS subject and region/grade, generate a teacher-facing code using the pattern "SCI-<GRADE>-<SECTION>-<LETTER>" for science, or "<SUBJ>-<GRADE>-<SECTION>-<LETTER>" in general (do NOT claim it is official), and keep the name/description accurate.
 
 OUTPUT
 [
@@ -272,13 +379,17 @@ INPUTS
 - Country: "${country}"
 ${region ? `- Region/State: "${region}"` : ''}
 ${grade ? `- Grade Level: "${grade}"` : ''}
+${stateStandardName ? `- Official/Reference Standard Name: "${stateStandardName}"` : ''}
 ${context ? `ADDITIONAL CONTEXT
 ${context}` : ''}
 
 REQUIREMENTS
-- Return 6–15 items that represent the major sections/units/standard groupings under "${framework}"${grade ? ` for ${grade}` : ''}.
+- STRICT MATCHING: Only include sections/units that are officially part of the framework "${framework}" for the subject ${subject}${grade ? ` at ${grade}` : ''}${region ? ` in ${region}` : ''}. If you are not certain about an item’s inclusion, DO NOT GUESS—omit it.
+- If the official list cannot be determined with high confidence, return an empty JSON array []. Do NOT invent units.
+- Return 6–15 items only if they are official; otherwise fewer or 0 is acceptable.
 - Each item must include: name (string), description (string).
-- Prefer short, recognizable section names; descriptions 1–2 sentences aligned to the grade and region (if provided).
+- Keep subject alignment strict to ${subject} and avoid cross-subject content.
+- Prefer short, recognizable official section names; descriptions 1–2 sentences aligned to the grade and region (if provided).
 
 OUTPUT
 [
@@ -582,11 +693,12 @@ REQUIREMENTS
       ? LESSON_PROMPT_ID 
       : PROMPT_ID
 
-    // Tune temperature per type: keep structured outputs lower
-  const temperature = (type === 'lesson-generation-by-strand' || type === 'lessons-by-substandards') ? 0.7 : 0.3
-
-  // Always use a single model across the app
-  const model = 'gpt-5-mini-2025-08-07'
+    // Resolve effective model from request; default and validate against allowed list, and coerce any unsupported/gemini-like to default
+    let model: string = typeof reqModel === 'string' && reqModel.trim() ? String(reqModel).trim() : DEFAULT_MODEL
+    const isAllowed = (m: string) => (ALLOWED_MODELS as readonly string[]).includes(m)
+    if (!isAllowed(model) || /^gemini\-/i.test(model)) {
+      model = DEFAULT_MODEL
+    }
 
     // Enforce JSON object format where prompts ask for object output
     const needsJsonObject = (
@@ -681,15 +793,20 @@ REQUIREMENTS
       // Enforce correct standard codes distribution across provided sub-standards
       try {
         const { subStandards: reqSubs = [], lessonsPerStandard: reqLps = 5 } = req.body || {}
-        const normalizedSubCodes: string[] = Array.isArray(reqSubs)
-          ? reqSubs.map((s: any) => normalizeStandardCode(s?.code || s?.standard_code || s?.title || s?.name || String(s || ''))).filter(Boolean)
+        // Determine curriculum family to validate codes
+        const family = detectCurriculumFamily(stateCurriculum || framework, region)
+        let normalizedSubCodes: string[] = Array.isArray(reqSubs)
+          ? reqSubs
+              .map((s: any) => normalizeStandardCode(s?.code || s?.standard_code || s?.title || s?.name || String(s || '')))
+              .filter((c: string) => isCodeAllowedByFamily(c, family, subject))
           : []
         if (normalizedSubCodes.length > 0) {
           const per = Math.max(1, Number(reqLps) || 5)
           items = items.map((it: any, i: number) => {
             const preferred = normalizedSubCodes[i % normalizedSubCodes.length]
             const normalizedCurrent = normalizeStandardCode(it.standard_code || '')
-            const std = normalizedSubCodes.includes(normalizedCurrent) ? normalizedCurrent : preferred
+            const currentAllowed = isCodeAllowedByFamily(normalizedCurrent, family, subject)
+            const std = (normalizedSubCodes.includes(normalizedCurrent) && currentAllowed) ? normalizedCurrent : preferred
             const seqWithinStd = (Math.floor(i / normalizedSubCodes.length) % per) + 1
             const lesson_code = `${std}-L${String(seqWithinStd).padStart(2, '0')}`
             return { ...it, standard_code: std, lesson_code }
@@ -721,12 +838,25 @@ REQUIREMENTS
         return res.status(500).json({ error: 'AI did not return an array of sub-standards' })
       }
 
-      items = items.map((item: any, index: number) => ({
-        code: normalizeStandardCode(item.code || item.standard_code || `S${index + 1}`),
-        name: item.name || item.title || `Sub-standard ${index + 1}`,
-        title: item.name || item.title,
-        description: item.description || ''
-      }))
+      const family = detectCurriculumFamily(stateCurriculum || framework, region)
+      items = items
+        .map((item: any, index: number) => {
+          const codeRaw = item.code || item.standard_code || `S${index + 1}`
+          const code = normalizeStandardCode(codeRaw)
+          const nm = item.name || item.title || `Sub-standard ${index + 1}`
+          const desc = item.description || ''
+          // Strict family enforcement: drop any sub-standard whose code does not belong to the selected curriculum
+          const subj = String(subject || '')
+          const allowed = isCodeAllowedByFamily(code, family, subj)
+          if (!allowed) return null
+          return {
+            code,
+            name: nm,
+            title: item.name || item.title,
+            description: desc,
+          }
+        })
+        .filter(Boolean)
 
       return res.status(200).json({
         success: true,
