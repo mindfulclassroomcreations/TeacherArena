@@ -40,7 +40,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const completion = await client.chat.completions.create({
       model,
-      temperature: 0.5,
       messages: [
         { role: 'system', content: sys },
         { role: 'user', content: user }

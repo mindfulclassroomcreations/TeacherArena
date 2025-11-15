@@ -599,7 +599,6 @@ REQUIREMENTS
           content: userPrompt
         }
       ],
-      temperature,
       // Newer chat models use max_completion_tokens instead of max_tokens
       max_completion_tokens: 2000,
       ...(needsJsonObject ? { response_format: { type: 'json_object' as const } } : {}),

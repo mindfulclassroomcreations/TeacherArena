@@ -60,7 +60,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     async function callOpenAI(): Promise<string> {
       const completion = await client.chat.completions.create({
         model: effectiveModel,
-        temperature: 0.2,
         messages: [
           { role: 'system', content: sys },
           { role: 'user', content: user },
