@@ -57,9 +57,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       user = `${baseContext}${searchHint}\nTASK: Validate and correct STANDARD codes so they match the grade band and Region/State for the specified Curriculum. Also propose small, precise edits (tighten titles, clarify notes). Only include items that need changes.\nINPUT: ${JSON.stringify(arr.map((it, i) => ({ index: i, code: it.standard_code || it.code || '', title: it.title || it.name || '', notes: it.description || '' })))}\nOUTPUT JSON SHAPE:\n{ "type": "sectionBulkUpdate", "sectionUpdates": [ { "index": number, "standard": "string?", "title": "string?", "notes": "string?" } ] }\n${userInstructions ? `USER NOTES: ${userInstructions}` : ''}`
     }
 
-    async function callOpenAI(): Promise<string> {
+    async function callOpenAI(modelName: string): Promise<string> {
       const completion = await client.chat.completions.create({
-        model: effectiveModel,
+        model: modelName,
         temperature: 0.2,
         messages: [
           { role: 'system', content: sys },
@@ -73,7 +73,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // If a Gemini model is provided, coerce to default OpenAI model (Gemini disabled)
   const effectiveModel = /^gemini\-/i.test(model) ? 'gpt-5-mini-2025-08-07' : model
 
-  const content = await callOpenAI()
+    let content = ''
+    try {
+      content = await callOpenAI(effectiveModel)
+    } catch (e: any) {
+      const fallback = 'gpt-4o-mini'
+      content = await callOpenAI(fallback)
+    }
     let parsed: SuggestionResponse | null = null
     try { parsed = JSON.parse(content) } catch {}
     if (!parsed) return res.status(200).json({ type: scope === 'lesson' ? 'lessonUpdate' : 'sectionBulkUpdate' })

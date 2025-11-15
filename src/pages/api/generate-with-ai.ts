@@ -559,10 +559,12 @@ REQUIREMENTS
     // Tune temperature per type: keep structured outputs lower
   const temperature = (type === 'lesson-generation-by-strand' || type === 'lessons-by-substandards') ? 0.7 : 0.3
 
-  // Use a reliable OpenAI model that supports JSON mode
-  const model = 'gpt-5-mini-2025-08-07'
+  // Use configured model; retry with a known-stable fallback if it fails
+  const primaryModel = process.env.OPENAI_MODEL || 'gpt-5-mini-2025-08-07'
+  const fallbackModel = 'gpt-4o-mini'
 
-    const response = await client.chat.completions.create({
+  async function callOpenAI(model: string) {
+    return client.chat.completions.create({
       model,
       messages: [
         {
@@ -577,6 +579,20 @@ REQUIREMENTS
       temperature,
       max_tokens: 2000,
     })
+  }
+
+    let response
+    try {
+      response = await callOpenAI(primaryModel)
+    } catch (err: any) {
+      // Retry with fallback model on invalid/unsupported model or other OpenAI errors
+      try {
+        response = await callOpenAI(fallbackModel)
+      } catch (err2: any) {
+        console.error('OpenAI failed (primary and fallback):', err2?.message || err2)
+        return res.status(500).json({ error: 'Failed to generate with AI. Please try again later.' })
+      }
+    }
 
     let responseText = ''
     if (response?.choices?.[0]?.message?.content) {

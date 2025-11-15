@@ -38,15 +38,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const user = `Create lessons for the following sub-standards. Provide JSON only.\nContext:\nCountry: ${country || ''}\nState/Curriculum: ${stateCurriculum || ''}\nGrade: ${grade || ''}\nSubject: ${subject || ''}\nSub-standards (array with index, code, title, description, lessons count):\n${JSON.stringify(cleaned)}\n\nRULES:\n- For each sub-standard produce the requested number of lessons.\n- Output keys: index (number, maps to input), lessons (array).\n- Each lesson: { title: string, description: string, standard_code: string }.\n- Titles concise (max ~12 words). Descriptions 1–2 sentences, actionable, age-appropriate.\n- Use provided code as standard_code (or improve punctuation minimally if obvious).\n- If a row has a title, subtly align lesson titles to that theme.\nOUTPUT JSON SHAPE: { items: [ { index: number, lessons: [ { title: string, description: string, standard_code: string } ] } ] }`
 
-    const completion = await client.chat.completions.create({
-      model,
-      temperature: 0.5,
-      messages: [
-        { role: 'system', content: sys },
-        { role: 'user', content: user }
-      ],
-      response_format: { type: 'json_object' }
-    })
+    async function call(modelName: string) {
+      return client.chat.completions.create({
+        model: modelName,
+        temperature: 0.5,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: user }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    }
+    let completion
+    try {
+      completion = await call(model)
+    } catch (e: any) {
+      // fallback to a stable model if default fails
+      const fallback = 'gpt-4o-mini'
+      try { completion = await call(fallback) } catch (e2: any) {
+        return res.status(500).json({ error: 'AI generation failed. Please try again later.' })
+      }
+    }
 
     const content = completion.choices?.[0]?.message?.content || ''
     let parsed: any = null
