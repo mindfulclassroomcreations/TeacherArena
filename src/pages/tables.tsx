@@ -809,8 +809,6 @@ export default function TablesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">🤖 Model</label>
               <select className="w-full border rounded px-2 py-1" value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
                 <option value="gpt-5-mini-2025-08-07">gpt-5-mini-2025-08-07 (default)</option>
-                <option value="gpt-5-mini-2025-08-07">gpt-5-mini-2025-08-07</option>
-                <option value="o1-mini">o1-mini</option>
               </select>
             </div>
             <div className="flex items-end">
