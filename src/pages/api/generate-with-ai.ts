@@ -937,10 +937,12 @@ REQUIREMENTS
     })
 
   } catch (error) {
-    console.error('API Error:', error)
+    // Surface useful provider error details to the client for debugging
+    const errAny: any = error as any
+    const providerMsg = errAny?.error?.message || errAny?.message || String(error)
+    console.error('API Error:', providerMsg)
     return res.status(500).json({
-      error: 'Failed to generate content',
-      details: String(error)
+      error: providerMsg
     })
   }
 }
