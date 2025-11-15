@@ -1292,12 +1292,26 @@ export default function Home() {
   // Step 5: Generate lessons for all curriculum sections (bulk)
   const handleGenerateLessonsFromSubStandardsForAll = async () => {
     if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    // Ensure user is authenticated (required for lesson generation endpoints)
+    if (!(await ensureValidSession())) {
+      return
+    }
     if (curriculumSections.length === 0) {
       setError('No curriculum sections available.')
       return
     }
     if (!Number.isFinite(bulkLessonsAmount) || bulkLessonsAmount <= 0) {
       setError('Please set the number of lessons to generate.')
+      return
+    }
+    // Ensure there is at least one section with generated sub-standards
+    const sectionsWithSubs = curriculumSections.filter((s) => {
+      const key = String(s.id || s.name || s.title || '')
+      const subs = subStandardsBySection[key] || []
+      return Array.isArray(subs) && subs.length > 0
+    })
+    if (sectionsWithSubs.length === 0) {
+      setError('Please generate sub-standards for at least one table before generating lessons.')
       return
     }
     setError(null)
@@ -1333,6 +1347,20 @@ export default function Home() {
           successCount += 1
         }
       } catch (err) {
+        const errMsg = String((err as any)?.message || err || '')
+        // Handle payment/token errors: open modal and stop the bulk run early
+        if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
+          setPaymentErrorMessage('Insufficient tokens. Please buy more credits to continue.')
+          setShowPaymentModal(true)
+          setBulkLoadingLessonsSectionKeys(new Set())
+          return
+        }
+        // Handle auth/session errors explicitly
+        if (errMsg.toLowerCase().includes('session') || errMsg.includes('401') || errMsg.toLowerCase().includes('login')) {
+          setError('Your session has expired. Please refresh the page and log in again.')
+          setBulkLoadingLessonsSectionKeys(new Set())
+          return
+        }
         console.error(`Failed to generate lessons for section "${section.title || section.name}":`, err)
       }
     }
@@ -1348,12 +1376,26 @@ export default function Home() {
   // Step 5: Generate lessons for selected curriculum sections (bulk)
   const handleGenerateLessonsFromSubStandardsForSelected = async () => {
     if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    // Ensure user is authenticated (required for lesson generation endpoints)
+    if (!(await ensureValidSession())) {
+      return
+    }
     if (selectedCurriculumSections.length === 0) {
       setError('Please select at least one section to generate lessons for.')
       return
     }
     if (!Number.isFinite(bulkLessonsAmount) || bulkLessonsAmount <= 0) {
       setError('Please set the number of lessons to generate.')
+      return
+    }
+    // Ensure at least one of the selected sections has sub-standards
+    const selectedWithSubs = selectedCurriculumSections.filter((s) => {
+      const key = String(s.id || s.name || s.title || '')
+      const subs = subStandardsBySection[key] || []
+      return Array.isArray(subs) && subs.length > 0
+    })
+    if (selectedWithSubs.length === 0) {
+      setError('Please generate sub-standards for the selected tables before generating lessons.')
       return
     }
     setError(null)
@@ -1389,6 +1431,18 @@ export default function Home() {
           successCount += 1
         }
       } catch (err) {
+        const errMsg = String((err as any)?.message || err || '')
+        if (errMsg.includes('Insufficient tokens') || errMsg.includes('402')) {
+          setPaymentErrorMessage('Insufficient tokens. Please buy more credits to continue.')
+          setShowPaymentModal(true)
+          setBulkLoadingLessonsSectionKeys(new Set())
+          return
+        }
+        if (errMsg.toLowerCase().includes('session') || errMsg.includes('401') || errMsg.toLowerCase().includes('login')) {
+          setError('Your session has expired. Please refresh the page and log in again.')
+          setBulkLoadingLessonsSectionKeys(new Set())
+          return
+        }
         console.error(`Failed to generate lessons for section "${section.title || section.name}":`, err)
       }
     }

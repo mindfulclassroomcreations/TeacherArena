@@ -689,6 +689,177 @@ REQUIREMENTS
         return res.status(400).json({ error: 'Invalid type' })
     }
 
+    // Custom exhaustive flow for section-standards to include ALL relevant sub-standards within the unit
+    if (type === 'section-standards') {
+      try {
+        // Resolve model with allowlist guard
+        let model: string = typeof reqModel === 'string' && reqModel.trim() ? String(reqModel).trim() : DEFAULT_MODEL
+        const isAllowed = (m: string) => (ALLOWED_MODELS as readonly string[]).includes(m)
+        if (!isAllowed(model) || /^gemini\-/i.test(model)) {
+          model = DEFAULT_MODEL
+        }
+
+        const familySS = detectCurriculumFamily(stateCurriculum || framework, region)
+        const codeFamilyRules = (() => {
+          switch (familySS) {
+            case 'NGSS':
+              return `For NGSS/NGSS-aligned adoptions, USE DCI-style codes like "HS-LS1.A", "MS-PS2.B", "3-ESS2.C" (with the hyphen). Do NOT output TEKS/SOL codes.`
+            case 'TEKS':
+              return `For Texas TEKS, USE codes like "5.7A" (grade.strandLetter) and for high school courses allow prefixes like "BIO.6B". Do NOT output NGSS/SOL codes.`
+            case 'SOL':
+              return `For Virginia SOL, USE codes like "6.2a" or high school forms like "BIO.1.a". Do NOT output NGSS/TEKS codes.`
+            default:
+              return `Use only the official local format for the selected curriculum. Do NOT guess NGSS/TEKS/SOL if not applicable.`
+          }
+        })()
+
+        // 1) Ask for the COMPLETE set of official sub-standard CODES for the unit
+        const codesPrompt = `${sharedRules}
+TASK: List the complete set of official sub-standard CODES that belong inside the section/unit "${section}" for ${subject} at ${grade} under the selected curriculum.
+
+INPUTS
+- Subject: "${subject}"
+- Framework/Standard: "${framework}"
+- Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
+- Curriculum Group (State/Region): "${stateCurriculum || ''}"
+- Grade Level: "${grade}"
+- Section Name: "${section}"
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+
+REQUIREMENTS
+- Return ONLY JSON with this exact shape: { "codes": string[], "total": number }.
+- "codes" must contain ALL official sub-standard codes for THIS unit and grade. No extras from other units.
+- STRICT UNIT BOUNDARY: If you are not 100% certain, return { "codes": [], "total": 0 }.
+- CODE FAMILY: ${codeFamilyRules}
+- CODE FORMAT RULES: Preserve official punctuation (hyphens/dots). Do NOT invent formats.
+`
+
+        const codesResp = await client.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
+            { role: 'user', content: codesPrompt }
+          ],
+          response_format: { type: 'json_object' }
+        })
+
+        let codesObj: any = null
+        try {
+          const c = codesResp.choices?.[0]?.message?.content || ''
+          codesObj = JSON.parse(c)
+        } catch {}
+
+        const rawCodes: string[] = Array.isArray(codesObj?.codes) ? codesObj.codes : []
+        const family = familySS
+        const allowedCodes = rawCodes
+          .map((x: string) => normalizeStandardCode(x))
+          .filter((x: string) => isCodeAllowedByFamily(x, family, subject))
+        const uniqueCodes = Array.from(new Set(allowedCodes))
+
+        if (uniqueCodes.length > 0) {
+          // 2) Request details for the specific codes, ensuring one item per code
+          const detailsPrompt = `${sharedRules}
+TASK: For the provided sub-standard codes, return details belonging INSIDE the section/unit "${section}" for ${subject} at ${grade}.
+
+INPUTS
+- Subject: "${subject}"
+- Framework/Standard: "${framework}"
+- Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
+- Curriculum Group (State/Region): "${stateCurriculum || ''}"
+- Grade Level: "${grade}"
+- Section Name: "${section}"
+- CODES: ${JSON.stringify(uniqueCodes)}
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+
+REQUIREMENTS
+- Return ONLY JSON with key "items": an array of { code: string, name: string, description: string }.
+- Include exactly ONE item per provided code; names concise; descriptions 1–2 sentences.
+- STRICT UNIT BOUNDARY: Content must fit this unit; if a provided code does not belong, OMIT it.
+- CODE FAMILY: ${codeFamilyRules}
+- CODE FORMAT RULES: Preserve official punctuation (hyphens/dots). Do NOT alter the provided codes.
+`
+          const detResp = await client.chat.completions.create({
+            model,
+            messages: [
+              { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
+              { role: 'user', content: detailsPrompt }
+            ],
+            response_format: { type: 'json_object' }
+          })
+
+          let detObj: any = null
+          try {
+            const d = detResp.choices?.[0]?.message?.content || ''
+            detObj = JSON.parse(d)
+          } catch {}
+
+          let items: any[] = Array.isArray(detObj?.items) ? detObj.items : []
+          // Filter, normalize, and map
+          const byCode = new Map<string, any>()
+          for (const it of items) {
+            const code = normalizeStandardCode(it?.code || it?.standard_code || '')
+            if (!code) continue
+            if (!isCodeAllowedByFamily(code, family, subject)) continue
+            if (!uniqueCodes.includes(code)) continue
+            byCode.set(code, {
+              code,
+              name: String(it?.name || it?.title || `Sub-standard ${code}`).trim(),
+              title: String(it?.name || it?.title || `Sub-standard ${code}`).trim(),
+              description: String(it?.description || '').trim(),
+            })
+          }
+
+          // Attempt a single retry for any missing codes
+          const missing = uniqueCodes.filter(c => !byCode.has(c))
+          if (missing.length > 0) {
+            const retryPrompt = `${sharedRules}
+TASK: Provide details ONLY for these missing sub-standard codes for the unit "${section}": ${JSON.stringify(missing)}
+Return: { items: [ { code: string, name: string, description: string } ] }
+Rules: One item per code; keep within unit; ${codeFamilyRules}`
+            const retry = await client.chat.completions.create({
+              model,
+              messages: [
+                { role: 'system', content: 'Return ONLY valid JSON. No text outside JSON.' },
+                { role: 'user', content: retryPrompt }
+              ],
+              response_format: { type: 'json_object' }
+            })
+            try {
+              const r = retry.choices?.[0]?.message?.content || ''
+              const rObj = JSON.parse(r)
+              const rItems: any[] = Array.isArray(rObj?.items) ? rObj.items : []
+              for (const it of rItems) {
+                const code = normalizeStandardCode(it?.code || it?.standard_code || '')
+                if (!code) continue
+                if (!isCodeAllowedByFamily(code, family, subject)) continue
+                if (!uniqueCodes.includes(code)) continue
+                if (!byCode.has(code)) {
+                  byCode.set(code, {
+                    code,
+                    name: String(it?.name || it?.title || `Sub-standard ${code}`).trim(),
+                    title: String(it?.name || it?.title || `Sub-standard ${code}`).trim(),
+                    description: String(it?.description || '').trim(),
+                  })
+                }
+              }
+            } catch {}
+          }
+
+          // Finalize in the original order of uniqueCodes
+          const finalItems = uniqueCodes
+            .filter(c => byCode.has(c))
+            .map(c => byCode.get(c))
+
+          return res.status(200).json({ success: true, items: finalItems, count: finalItems.length })
+        }
+        // If no codes returned, fall through to the generic single-shot path below
+      } catch (e) {
+        console.warn('section-standards exhaustive flow failed; falling back to single-call:', e)
+      }
+    }
+
     const selectedPromptId = (type === 'lesson-discovery' || type === 'lesson-generation-by-strand' || type === 'lessons' || type === 'lessons-by-substandards') 
       ? LESSON_PROMPT_ID 
       : PROMPT_ID
