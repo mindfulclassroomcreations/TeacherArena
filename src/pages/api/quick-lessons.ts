@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'OpenAI not configured' })
-    const { country, stateCurriculum, grade, subject, subStandards = [], model = 'gpt-4o-mini' }: QuickLessonReq = req.body || {}
+  const { country, stateCurriculum, grade, subject, subStandards = [], model = 'gpt-5-mini-2025-08-07' }: QuickLessonReq = req.body || {}
     if (!subject || !grade || !Array.isArray(subStandards) || subStandards.length === 0) {
       return res.status(400).json({ error: 'Missing required fields: subject, grade, subStandards' })
     }

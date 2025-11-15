@@ -560,7 +560,7 @@ REQUIREMENTS
   const temperature = (type === 'lesson-generation-by-strand' || type === 'lessons-by-substandards') ? 0.7 : 0.3
 
   // Use a reliable OpenAI model that supports JSON mode
-  const model = 'gpt-4o-mini'
+  const model = 'gpt-5-mini-2025-08-07'
 
     const response = await client.chat.completions.create({
       model,
