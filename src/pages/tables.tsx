@@ -71,6 +71,10 @@ export default function TablesPage() {
     return result
   }, [payload])
 
+  const totalLessons = useMemo(() => {
+    return sectionsWithLessons.reduce((sum, sec) => sum + (Array.isArray(sec.items) ? sec.items.length : 0), 0)
+  }, [sectionsWithLessons])
+
   const handleExportAll = () => {
     if (!payload) return
     // Export into a single combined sheet
@@ -655,7 +659,7 @@ export default function TablesPage() {
             <div className="bg-white border border-gray-200 rounded p-4">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-lg font-semibold text-gray-900">Included Sections</h2>
-                <span className="text-sm text-gray-600">{sectionsWithLessons.length} total</span>
+                <span className="text-sm text-gray-600">Sections: {sectionsWithLessons.length} • Lessons: {totalLessons}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {sectionsWithLessons.map((sec) => {
