@@ -879,19 +879,24 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
       type === 'state-standard' ||
       type === 'state-curricula'
     )
+    // Some lightweight models only support default temperature; omit temperature for those.
+    const modelSupportsTemperature = (m: string) => !/gpt-5-(mini|nano)-/i.test(m)
+    const desiredTemp = (type === 'frameworks' || type === 'section-standards') ? 0.2 : 0.4
+    const baseMessages = [
+      {
+        role: 'system' as const,
+        content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
+      },
+      {
+        role: 'user' as const,
+        content: userPrompt
+      }
+    ]
+
     const response = await client.chat.completions.create({
       model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. Do not include any text outside JSON.'
-        },
-        {
-          role: 'user',
-          content: userPrompt
-        }
-      ],
-      temperature: (type === 'frameworks' || type === 'section-standards') ? 0.2 : 0.4,
+      messages: baseMessages,
+      ...(modelSupportsTemperature(model) ? { temperature: desiredTemp } : {}),
       ...(needsJsonObject ? { response_format: { type: 'json_object' as const } } : {}),
     })
 
@@ -975,7 +980,7 @@ REQUIREMENTS
               { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
               { role: 'user', content: fallbackPrompt }
             ],
-            temperature: 0.2,
+            ...(modelSupportsTemperature(model) ? { temperature: 0.2 } : {}),
             response_format: { type: 'json_object' }
           })
           let fbObj: any = null
