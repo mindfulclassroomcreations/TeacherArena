@@ -369,7 +369,7 @@ OUTPUT
 
   case 'frameworks':
         // Dual-mode: if a specific framework is provided, generate its sections aligned to grade/region.
-        if (framework) {
+  if (framework) {
           userPrompt = `${sharedRules}
 TASK: Generate curriculum standard sections under the specified framework.
 
@@ -385,7 +385,8 @@ ${context}` : ''}
 
 REQUIREMENTS
 - STRICT MATCHING: Only include sections/units that are officially part of the framework "${framework}" for the subject ${subject}${grade ? ` at ${grade}` : ''}${region ? ` in ${region}` : ''}. If you are not certain about an item’s inclusion, DO NOT GUESS—omit it.
-- If the official list cannot be determined with high confidence, return an empty JSON array []. Do NOT invent units.
+- FALLBACK WITHIN OFFICIAL STRUCTURE: If the framework does not publish named "units/sections" for this grade/subject but does publish official strands/domains/clusters, return those official strands/domains/clusters as the sections instead of returning an empty list.
+- If neither official units nor official strands/domains/clusters for this grade can be determined with reasonable confidence, return an empty JSON array []. Do NOT invent units.
 - Return 6–15 items only if they are official; otherwise fewer or 0 is acceptable.
 - Each item must include: name (string), description (string).
 - Keep subject alignment strict to ${subject} and avoid cross-subject content.
@@ -890,6 +891,7 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
           content: userPrompt
         }
       ],
+      temperature: (type === 'frameworks' || type === 'section-standards') ? 0.2 : 0.4,
       ...(needsJsonObject ? { response_format: { type: 'json_object' as const } } : {}),
     })
 
@@ -941,6 +943,60 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
       } else {
         return res.status(500).json({ error: 'AI did not return a valid discovery object' })
       }
+    }
+
+    // Special handling for 'frameworks' when a specific framework is selected: try a strands/domains fallback if empty
+    if (type === 'frameworks' && framework) {
+      let items = ensureArray(parsedData) || []
+      if (!Array.isArray(items)) items = []
+      // If nothing returned, try a fallback prompt asking for official strands/domains/clusters for this grade
+      if (items.length === 0) {
+        const fallbackPrompt = `${sharedRules}
+TASK: When named units/sections are not explicitly published for this framework, return the official strands/domains/clusters for the grade as the sections.
+
+INPUTS
+- Subject: "${subject}"
+- Framework/Standard: "${framework}"
+- Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
+${grade ? `- Grade Level: "${grade}"` : ''}
+${stateStandardName ? `- Official/Reference Standard Name: "${stateStandardName}"` : ''}
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+
+REQUIREMENTS
+- Return ONLY official strands/domains/clusters for this framework and grade (no invented items).
+- If official strands/domains do not exist for this grade, return an empty list.
+- Output object shape ONLY: { "items": [ { "name": string, "description": string } ] }
+`
+        try {
+          const fb = await client.chat.completions.create({
+            model,
+            messages: [
+              { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
+              { role: 'user', content: fallbackPrompt }
+            ],
+            temperature: 0.2,
+            response_format: { type: 'json_object' }
+          })
+          let fbObj: any = null
+          try {
+            const txt = fb.choices?.[0]?.message?.content || ''
+            fbObj = JSON.parse(txt)
+          } catch {}
+          const arr = ensureArray(fbObj) || []
+          items = Array.isArray(arr) ? arr : []
+        } catch (e) {
+          // swallow and keep items as []
+        }
+      }
+
+      // Normalize and return
+      items = items.map((item: any, index: number) => ({
+        name: item.title || item.name || `Item ${index + 1}`,
+        title: item.title,
+        description: item.description || '',
+      }))
+      return res.status(200).json({ success: true, items, count: items.length })
     }
 
     if (type === 'lessons-by-substandards') {
