@@ -693,16 +693,11 @@ REQUIREMENTS
 `
         break
 
-      default:
-        return res.status(400).json({ error: 'Invalid type' })
-    }
-
-    // Holiday / Seasonal themed lessons simple prompt
-    if (type === 'holiday-seasonal-lessons') {
-      const { theme = '', lessonCount = 12 } = req.body
-      const normalizedTheme = String(theme || '').trim() || 'Seasonal Theme'
-      const finalCount = Math.min(60, Math.max(1, Number(lessonCount) || 12))
-      userPrompt = `${sharedRules}
+      case 'holiday-seasonal-lessons':
+        const { theme = '', lessonCount = 12 } = req.body
+        const normalizedTheme = String(theme || '').trim() || 'Seasonal Theme'
+        const finalCount = Math.min(60, Math.max(1, Number(lessonCount) || 12))
+        userPrompt = `${sharedRules}
 ROLE: You are an expert educator creating concise lesson outlines.
 
 INPUTS
@@ -735,6 +730,10 @@ REQUIREMENTS
 - lesson_code pattern: Use an acronym from theme (letters only, up to 6) + '-' + L + zero-padded sequence (e.g., MLKDAY-L01). Do NOT claim lesson_code is an official standard.
 - Avoid generic filler; make each description actionable.
 `
+        break
+
+      default:
+        return res.status(400).json({ error: 'Invalid type' })
     }
 
     // Custom exhaustive flow for section-standards to include ALL relevant sub-standards within the unit
