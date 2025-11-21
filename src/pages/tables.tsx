@@ -88,6 +88,19 @@ export default function TablesPage() {
     )
   }
 
+  const handleExportAllNoStandards = () => {
+    if (!payload) return
+    downloadStep5CombinedExcel(
+      payload.lessonsBySection as LessonsBySection,
+      payload.sectionNamesByKey as Record<string, string>,
+      (payload.headerSubjectName || payload.framework || payload.subject),
+      (payload.headerCurriculum || payload.subject || payload.framework),
+      (payload.headerGradeLevel || payload.grade),
+      payload.sectionOrder,
+      { omitStandardCodes: true }
+    )
+  }
+
   const handleExportSelected = () => {
     if (!payload) return
     const selectedKeys = sectionsWithLessons.map(s => s.key).filter(k => selectedSections[k])
@@ -107,6 +120,27 @@ export default function TablesPage() {
       (payload.headerCurriculum || payload.subject || payload.framework),
       (payload.headerGradeLevel || payload.grade),
       selectedKeys
+    )
+  }
+
+  const handleExportSelectedNoStandards = () => {
+    if (!payload) return
+    const selectedKeys = sectionsWithLessons.map(s => s.key).filter(k => selectedSections[k])
+    if (selectedKeys.length === 0) return
+    const filteredLessons: LessonsBySection = {}
+    const filteredNames: Record<string, string> = {}
+    selectedKeys.forEach((k) => {
+      filteredLessons[k] = (payload.lessonsBySection || {})[k] || []
+      filteredNames[k] = (payload.sectionNamesByKey || {})[k] || k
+    })
+    downloadStep5CombinedExcel(
+      filteredLessons,
+      filteredNames,
+      (payload.headerSubjectName || payload.framework || payload.subject),
+      (payload.headerCurriculum || payload.subject || payload.framework),
+      (payload.headerGradeLevel || payload.grade),
+      selectedKeys,
+      { omitStandardCodes: true }
     )
   }
 
@@ -651,7 +685,12 @@ export default function TablesPage() {
                   Export Selected Tables (Excel)
                   {(() => { const c = Object.values(selectedSections).filter(Boolean).length; return c > 0 ? ` (${c})` : '' })()}
                 </Button>
+                <Button size="sm" variant="success" onClick={handleExportSelectedNoStandards} disabled={Object.values(selectedSections).every(v => !v)}>
+                  Export Selected (No Standards)
+                  {(() => { const c = Object.values(selectedSections).filter(Boolean).length; return c > 0 ? ` (${c})` : '' })()}
+                </Button>
                 <Button size="sm" variant="success" onClick={handleExportAll}>Export All Tables (Excel)</Button>
+                <Button size="sm" variant="success" onClick={handleExportAllNoStandards}>Export All (No Standards)</Button>
               </div>
             </div>
 

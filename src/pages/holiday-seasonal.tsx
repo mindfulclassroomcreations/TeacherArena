@@ -216,6 +216,100 @@ export default function HolidaySeasonalPage() {
     } finally { setLoading(false) }
   }
 
+  const moveToTables = () => {
+    try {
+      if (!Array.isArray(lessons) || lessons.length === 0) {
+        setError('No generated lessons to move.')
+        return
+      }
+
+      const lsRaw = window.localStorage.getItem('ta_tables_data')
+      const data = lsRaw ? JSON.parse(lsRaw) : {}
+      const lessonsBySection: Record<string, any[]> = data.lessonsBySection || {}
+      const subStandardsBySection: Record<string, Array<{ code?: string; title?: string; name?: string }>> = data.subStandardsBySection || {}
+      const names: Record<string, string> = data.sectionNamesByKey || {}
+      const order: string[] = Array.isArray(data.sectionOrder) ? data.sectionOrder.slice() : []
+
+      // Create a single section for holiday/seasonal lessons
+      const sectionKey = `holiday-seasonal-${effectiveTheme.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+      const sectionTitle = `${effectiveTheme} - Holiday/Seasonal Lessons`
+
+      if (!order.includes(sectionKey)) order.push(sectionKey)
+      names[sectionKey] = sectionTitle
+
+      // Merge lessons (avoid duplicates)
+      const existing = Array.isArray(lessonsBySection[sectionKey]) ? lessonsBySection[sectionKey] : []
+      const existingKeys = new Set(existing.map((l: any) => (String(l.title || l.name || '').toLowerCase() + '|' + String(l.lesson_code || l.code || '').toLowerCase())))
+      const toAdd = lessons.filter((l: any) => {
+        const k = (String(l.title || '').toLowerCase() + '|' + String(l.lesson_code || '').toLowerCase())
+        return !existingKeys.has(k)
+      })
+      lessonsBySection[sectionKey] = [...existing, ...toAdd]
+
+      // Add sub-standards from lesson codes
+      const prevSubs = Array.isArray(subStandardsBySection[sectionKey]) ? subStandardsBySection[sectionKey] : []
+      const prevCodes = new Set(prevSubs.map((s: any) => String(s.code || '').toLowerCase()))
+      const newSubs: Array<{ code: string; title?: string }> = []
+      lessons.forEach((l: any) => {
+        const c = String(l.lesson_code || l.code || '').trim()
+        if (!c) return
+        const key = c.toLowerCase()
+        if (prevCodes.has(key)) return
+        prevCodes.add(key)
+        newSubs.push({ code: c })
+      })
+      subStandardsBySection[sectionKey] = [...prevSubs, ...newSubs]
+
+      // Build payload with holiday/seasonal context
+      const curriculumInfo = manualMode ? manualCurriculum : effectiveCurriculum
+      const subjectInfo = manualMode ? manualSubject : (selectedSubject?.name || '')
+      const gradeInfo = manualMode ? manualGrades : selectedGrades.join(', ')
+      const countryInfo = manualMode ? manualCountry : selectedCountry
+
+      const nextPayload = {
+        ...data,
+        lessonsBySection,
+        subStandardsBySection,
+        sectionNamesByKey: names,
+        sectionOrder: order,
+        subject: subjectInfo,
+        framework: curriculumInfo,
+        grade: gradeInfo,
+        headerSubjectName: subjectInfo,
+        headerCurriculum: curriculumInfo || countryInfo || '',
+        headerGradeLevel: gradeInfo,
+        userCleared: false,
+      }
+      window.localStorage.setItem('ta_tables_data', JSON.stringify(nextPayload))
+
+      // Clear deletion markers
+      try {
+        window.localStorage.removeItem('ta_tables_deleted')
+        window.localStorage.removeItem('ta_tables_deleted_signature')
+      } catch {}
+
+      // Navigate to tables (prefer new tab)
+      try {
+        const url = new URL('/tables', window.location.origin).toString()
+        const w = window.open(url, '_blank')
+        if (!w) {
+          window.location.href = url
+        }
+      } catch {
+        try {
+          window.location.href = '/tables'
+        } catch {}
+      }
+
+      // Clear lessons from this page after successful move
+      setLessons([])
+      setSuccess(`${toAdd.length} lesson(s) moved to Tables!`)
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (e) {
+      setError('Failed to move to Tables. Please try again.')
+    }
+  }
+
   const handleReset = () => {
     setCurrentStep(0)
     setSelectedTheme('')
@@ -516,7 +610,10 @@ export default function HolidaySeasonalPage() {
               </div>
               {lessons.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Generated Lessons ({lessons.length})</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-800">Generated Lessons ({lessons.length})</h3>
+                    <Button variant="primary" size="sm" onClick={moveToTables}>Move to Tables</Button>
+                  </div>
                   <div className="space-y-3">
                     {lessons.map((ls, idx) => (
                       <div key={idx} className="border rounded p-3 bg-white shadow-sm">
@@ -531,6 +628,9 @@ export default function HolidaySeasonalPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button variant="primary" onClick={moveToTables}>Move to Tables</Button>
                   </div>
                 </div>
               )}
@@ -564,7 +664,10 @@ export default function HolidaySeasonalPage() {
               </div>
               {lessons.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Generated Lessons ({lessons.length})</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-800">Generated Lessons ({lessons.length})</h3>
+                    <Button variant="primary" size="sm" onClick={moveToTables}>Move to Tables</Button>
+                  </div>
                   <div className="space-y-3">
                     {lessons.map((ls, idx) => (
                       <div key={idx} className="border rounded p-3 bg-white shadow-sm">
@@ -579,6 +682,9 @@ export default function HolidaySeasonalPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button variant="primary" onClick={moveToTables}>Move to Tables</Button>
                   </div>
                 </div>
               )}

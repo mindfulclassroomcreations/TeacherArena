@@ -608,7 +608,8 @@ export const downloadStep5CombinedExcel = (
   subject?: string,
   framework?: string,
   grade?: string,
-  sectionOrder?: string[]
+  sectionOrder?: string[],
+  options?: { omitStandardCodes?: boolean }
 ) => {
   const workbook = XLSX.utils.book_new()
 
@@ -682,7 +683,7 @@ export const downloadStep5CombinedExcel = (
     sorted.forEach((ls, i) => {
       rows.push([
         i + 1,
-        String(ls.standard_code || ls.code || ''),
+        options?.omitStandardCodes ? '' : String(ls.standard_code || ls.code || ''),
         String(ls.title || ls.name || ''),
         String(ls.description || '')
       ])
