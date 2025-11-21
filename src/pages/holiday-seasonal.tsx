@@ -57,13 +57,18 @@ export default function HolidaySeasonalPage() {
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL)
   const [selectedTheme, setSelectedTheme] = useState<string>('')
   const [customTheme, setCustomTheme] = useState<string>('')
+  const [manualMode, setManualMode] = useState(false)
+  const [manualCountry, setManualCountry] = useState<string>('')
+  const [manualCurriculum, setManualCurriculum] = useState<string>('')
+  const [manualSubject, setManualSubject] = useState<string>('')
+  const [manualGrades, setManualGrades] = useState<string>('')
   const [selectedCountry, setSelectedCountry] = useState<string>('')
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [selectedCurriculum, setSelectedCurriculum] = useState<any | null>(null)
   const [customCurriculum, setCustomCurriculum] = useState<string>('')
   const [subjects, setSubjects] = useState<any[]>([])
   const [selectedSubject, setSelectedSubject] = useState<any | null>(null)
-  const [selectedGrade, setSelectedGrade] = useState<string>('')
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([])
   const [lessonCount, setLessonCount] = useState<string>('12')
   const [lessons, setLessons] = useState<LessonItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -146,25 +151,60 @@ export default function HolidaySeasonalPage() {
   }
 
   const handleGenerateLessons = async () => {
-    if (!effectiveTheme || !selectedCountry || !effectiveCurriculum || !selectedSubject || !selectedGrade) {
-      setError('Select theme, country, state curriculum, subject, and grade first.')
+    if (manualMode) {
+      // Manual mode validation
+      if (!effectiveTheme || !manualCountry.trim() || !manualCurriculum.trim() || !manualSubject.trim() || !manualGrades.trim()) {
+        setError('Fill all manual input fields (Theme, Country, Curriculum, Subject, Grades).')
+        return
+      }
+      setLoading(true); setError(null)
+      try {
+        const countNum = parseInt(lessonCount)
+        const finalCount = Number.isFinite(countNum) && countNum > 0 ? countNum : 12
+        const response = await generateContent({
+          type: 'holiday-seasonal-lessons',
+          country: manualCountry.trim(),
+          stateCurriculum: manualCurriculum.trim(),
+          subject: manualSubject.trim(),
+          grade: manualGrades.trim(),
+          framework: manualCurriculum.trim(),
+          theme: effectiveTheme,
+          lessonCount: finalCount,
+          model: selectedModel,
+          context: context + `\nManual input grades: ${manualGrades.trim()}`
+        })
+        if (Array.isArray(response.items)) {
+          setLessons(response.items as LessonItem[])
+          setSuccess(`Generated ${response.items.length} themed lessons!`)
+          setTimeout(() => setSuccess(null), 3000)
+        }
+      } catch (e: any) {
+        setError(String(e.message || 'Failed to generate lessons'))
+      } finally { setLoading(false) }
+      return
+    }
+
+    // Guided mode validation
+    if (!effectiveTheme || !selectedCountry || !effectiveCurriculum || !selectedSubject || selectedGrades.length === 0) {
+      setError('Select theme, country, state curriculum, subject, and at least one grade first.')
       return
     }
     setLoading(true); setError(null)
     try {
       const countNum = parseInt(lessonCount)
       const finalCount = Number.isFinite(countNum) && countNum > 0 ? countNum : 12
+      const gradeList = selectedGrades.join(', ')
       const response = await generateContent({
         type: 'holiday-seasonal-lessons',
         country: selectedCountry,
         stateCurriculum: effectiveCurriculum,
         subject: selectedSubject.name,
-        grade: selectedGrade,
+        grade: gradeList,
         framework: effectiveCurriculum,
         theme: effectiveTheme,
         lessonCount: finalCount,
         model: selectedModel,
-        context
+        context: context + (selectedGrades.length > 1 ? `\nMultiple grades selected: ${gradeList}` : '')
       })
       if (Array.isArray(response.items)) {
         setLessons(response.items as LessonItem[])
@@ -180,16 +220,38 @@ export default function HolidaySeasonalPage() {
     setCurrentStep(0)
     setSelectedTheme('')
     setCustomTheme('')
+    setManualMode(false)
+    setManualCountry('')
+    setManualCurriculum('')
+    setManualSubject('')
+    setManualGrades('')
     setSelectedCountry('')
     setStateCurricula([])
     setSelectedCurriculum(null)
     setCustomCurriculum('')
     setSubjects([])
     setSelectedSubject(null)
-    setSelectedGrade('')
+    setSelectedGrades([])
     setLessons([])
     setLessonCount('12')
     setError(null); setSuccess(null)
+  }
+
+  const toggleGradeSelection = (grade: string) => {
+    setSelectedGrades((prev) => prev.includes(grade) ? prev.filter(g => g !== grade) : [...prev, grade])
+  }
+
+  const selectAllGradesInCategory = (category: keyof typeof gradeCategories) => {
+    const categoryGrades = gradeCategories[category].grades
+    const allSelected = categoryGrades.every(g => selectedGrades.includes(g))
+    if (allSelected) {
+      setSelectedGrades((prev) => prev.filter(g => !categoryGrades.includes(g)))
+    } else {
+      setSelectedGrades((prev) => {
+        const updated = new Set([...prev, ...categoryGrades])
+        return Array.from(updated)
+      })
+    }
   }
 
   return (
@@ -248,9 +310,28 @@ export default function HolidaySeasonalPage() {
               <div className="mt-6">
                 <Input label="Or enter a custom theme" placeholder="e.g., Community Service Week" value={customTheme} onChange={(e) => { setCustomTheme(e.target.value); setSelectedTheme('') }} />
               </div>
-              <div className="mt-6 flex justify-end">
-                <Button variant="primary" disabled={!effectiveTheme} onClick={() => setCurrentStep(1)}>Next: Country</Button>
-              </div>
+              {effectiveTheme && (
+                <div className="mt-6 p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-blue-900">Choose Your Path</h3>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <button type="button" onClick={() => { setManualMode(false); setCurrentStep(1) }} className="p-4 border-2 border-purple-400 rounded-lg bg-white hover:bg-purple-50 text-left">
+                      <div className="font-semibold text-gray-900 mb-1">🎯 Guided Mode</div>
+                      <p className="text-xs text-gray-600">Step-by-step AI-assisted selection of Country, Curriculum, Subject, Grades</p>
+                    </button>
+                    <button type="button" onClick={() => { setManualMode(true); setCurrentStep(5) }} className="p-4 border-2 border-green-400 rounded-lg bg-white hover:bg-green-50 text-left">
+                      <div className="font-semibold text-gray-900 mb-1">⚡ Quick Manual Mode</div>
+                      <p className="text-xs text-gray-600">Type all details yourself and generate lessons immediately</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!effectiveTheme && (
+                <div className="mt-6 flex justify-end">
+                  <Button variant="primary" disabled={!effectiveTheme} onClick={() => setCurrentStep(1)}>Next: Country</Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -374,34 +455,46 @@ export default function HolidaySeasonalPage() {
           {currentStep === 4 && (
             <div className="mb-10">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Step 5: Select Grade</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Step 5: Select Grade(s)</h2>
                 <ModelSelector />
               </div>
-              <p className="text-sm text-gray-600 mb-4">Choose the grade level for lesson alignment.</p>
+              <p className="text-sm text-gray-600 mb-4">Choose one or more grade levels for lesson alignment.</p>
               <div className="grid md:grid-cols-3 gap-4">
-                {Object.entries(gradeCategories).map(([key, cat]) => (
-                  <Card key={key} className="space-y-2">
-                    <h4 className="font-semibold text-gray-900 text-sm">{cat.label}</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {cat.grades.map((g) => {
-                        const sel = selectedGrade === g
-                        return (
-                          <button key={g} type="button" onClick={() => setSelectedGrade(g)} className={`px-2 py-1 rounded text-xs font-medium border ${sel ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-800 border-gray-300 hover:border-purple-400'}`}>{g}</button>
-                        )
-                      })}
-                    </div>
-                  </Card>
-                ))}
+                {Object.entries(gradeCategories).map(([key, cat]) => {
+                  const catKey = key as keyof typeof gradeCategories
+                  const allSelected = cat.grades.every(g => selectedGrades.includes(g))
+                  return (
+                    <Card key={key} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-semibold text-gray-900 text-sm">{cat.label}</h4>
+                        <button type="button" onClick={() => selectAllGradesInCategory(catKey)} className="text-xs text-purple-600 hover:text-purple-800 font-medium">{allSelected ? 'Deselect All' : 'Select All'}</button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {cat.grades.map((g) => {
+                          const sel = selectedGrades.includes(g)
+                          return (
+                            <button key={g} type="button" onClick={() => toggleGradeSelection(g)} className={`px-2 py-1 rounded text-xs font-medium border ${sel ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-800 border-gray-300 hover:border-purple-400'}`}>{g}</button>
+                          )
+                        })}
+                      </div>
+                    </Card>
+                  )
+                })}
               </div>
+              {selectedGrades.length > 0 && (
+                <div className="mt-4 p-3 border rounded bg-blue-50 border-blue-200 text-sm text-blue-900">
+                  <strong>Selected:</strong> {selectedGrades.join(', ')}
+                </div>
+              )}
               <div className="flex justify-between mt-6">
                 <Button variant="outline" onClick={() => setCurrentStep(3)}>Back</Button>
-                <Button variant="primary" disabled={!selectedGrade} onClick={() => setCurrentStep(5)}>Next: Generate Lessons</Button>
+                <Button variant="primary" disabled={selectedGrades.length === 0} onClick={() => setCurrentStep(5)}>Next: Generate Lessons</Button>
               </div>
             </div>
           )}
 
-          {/* Step 6: Lessons */}
-          {currentStep === 5 && (
+          {/* Step 6: Lessons (Guided Mode) */}
+          {currentStep === 5 && !manualMode && (
             <div className="mb-16">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Step 6: Generate Lessons</h2>
@@ -413,13 +506,61 @@ export default function HolidaySeasonalPage() {
                 <Input label="Country" value={selectedCountry} disabled onChange={() => {}} />
                 <Input label="Curriculum" value={effectiveCurriculum} disabled onChange={() => {}} />
                 <Input label="Subject" value={selectedSubject?.name || ''} disabled onChange={() => {}} />
-                <Input label="Grade" value={selectedGrade} disabled onChange={() => {}} />
+                <Input label="Grade(s)" value={selectedGrades.join(', ')} disabled onChange={() => {}} />
                 <Input label="Number of Lessons" value={lessonCount} onChange={(e) => setLessonCount(e.target.value)} placeholder="e.g. 12" />
               </div>
               <Textarea label="Additional Context (optional)" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Any extra notes or constraints" />
               <div className="flex justify-end mt-4 gap-3">
                 <Button variant="outline" onClick={() => setCurrentStep(4)}>Back</Button>
                 <Button variant="primary" disabled={loading} onClick={handleGenerateLessons}>{loading ? 'Generating…' : 'Generate Lessons'}</Button>
+              </div>
+              {lessons.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Generated Lessons ({lessons.length})</h3>
+                  <div className="space-y-3">
+                    {lessons.map((ls, idx) => (
+                      <div key={idx} className="border rounded p-3 bg-white shadow-sm">
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="font-semibold text-gray-900">{ls.title}</h4>
+                          {ls.standard_code && <span className="text-xs px-2 py-1 bg-purple-50 border border-purple-200 rounded text-purple-700 font-mono">{ls.standard_code}</span>}
+                        </div>
+                        <p className="text-sm text-gray-700 mb-2">{ls.description}</p>
+                        <div className="text-xs text-gray-500 flex gap-3">
+                          <span>Code: {ls.lesson_code}</span>
+                          <span>Theme: {ls.theme || effectiveTheme}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual Mode: Quick Input */}
+          {currentStep === 5 && manualMode && (
+            <div className="mb-16">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">⚡ Quick Manual Input</h2>
+                <ModelSelector />
+              </div>
+              <p className="text-sm text-gray-600 mb-4">Manually enter all details and generate lessons immediately.</p>
+              <div className="p-4 border rounded-lg bg-yellow-50 border-yellow-200 mb-6">
+                <p className="text-sm text-yellow-900"><strong>Theme:</strong> {effectiveTheme}</p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <Input label="Country *" placeholder="e.g., USA, Canada, UK" value={manualCountry} onChange={(e) => setManualCountry(e.target.value)} />
+                <Input label="State Curriculum *" placeholder="e.g., Texas TEKS, California NGSS" value={manualCurriculum} onChange={(e) => setManualCurriculum(e.target.value)} />
+                <Input label="Subject *" placeholder="e.g., Science, Social Studies" value={manualSubject} onChange={(e) => setManualSubject(e.target.value)} />
+                <Input label="Grade(s) *" placeholder="e.g., 3rd grade, or 3rd-5th grade" value={manualGrades} onChange={(e) => setManualGrades(e.target.value)} />
+                <Input label="Number of Lessons *" placeholder="e.g., 12" value={lessonCount} onChange={(e) => setLessonCount(e.target.value)} />
+              </div>
+              <Textarea label="Additional Context (optional)" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Any extra notes or constraints" />
+              <div className="flex justify-end mt-4 gap-3">
+                <Button variant="outline" onClick={() => { setManualMode(false); setCurrentStep(0) }}>Back to Theme</Button>
+                <Button variant="primary" disabled={loading || !manualCountry.trim() || !manualCurriculum.trim() || !manualSubject.trim() || !manualGrades.trim()} onClick={handleGenerateLessons}>
+                  {loading ? 'Generating…' : 'Generate Lessons'}
+                </Button>
               </div>
               {lessons.length > 0 && (
                 <div className="mt-8">
