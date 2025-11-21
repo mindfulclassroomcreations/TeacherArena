@@ -1073,33 +1073,29 @@ REQUIREMENTS
     }
 
     if (type === 'section-standards') {
-      let items = ensureArray(parsedData)
-      if (!items) {
+      const family = detectCurriculumFamily(stateCurriculum || framework, region)
+      let itemsRaw = ensureArray(parsedData)
+
+      // If parsing failed AND family is OTHER, attempt fallback instead of hard error
+      if (!itemsRaw && family !== 'OTHER') {
         return res.status(500).json({ error: 'AI did not return an array of sub-standards' })
       }
 
-      const family = detectCurriculumFamily(stateCurriculum || framework, region)
+      let items: any[] = Array.isArray(itemsRaw) ? itemsRaw : []
       items = items
         .map((item: any, index: number) => {
           const codeRaw = item.code || item.standard_code || `S${index + 1}`
           const code = normalizeStandardCode(codeRaw)
           const nm = item.name || item.title || `Sub-standard ${index + 1}`
           const desc = item.description || ''
-          // Strict family enforcement: drop any sub-standard whose code does not belong to the selected curriculum
           const subj = String(subject || '')
           const allowed = isCodeAllowedByFamily(code, family, subj)
           if (!allowed) return null
-          return {
-            code,
-            name: nm,
-            title: item.name || item.title,
-            description: desc,
-          }
+          return { code, name: nm, title: item.name || item.title || nm, description: desc }
         })
         .filter(Boolean)
 
-      // Fallback for OTHER curricula: if still empty, attempt a lightweight best-fit generation.
-      if (items.length === 0 && family === 'OTHER') {
+      const attemptFallback = async () => {
         try {
           const fallbackPrompt = `${sharedRules}\nTASK: Provide 3–6 best-fit sub-standards inside the section "${section}" for ${subject} at ${grade}.\nCURRICULUM CONTEXT: ${stateCurriculum || framework || country || ''}\n\nRULES\n- Return ONLY JSON: { "items": [ { "code": string, "name": string, "description": string } ] }.\n- Use locally plausible short codes. If official codes are unknown, you MAY use simple teacher codes like SEC1, SEC2, SEC3.\n- Each name concise (≤ 7 words). Description 1 sentence.\n- Avoid cross-unit references.\n- Avoid returning an empty list unless absolutely no reasonable sub-standards can be inferred.\nOUTPUT EXAMPLE\n{ "items": [ { "code": "SEC1", "name": "Matter and Its Properties", "description": "Explore states of matter and observable physical changes." } ] }`
           const fbResp = await client.chat.completions.create({
@@ -1111,7 +1107,7 @@ REQUIREMENTS
             response_format: { type: 'json_object' }
           })
           let fbObj: any = null
-            try { fbObj = JSON.parse(fbResp.choices?.[0]?.message?.content || '') } catch {}
+          try { fbObj = JSON.parse(fbResp.choices?.[0]?.message?.content || '') } catch {}
           const fbItemsArr: any[] = Array.isArray(fbObj?.items) ? fbObj.items : []
           const mapped = fbItemsArr.map((it: any, idx: number) => {
             const code = normalizeStandardCode(it.code || it.standard_code || `SEC${idx + 1}`)
@@ -1119,11 +1115,22 @@ REQUIREMENTS
             const desc = it.description || ''
             return { code: code || `SEC${idx + 1}`, name: nm, title: nm, description: desc }
           }).filter((x: any) => x.code)
-          if (mapped.length > 0) {
-            items = mapped
-          }
+          if (mapped.length > 0) items = mapped
         } catch (e) {
           // swallow fallback errors
+        }
+      }
+
+      if ((items.length === 0) && family === 'OTHER') {
+        await attemptFallback()
+        if (items.length === 0) {
+          // Final placeholder guarantee (never return empty for OTHER)
+          items = [1,2,3].map((n) => ({
+            code: `SEC${n}`,
+            name: n === 1 ? 'Foundational Concept' : n === 2 ? 'Core Skill Development' : 'Applied Practice',
+            title: n === 1 ? 'Foundational Concept' : n === 2 ? 'Core Skill Development' : 'Applied Practice',
+            description: 'Locally inferred sub-standard placeholder to support lesson planning where official granular codes are unavailable.'
+          }))
         }
       }
 
