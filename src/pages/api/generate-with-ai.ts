@@ -85,11 +85,8 @@ function isCodeAllowedByFamily(code: string, family: CurriculumFamily, subject?:
       // 6.2a or BIO.1.a (accept both upper/lower final letter)
       return /^(K|[1-9]|1[0-2])\.[0-9]+[A-Z]$/i.test(up) || /^(BIO|CHEM|PHYS|SCI)\.[0-9]+(\.[A-Z])?$/i.test(up)
     default:
-      // Generic acceptance: our own teacher-facing prefixes per subject to avoid cross-mixing
-      const subj = String(subject || '').toLowerCase()
-      const acr = subj.includes('science') ? 'SCI' : subj.includes('math') ? 'MATH' : (subj.includes('english') || subj.includes('ela') || subj.includes('language')) ? 'ELA' : (subj.includes('social') || subj.includes('history') || subj.includes('civics')) ? 'SS' : subj.includes('computer') || subj.includes('technology') || subj.includes('ict') || subj.includes('cs') ? 'CS' : 'STD'
-      const re = new RegExp(`^${acr}\-`)
-      return re.test(up)
+      // For OTHER curricula, accept any non-empty code (no strict pattern enforcement)
+      return up.length > 0
   }
 }
 
@@ -301,6 +298,16 @@ OUTPUT
               return `Use only the official local format for the selected curriculum. Do NOT guess NGSS/TEKS/SOL if not applicable.`
           }
         })()
+        const confidenceRule = (() => {
+          switch (familySS) {
+            case 'NGSS':
+            case 'TEKS':
+            case 'SOL':
+              return `CONFIDENCE RULE: If you are not highly confident at least 4 valid in-section sub-standards exist, return an empty JSON array [] instead of guessing.`
+            default:
+              return `CONFIDENCE RULE: For this curriculum, provide your best-fit in-section sub-standards even if you are not fully certain about every official code. Only return an empty JSON array [] if you truly cannot infer any reasonable sub-standards for this section at this grade.`
+          }
+        })()
         userPrompt = `${sharedRules}
 TASK: For the selected curriculum, generate sub-standards for a specific section.
 
@@ -315,7 +322,7 @@ ${region ? `- Region/State: "${region}"` : ''}
 ${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
 
 REQUIREMENTS
-- Generate 4–10 sub-standards that belong under the section "${section}" for ${subject} at ${grade}.
+- Generate ${familySS === 'NGSS' || familySS === 'TEKS' || familySS === 'SOL' ? '4–10' : '3–10'} sub-standards that belong under the section "${section}" for ${subject} at ${grade}.
 - Each item must include exactly these fields:
   - code (string) — a short code or identifier like "S1.A" or "BIO.1.1".
   - name (string) — concise sub-standard title.
@@ -326,7 +333,7 @@ REQUIREMENTS
 - Do NOT invent standards; mirror real structure/names where possible.
 - STRICT UNIT BOUNDARY: Only include sub-standards that logically fall INSIDE the pedagogical scope of the section "${section}". If a candidate would clearly belong to another unit/section (even if related), EXCLUDE it.
 - GRADE & CURRICULUM ALIGNMENT: All sub-standards must be appropriate for grade ${grade} and reflect the selected curriculum family. Do not output advanced high-school only content if grade is elementary, etc.
-- CONFIDENCE RULE: If you are not highly confident at least 4 valid in-section sub-standards exist, return an empty JSON array [] instead of guessing.
+- ${confidenceRule}
 - NO CROSS-UNIT REFERENCES: Names or descriptions must NOT explicitly reference other units/sections by name (e.g., "This prepares for Forces & Motion" if that is a different unit).
 - NO MIXED SUBJECTS: Stay strictly within ${subject}—no cross-curricular blend unless inherently part of the official standard wording.
 
@@ -691,7 +698,8 @@ REQUIREMENTS
     }
 
     // Custom exhaustive flow for section-standards to include ALL relevant sub-standards within the unit
-    if (type === 'section-standards') {
+    // Skip exhaustive multi-call discovery for OTHER curricula to allow best-fit generation instead of empty arrays.
+    if (type === 'section-standards' && detectCurriculumFamily(stateCurriculum || framework, region) !== 'OTHER') {
       try {
         // Resolve model with allowlist guard
         let model: string = typeof reqModel === 'string' && reqModel.trim() ? String(reqModel).trim() : DEFAULT_MODEL
@@ -1089,6 +1097,35 @@ REQUIREMENTS
           }
         })
         .filter(Boolean)
+
+      // Fallback for OTHER curricula: if still empty, attempt a lightweight best-fit generation.
+      if (items.length === 0 && family === 'OTHER') {
+        try {
+          const fallbackPrompt = `${sharedRules}\nTASK: Provide 3–6 best-fit sub-standards inside the section "${section}" for ${subject} at ${grade}.\nCURRICULUM CONTEXT: ${stateCurriculum || framework || country || ''}\n\nRULES\n- Return ONLY JSON: { "items": [ { "code": string, "name": string, "description": string } ] }.\n- Use locally plausible short codes. If official codes are unknown, you MAY use simple teacher codes like SEC1, SEC2, SEC3.\n- Each name concise (≤ 7 words). Description 1 sentence.\n- Avoid cross-unit references.\n- Avoid returning an empty list unless absolutely no reasonable sub-standards can be inferred.\nOUTPUT EXAMPLE\n{ "items": [ { "code": "SEC1", "name": "Matter and Its Properties", "description": "Explore states of matter and observable physical changes." } ] }`
+          const fbResp = await client.chat.completions.create({
+            model,
+            messages: [
+              { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON.' },
+              { role: 'user', content: fallbackPrompt }
+            ],
+            response_format: { type: 'json_object' }
+          })
+          let fbObj: any = null
+            try { fbObj = JSON.parse(fbResp.choices?.[0]?.message?.content || '') } catch {}
+          const fbItemsArr: any[] = Array.isArray(fbObj?.items) ? fbObj.items : []
+          const mapped = fbItemsArr.map((it: any, idx: number) => {
+            const code = normalizeStandardCode(it.code || it.standard_code || `SEC${idx + 1}`)
+            const nm = it.name || it.title || `Sub-standard ${idx + 1}`
+            const desc = it.description || ''
+            return { code: code || `SEC${idx + 1}`, name: nm, title: nm, description: desc }
+          }).filter((x: any) => x.code)
+          if (mapped.length > 0) {
+            items = mapped
+          }
+        } catch (e) {
+          // swallow fallback errors
+        }
+      }
 
       return res.status(200).json({
         success: true,
