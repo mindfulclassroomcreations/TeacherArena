@@ -697,6 +697,46 @@ REQUIREMENTS
         return res.status(400).json({ error: 'Invalid type' })
     }
 
+    // Holiday / Seasonal themed lessons simple prompt
+    if (type === 'holiday-seasonal-lessons') {
+      const { theme = '', lessonCount = 12 } = req.body
+      const normalizedTheme = String(theme || '').trim() || 'Seasonal Theme'
+      const finalCount = Math.min(60, Math.max(1, Number(lessonCount) || 12))
+      userPrompt = `${sharedRules}
+ROLE: You are an expert educator creating concise lesson outlines.
+
+INPUTS
+- Theme: "${normalizedTheme}"
+- Country: "${country}"
+${region ? `- Region/State: "${region}"\n` : ''}- Curriculum Group: "${stateCurriculum || 'General'}"
+- Grade Level: "${grade || 'Unspecified'}"
+${framework ? `- Framework Reference: "${framework}"\n` : ''}${context ? `- Additional Context: ${context}\n` : ''}
+
+GOAL
+Generate ${finalCount} themed lesson plan outlines integrating the selected curriculum context where applicable.
+
+OUTPUT FORMAT
+Respond with ONLY a JSON array of lesson objects:
+[
+  {
+    "title": "Concise, engaging lesson title",
+    "description": "1-3 sentence overview including objective, key activity, assessment",
+    "theme": "${normalizedTheme}",
+    "grade_alignment": "${grade || 'General'}",
+    "standard_code": "Official code if confidently aligned, else empty string",
+    "lesson_code": "Internal identifier combining theme acronym + sequence, e.g. THEME-L01"
+  }
+]
+
+REQUIREMENTS
+- Vary lesson focus (skills, inquiry, project, reflection, cross-curricular integration).
+- Ensure titles are unique and reflect the theme.
+- If you cannot confidently provide a valid official standard code for ${stateCurriculum || 'the curriculum'}, set standard_code to "".
+- lesson_code pattern: Use an acronym from theme (letters only, up to 6) + '-' + L + zero-padded sequence (e.g., MLKDAY-L01). Do NOT claim lesson_code is an official standard.
+- Avoid generic filler; make each description actionable.
+`
+    }
+
     // Custom exhaustive flow for section-standards to include ALL relevant sub-standards within the unit
     // Skip exhaustive multi-call discovery for OTHER curricula to allow best-fit generation instead of empty arrays.
     if (type === 'section-standards' && detectCurriculumFamily(stateCurriculum || framework, region) !== 'OTHER') {
@@ -907,7 +947,7 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
       }
     }
 
-    const selectedPromptId = (type === 'lesson-discovery' || type === 'lesson-generation-by-strand' || type === 'lessons' || type === 'lessons-by-substandards') 
+    const selectedPromptId = (type === 'lesson-discovery' || type === 'lesson-generation-by-strand' || type === 'lessons' || type === 'lessons-by-substandards' || type === 'holiday-seasonal-lessons') 
       ? LESSON_PROMPT_ID 
       : PROMPT_ID
 
@@ -1108,6 +1148,37 @@ REQUIREMENTS
         items,
         count: items.length
       })
+    }
+
+    if (type === 'holiday-seasonal-lessons') {
+      let items = ensureArray(parsedData)
+      if (!items) {
+        return res.status(500).json({ error: 'AI did not return an array of lessons' })
+      }
+      const { theme = '', lessonCount = items.length } = req.body || {}
+      const themeAcronym = String(theme || 'THEME').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) || 'THEME'
+      items = items.map((item: any, index: number) => {
+        const std = normalizeStandardCode(item.standard_code || item.code || '')
+        const lessonCode = item.lesson_code || `${themeAcronym}-L${String(index + 1).padStart(2, '0')}`
+        return {
+          name: item.title || item.name || `Lesson ${index + 1}`,
+            title: item.title || item.name || `Lesson ${index + 1}`,
+          description: item.description || '',
+          standard_code: std || '',
+          lesson_code: lessonCode,
+          theme: theme
+        }
+      })
+      // Deduct tokens equal to number of lessons generated
+      if (userId && supabaseAdmin) {
+        try {
+          const current = await getUserTokens(userId)
+          await setUserTokens(userId, current - items.length)
+        } catch (e) {
+          console.error('Token deduction failed (holiday):', e)
+        }
+      }
+      return res.status(200).json({ success: true, items, count: items.length })
     }
 
     if (type === 'section-standards') {

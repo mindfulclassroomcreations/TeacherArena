@@ -1805,6 +1805,12 @@ export default function Home() {
           >
             ⚡ Quick Lesson Generator
           </Button>
+          <Button
+            variant="purple"
+            onClick={() => { window.location.href = '/holiday-seasonal' }}
+          >
+            🎉 Holiday / Seasonal Products
+          </Button>
         </div>
       </div>
 

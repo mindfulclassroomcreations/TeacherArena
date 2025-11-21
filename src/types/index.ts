@@ -44,7 +44,7 @@ export interface Lesson {
 }
 
 export interface AIGenerationRequest {
-  type: 'subjects' | 'frameworks' | 'grades' | 'lessons' | 'lesson-discovery' | 'lesson-generation-by-strand' | 'state-curricula' | 'state-standard' | 'section-standards' | 'lessons-by-substandards' | 'unit-topics'
+  type: 'subjects' | 'frameworks' | 'grades' | 'lessons' | 'lesson-discovery' | 'lesson-generation-by-strand' | 'state-curricula' | 'state-standard' | 'section-standards' | 'lessons-by-substandards' | 'unit-topics' | 'holiday-seasonal-lessons'
   country?: string
   subject?: string
   framework?: string
@@ -70,6 +70,9 @@ export interface AIGenerationRequest {
   // For lessons-by-substandards
   subStandards?: Array<{ code?: string; name?: string; title?: string; description?: string }>
   lessonsPerStandard?: number
+  // For holiday/seasonal lessons
+  theme?: string
+  lessonCount?: number
 }
 
 // User roles and profile
