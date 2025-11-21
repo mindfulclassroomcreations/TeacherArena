@@ -36,16 +36,15 @@ function isCodeAllowedByFamily(code: string, family: CurriculumFamily, subject?:
   if (!up) return false
   switch (family) {
     case 'NGSS':
-      return /^(HS|MS|K|[1-9]|1[0-2])\-(LS|PS|ESS|ETS)\d(\.[A-Z])?$/.test(up)
+      // Accept both DCI (HS-LS1.A) and Performance Expectations (MS-PS2-1), including grade bands (K-2, 3-5, 6-8, 9-12)
+      return /^(HS|MS|K|[1-9]|1[0-2]|K-2|3-5|6-8|9-12)\-(LS|PS|ESS|ETS)\d((\.[A-Z])|(\-\d+[A-Z]?))?$/.test(up)
     case 'TEKS':
       return /^(K|[1-9]|1[0-2])\.[0-9]+[A-Z]$/.test(up) || /^(BIO|CHEM|PHYS|SCI)\.[0-9]+(\.[A-Z])?$/.test(up)
     case 'SOL':
       return /^(K|[1-9]|1[0-2])\.[0-9]+[A-Z]$/i.test(up) || /^(BIO|CHEM|PHYS|SCI)\.[0-9]+(\.[A-Z])?$/i.test(up)
     default:
-      const subj = String(subject || '').toLowerCase()
-      const acr = subj.includes('science') ? 'SCI' : subj.includes('math') ? 'MATH' : (subj.includes('english') || subj.includes('ela') || subj.includes('language')) ? 'ELA' : (subj.includes('social') || subj.includes('history') || subj.includes('civics')) ? 'SS' : subj.includes('computer') || subj.includes('technology') || subj.includes('ict') || subj.includes('cs') ? 'CS' : 'STD'
-      const re = new RegExp(`^${acr}\-`)
-      return re.test(up)
+      // For OTHER curricula, accept any non-empty code (no strict pattern enforcement)
+      return up.length > 0
   }
 }
 function isLikelyScienceCode(code: string): boolean {

@@ -76,8 +76,8 @@ function isCodeAllowedByFamily(code: string, family: CurriculumFamily, subject?:
   if (!up) return false
   switch (family) {
     case 'NGSS':
-      // HS-LS1.A or 3-ESS2.C
-      return /^(HS|MS|K|[1-9]|1[0-2])\-(LS|PS|ESS|ETS)\d(\.[A-Z])?$/.test(up)
+      // Accept both DCI (HS-LS1.A, 3-ESS2.C) and Performance Expectations (MS-PS2-1), including grade bands (K-2, 3-5, 6-8, 9-12)
+      return /^(HS|MS|K|[1-9]|1[0-2]|K-2|3-5|6-8|9-12)\-(LS|PS|ESS|ETS)\d((\.[A-Z])|(\-\d+[A-Z]?))?$/.test(up)
     case 'TEKS':
       // 5.7A style across subjects; allow BIO./CHEM./PHYS. prefixes for HS
       return /^(K|[1-9]|1[0-2])\.[0-9]+[A-Z]$/.test(up) || /^(BIO|CHEM|PHYS|SCI)\.[0-9]+(\.[A-Z])?$/.test(up)
@@ -764,7 +764,45 @@ REQUIREMENTS
         const allowedCodes = rawCodes
           .map((x: string) => normalizeStandardCode(x))
           .filter((x: string) => isCodeAllowedByFamily(x, family, subject))
-        const uniqueCodes = Array.from(new Set(allowedCodes))
+        let uniqueCodes = Array.from(new Set(allowedCodes))
+
+        // NGSS safeguard: if too few codes were returned (common when model mixes DCI vs PE),
+        // request Performance Expectation style codes explicitly and merge.
+        if (family === 'NGSS' && uniqueCodes.length < 4) {
+          try {
+            const pePrompt = `${sharedRules}
+TASK: List the complete set of NGSS Performance Expectation CODES (e.g., MS-LS1-1, HS-PS2-2) that belong INSIDE the section/unit "${section}" for ${subject} at ${grade}.
+
+INPUTS
+- Subject: "${subject}"
+- Framework/Standard: "${framework}"
+- Country: "${country}"
+${region ? `- Region/State: "${region}"` : ''}
+- Curriculum Group (State/Region): "${stateCurriculum || ''}"
+- Grade Level: "${grade}"
+- Section Name: "${section}"
+${context ? `ADDITIONAL CONTEXT\n${context}` : ''}
+
+REQUIREMENTS
+- Return ONLY JSON with this exact shape: { "codes": string[], "total": number }.
+- Include ONLY NGSS PE codes for THIS specific unit/section and grade band.
+- Preserve hyphens; do NOT convert to DCI dot notation.
+`
+            const peResp = await client.chat.completions.create({
+              model,
+              messages: [
+                { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
+                { role: 'user', content: pePrompt }
+              ],
+              response_format: { type: 'json_object' }
+            })
+            let peObj: any = null
+            try { peObj = JSON.parse(peResp.choices?.[0]?.message?.content || '') } catch {}
+            const peRaw: string[] = Array.isArray(peObj?.codes) ? peObj.codes : []
+            const peAllowed = peRaw.map((x) => normalizeStandardCode(x)).filter((x) => isCodeAllowedByFamily(x, family, subject))
+            uniqueCodes = Array.from(new Set([...uniqueCodes, ...peAllowed]))
+          } catch {}
+        }
 
         if (uniqueCodes.length > 0) {
           // 2) Request details for the specific codes, ensuring one item per code
