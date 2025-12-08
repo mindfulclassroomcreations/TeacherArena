@@ -1730,13 +1730,21 @@ export default function Home() {
   }
 
   const handleSelectGrade = (grade: Item) => {
-    setSelectedGrade(grade)
-    setSelectedGrades([grade])
-    setCurrentStep(5)
-    setStrands([])
-    setLessons([])
+    // Toggle multi-select for grades; do not advance immediately
+    setSelectedGrades((prev) => {
+      const exists = prev.some((g) => g.name === grade.name)
+      const next = exists ? prev.filter((g) => g.name !== grade.name) : [...prev, grade]
+      // Keep a primary selectedGrade for downstream APIs (first selected)
+      setSelectedGrade(next[0] || null)
+      return next
+    })
+    // Clear downstream when changing selection
+    setFrameworks([])
+    setSelectedFramework(null)
     setCurriculumSections([])
     setSelectedCurriculumSection(null)
+    setStrands([])
+    setLessons([])
   }
 
   // Step 3: Select-all helpers – select all grades in the category and advance to Step 4
@@ -1757,6 +1765,14 @@ export default function Home() {
       setCurrentStep(4)
       setSuccess(`Selected all grades in ${group.label}. Proceeding to Step 4.`)
       setTimeout(() => setSuccess(null), 2000)
+    }
+  }
+
+  const proceedToStep4FromGrades = () => {
+    if (selectedGrades.length > 0) {
+      // Ensure primary grade is set
+      setSelectedGrade(selectedGrades[0] || null)
+      setCurrentStep(4)
     }
   }
 
@@ -2329,6 +2345,12 @@ export default function Home() {
                   ))}
                 </div>
               )}
+              {/* Proceed to Step 4 once at least one grade is selected */}
+              <div className="flex justify-end mt-4">
+                <Button onClick={proceedToStep4FromGrades} disabled={selectedGrades.length === 0} variant="primary">
+                  Continue to Step 4
+                </Button>
+              </div>
             </>
           )}
         </div>

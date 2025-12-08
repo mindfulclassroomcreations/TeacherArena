@@ -63,6 +63,7 @@ export default function HolidaySeasonalPage() {
   const [manualSubject, setManualSubject] = useState<string>('')
   const [manualGrades, setManualGrades] = useState<string>('')
   const [selectedCountry, setSelectedCountry] = useState<string>('')
+  // Removed guided State Curriculum step; manual mode still supports curriculum input
   const [stateCurricula, setStateCurricula] = useState<any[]>([])
   const [selectedCurriculum, setSelectedCurriculum] = useState<any | null>(null)
   const [customCurriculum, setCustomCurriculum] = useState<string>('')
@@ -82,10 +83,9 @@ export default function HolidaySeasonalPage() {
   const steps = [
     { label: 'Theme', completed: currentStep > 0, active: currentStep === 0 },
     { label: 'Country', completed: currentStep > 1, active: currentStep === 1 },
-    { label: 'State Curriculum', completed: currentStep > 2, active: currentStep === 2 },
-    { label: 'Subject', completed: currentStep > 3, active: currentStep === 3 },
-    { label: 'Grade', completed: currentStep > 4, active: currentStep === 4 },
-    { label: 'Lessons', completed: false, active: currentStep === 5 }
+    { label: 'Subject', completed: currentStep > 2, active: currentStep === 2 },
+    { label: 'Grade', completed: currentStep > 3, active: currentStep === 3 },
+    { label: 'Lessons', completed: false, active: currentStep === 4 }
   ]
 
   const ModelSelector = ({ className = '' }: { className?: string }) => (
@@ -106,43 +106,23 @@ export default function HolidaySeasonalPage() {
     </div>
   )
 
-  const generateStateCurricula = async () => {
-    if (!selectedCountry || !effectiveTheme) return
-    if (stateCurricula.length > 0) return
-    setLoading(true); setError(null)
-    try {
-      const response = await generateContent({
-        type: 'state-curricula',
-        country: selectedCountry,
-        subject: effectiveTheme + ' Thematic Learning',
-        model: selectedModel,
-        context
-      })
-      if (response.items) {
-        setStateCurricula(response.items)
-        setSuccess(`Generated ${response.items.length} curriculum groups for ${selectedCountry}`)
-        setTimeout(() => setSuccess(null), 2500)
-      }
-    } catch (e: any) {
-      setError(String(e.message || 'Failed to generate state curricula'))
-    } finally { setLoading(false) }
-  }
+  // Guided flow no longer includes a State Curriculum step
 
   const generateSubjects = async () => {
-    if (!selectedCountry || !effectiveCurriculum) return
+    if (!selectedCountry || !effectiveTheme) return
     if (subjects.length > 0) return
     setLoading(true); setError(null)
     try {
       const response = await generateContent({
         type: 'subjects',
         country: selectedCountry,
-        context: `Generate subjects relevant to ${effectiveCurriculum} and ${effectiveTheme} theme`,
+        context: `Generate subjects relevant to ${effectiveTheme} theme in ${selectedCountry}`,
         model: selectedModel,
         subjectsCount: 10
       })
       if (response.items) {
         setSubjects(response.items)
-        setSuccess(`Generated ${response.items.length} subjects for ${effectiveCurriculum}`)
+        setSuccess(`Generated ${response.items.length} subjects for ${selectedCountry}`)
         setTimeout(() => setSuccess(null), 2500)
       }
     } catch (e: any) {
@@ -185,8 +165,8 @@ export default function HolidaySeasonalPage() {
     }
 
     // Guided mode validation
-    if (!effectiveTheme || !selectedCountry || !effectiveCurriculum || !selectedSubject || selectedGrades.length === 0) {
-      setError('Select theme, country, state curriculum, subject, and at least one grade first.')
+    if (!effectiveTheme || !selectedCountry || !selectedSubject || selectedGrades.length === 0) {
+      setError('Select Theme, Country, Subject, and at least one Grade first.')
       return
     }
     setLoading(true); setError(null)
@@ -194,17 +174,24 @@ export default function HolidaySeasonalPage() {
       const countNum = parseInt(lessonCount)
       const finalCount = Number.isFinite(countNum) && countNum > 0 ? countNum : 12
       const gradeList = selectedGrades.join(', ')
+      const alignmentContext = [
+        `Align strictly with Subject: ${selectedSubject.name}`,
+        `Use Theme: ${effectiveTheme} across objectives and activities`,
+        `Country context: ${selectedCountry}`,
+        `Grade levels: ${gradeList}`,
+        `Ensure each lesson explicitly references the theme and subject focus`
+      ].join('\n')
       const response = await generateContent({
         type: 'holiday-seasonal-lessons',
         country: selectedCountry,
-        stateCurriculum: effectiveCurriculum,
+        stateCurriculum: selectedCountry,
         subject: selectedSubject.name,
         grade: gradeList,
-        framework: effectiveCurriculum,
+        framework: selectedCountry,
         theme: effectiveTheme,
         lessonCount: finalCount,
         model: selectedModel,
-        context: context + (selectedGrades.length > 1 ? `\nMultiple grades selected: ${gradeList}` : '')
+        context: `${context}\n${alignmentContext}`
       })
       if (Array.isArray(response.items)) {
         setLessons(response.items as LessonItem[])
@@ -450,73 +437,23 @@ export default function HolidaySeasonalPage() {
               </div>
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setCurrentStep(0)}>Back</Button>
-                <Button variant="primary" disabled={!selectedCountry} onClick={() => setCurrentStep(2)}>Next: State Curriculum</Button>
+                <Button variant="primary" disabled={!selectedCountry} onClick={() => setCurrentStep(2)}>Next: Subject</Button>
               </div>
             </div>
           )}
 
-          {/* Step 3: State Curriculum */}
-          {currentStep === 2 && (
-            <div className="mb-10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Step 3: State Curriculum Group</h2>
-                <ModelSelector />
-              </div>
-              <p className="text-sm text-gray-600 mb-4">Generate curriculum groups relevant to the theme and country.</p>
-              {stateCurricula.length === 0 && (
-                <Button variant="primary" disabled={!selectedCountry || !effectiveTheme || loading} onClick={generateStateCurricula}>
-                  {loading ? 'Generating…' : 'Generate Curriculum Groups'}
-                </Button>
-              )}
-              {stateCurricula.length > 0 && (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                  {stateCurricula.map((g: any, idx: number) => {
-                    const sel = selectedCurriculum?.curriculum_name === g.curriculum_name
-                    return (
-                      <Card key={idx} className={`cursor-pointer border-2 ${sel ? 'border-purple-600 bg-purple-50' : 'border-gray-200 hover:border-purple-400'}`} onClick={() => setSelectedCurriculum(g)}>
-                        <h4 className="font-semibold text-gray-900 mb-1 text-sm">{g.curriculum_name}</h4>
-                        <p className="text-xs text-gray-600">{g.description || ''}</p>
-                        {Array.isArray(g.states) && g.states.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {g.states.slice(0,6).map((s: string, si: number) => <span key={si} className="text-[10px] px-1 py-0.5 bg-gray-100 rounded border border-gray-200">{s}</span>)}
-                            {g.states.length > 6 && <span className="text-[10px] text-gray-500">+{g.states.length - 6}</span>}
-                          </div>
-                        )}
-                      </Card>
-                    )
-                  })}
-                </div>
-              )}
-              {selectedCurriculum && (
-                <div className="mt-6 p-4 border rounded bg-green-50 border-green-200 text-sm text-green-900">
-                  <strong>Selected Group:</strong> {selectedCurriculum.curriculum_name}
-                </div>
-              )}
-              <div className="mt-6">
-                <Input label="Or enter a custom State Curriculum" placeholder="e.g., Texas TEKS, California NGSS" value={customCurriculum} onChange={(e) => { setCustomCurriculum(e.target.value); setSelectedCurriculum(null) }} />
-              </div>
-              {effectiveCurriculum && (
-                <div className="mt-4 p-3 border rounded bg-blue-50 border-blue-200 text-sm text-blue-900">
-                  <strong>Active Curriculum:</strong> {effectiveCurriculum}
-                </div>
-              )}
-              <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={() => setCurrentStep(1)}>Back</Button>
-                <Button variant="primary" disabled={!effectiveCurriculum} onClick={() => setCurrentStep(3)}>Next: Subject</Button>
-              </div>
-            </div>
-          )}
+          {/* Removed Step 3: State Curriculum in guided flow */}
 
           {/* Step 4: Subject */}
-          {currentStep === 3 && (
+          {currentStep === 2 && (
             <div className="mb-10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Step 4: Select Subject</h2>
                 <ModelSelector />
               </div>
-              <p className="text-sm text-gray-600 mb-4">Generate or select subjects for thematic lessons under <strong>{effectiveCurriculum}</strong>.</p>
+              <p className="text-sm text-gray-600 mb-4">Generate or select subjects for thematic lessons for <strong>{selectedCountry}</strong>.</p>
               {subjects.length === 0 && (
-                <Button variant="primary" disabled={!effectiveCurriculum || loading} onClick={generateSubjects}>
+                <Button variant="primary" disabled={!selectedCountry || !effectiveTheme || loading} onClick={generateSubjects}>
                   {loading ? 'Generating…' : 'Generate Subjects'}
                 </Button>
               )}
@@ -539,14 +476,14 @@ export default function HolidaySeasonalPage() {
                 </div>
               )}
               <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={() => setCurrentStep(2)}>Back</Button>
-                <Button variant="primary" disabled={!selectedSubject} onClick={() => setCurrentStep(4)}>Next: Grade</Button>
+                <Button variant="outline" onClick={() => setCurrentStep(1)}>Back</Button>
+                <Button variant="primary" disabled={!selectedSubject} onClick={() => setCurrentStep(3)}>Next: Grade</Button>
               </div>
             </div>
           )}
 
           {/* Step 5: Grade */}
-          {currentStep === 4 && (
+          {currentStep === 3 && (
             <div className="mb-10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Step 5: Select Grade(s)</h2>
@@ -581,31 +518,31 @@ export default function HolidaySeasonalPage() {
                 </div>
               )}
               <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={() => setCurrentStep(3)}>Back</Button>
-                <Button variant="primary" disabled={selectedGrades.length === 0} onClick={() => setCurrentStep(5)}>Next: Generate Lessons</Button>
+                <Button variant="outline" onClick={() => setCurrentStep(2)}>Back</Button>
+                <Button variant="primary" disabled={selectedGrades.length === 0} onClick={() => setCurrentStep(4)}>Next: Generate Lessons</Button>
               </div>
             </div>
           )}
 
           {/* Step 6: Lessons (Guided Mode) */}
-          {currentStep === 5 && !manualMode && (
+          {currentStep === 4 && !manualMode && (
             <div className="mb-16">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Step 6: Generate Lessons</h2>
                 <ModelSelector />
               </div>
-              <p className="text-sm text-gray-600 mb-4">Generate themed lessons using the selected parameters.</p>
+              <p className="text-sm text-gray-600 mb-4">Generate lessons aligned with the selected Theme, Country, Subject, and Grade(s).</p>
               <div className="grid md:grid-cols-3 gap-4 mb-6">
                 <Input label="Theme" value={effectiveTheme} disabled onChange={() => {}} />
                 <Input label="Country" value={selectedCountry} disabled onChange={() => {}} />
-                <Input label="Curriculum" value={effectiveCurriculum} disabled onChange={() => {}} />
+                {/* Curriculum removed from guided flow */}
                 <Input label="Subject" value={selectedSubject?.name || ''} disabled onChange={() => {}} />
                 <Input label="Grade(s)" value={selectedGrades.join(', ')} disabled onChange={() => {}} />
                 <Input label="Number of Lessons" value={lessonCount} onChange={(e) => setLessonCount(e.target.value)} placeholder="e.g. 12" />
               </div>
-              <Textarea label="Additional Context (optional)" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Any extra notes or constraints" />
+              <Textarea label="Additional Context (optional)" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Add constraints or focus areas to reinforce the theme and subject alignment" />
               <div className="flex justify-end mt-4 gap-3">
-                <Button variant="outline" onClick={() => setCurrentStep(4)}>Back</Button>
+                <Button variant="outline" onClick={() => setCurrentStep(3)}>Back</Button>
                 <Button variant="primary" disabled={loading} onClick={handleGenerateLessons}>{loading ? 'Generating…' : 'Generate Lessons'}</Button>
               </div>
               {lessons.length > 0 && (
