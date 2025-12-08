@@ -132,22 +132,24 @@ export default function HolidaySeasonalPage() {
 
   const handleGenerateLessons = async () => {
     if (manualMode) {
-      // Manual mode validation
-      if (!effectiveTheme || !manualCountry.trim() || !manualCurriculum.trim() || !manualSubject.trim() || !manualGrades.trim()) {
-        setError('Fill all manual input fields (Theme, Country, Curriculum, Subject, Grades).')
+      // Manual mode validation (State Curriculum optional)
+      if (!effectiveTheme || !manualCountry.trim() || !manualSubject.trim() || !manualGrades.trim()) {
+        setError('Fill required fields: Theme, Country, Subject, and Grades. (State Curriculum is optional).')
         return
       }
       setLoading(true); setError(null)
       try {
         const countNum = parseInt(lessonCount)
         const finalCount = Number.isFinite(countNum) && countNum > 0 ? countNum : 12
+        const manualCurr = manualCurriculum.trim()
+        const stateCurrOrCountry = manualCurr || manualCountry.trim()
         const response = await generateContent({
           type: 'holiday-seasonal-lessons',
           country: manualCountry.trim(),
-          stateCurriculum: manualCurriculum.trim(),
+          stateCurriculum: stateCurrOrCountry,
           subject: manualSubject.trim(),
           grade: manualGrades.trim(),
-          framework: manualCurriculum.trim(),
+          framework: stateCurrOrCountry,
           theme: effectiveTheme,
           lessonCount: finalCount,
           model: selectedModel,
@@ -587,7 +589,7 @@ export default function HolidaySeasonalPage() {
               </div>
               <div className="grid md:grid-cols-2 gap-4 mb-6">
                 <Input label="Country *" placeholder="e.g., USA, Canada, UK" value={manualCountry} onChange={(e) => setManualCountry(e.target.value)} />
-                <Input label="State Curriculum *" placeholder="e.g., Texas TEKS, California NGSS" value={manualCurriculum} onChange={(e) => setManualCurriculum(e.target.value)} />
+                <Input label="State Curriculum (optional)" placeholder="e.g., Texas TEKS, California NGSS" value={manualCurriculum} onChange={(e) => setManualCurriculum(e.target.value)} />
                 <Input label="Subject *" placeholder="e.g., Science, Social Studies" value={manualSubject} onChange={(e) => setManualSubject(e.target.value)} />
                 <Input label="Grade(s) *" placeholder="e.g., 3rd grade, or 3rd-5th grade" value={manualGrades} onChange={(e) => setManualGrades(e.target.value)} />
                 <Input label="Number of Lessons *" placeholder="e.g., 12" value={lessonCount} onChange={(e) => setLessonCount(e.target.value)} />
@@ -595,7 +597,7 @@ export default function HolidaySeasonalPage() {
               <Textarea label="Additional Context (optional)" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Any extra notes or constraints" />
               <div className="flex justify-end mt-4 gap-3">
                 <Button variant="outline" onClick={() => { setManualMode(false); setCurrentStep(0) }}>Back to Theme</Button>
-                <Button variant="primary" disabled={loading || !manualCountry.trim() || !manualCurriculum.trim() || !manualSubject.trim() || !manualGrades.trim()} onClick={handleGenerateLessons}>
+                <Button variant="primary" disabled={loading || !manualCountry.trim() || !manualSubject.trim() || !manualGrades.trim()} onClick={handleGenerateLessons}>
                   {loading ? 'Generating…' : 'Generate Lessons'}
                 </Button>
               </div>
