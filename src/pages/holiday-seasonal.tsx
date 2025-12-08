@@ -143,6 +143,14 @@ export default function HolidaySeasonalPage() {
         const finalCount = Number.isFinite(countNum) && countNum > 0 ? countNum : 12
         const manualCurr = manualCurriculum.trim()
         const stateCurrOrCountry = manualCurr || manualCountry.trim()
+        const alignmentContext = [
+          `Align strictly with Subject: ${manualSubject.trim()}`,
+          `Use Theme: ${effectiveTheme} across objectives and activities`,
+          `Country context: ${manualCountry.trim()}`,
+          `Grade levels: ${manualGrades.trim()}`,
+          `Ensure each lesson explicitly references the theme and subject focus`,
+          `Keep lessons implementable in 45–60 minutes, age-appropriate vocabulary`
+        ].join('\n')
         const response = await generateContent({
           type: 'holiday-seasonal-lessons',
           country: manualCountry.trim(),
@@ -153,7 +161,7 @@ export default function HolidaySeasonalPage() {
           theme: effectiveTheme,
           lessonCount: finalCount,
           model: selectedModel,
-          context: context + `\nManual input grades: ${manualGrades.trim()}`
+          context: `${context}\n${alignmentContext}`
         })
         if (Array.isArray(response.items)) {
           setLessons(response.items as LessonItem[])
