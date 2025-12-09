@@ -965,7 +965,8 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
       type === 'state-curricula'
     )
     // Some lightweight models only support default temperature; omit temperature for those.
-    const modelSupportsTemperature = (m: string) => !/gpt-5-(mini|nano)-/i.test(m)
+    // Omit temperature for lightweight and search-preview models that reject this arg
+    const modelSupportsTemperature = (m: string) => !/(mini|nano|search-preview)/i.test(m)
     const desiredTemp = (type === 'frameworks' || type === 'section-standards') ? 0.2 : 0.4
     const baseMessages = [
       {
