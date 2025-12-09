@@ -9,7 +9,9 @@ export const ALLOWED_MODELS = [
 	'gpt-5.1-2025-11-13',
 	'gpt-5-mini-2025-08-07',
 	'gpt-5-nano-2025-08-07',
-	'gpt-4.1-2025-04-14'
+	'gpt-4.1-2025-04-14',
+	'gpt-4o-mini-search-preview-2025-03-11',
+	'gpt-4.1-nano-2025-04-14'
 ] as const
 
 export type AllowedModel = typeof ALLOWED_MODELS[number]
