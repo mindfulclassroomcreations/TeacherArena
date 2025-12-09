@@ -2,7 +2,7 @@
 // Do NOT import server clients (like OpenAI) from here.
 
 // Default chat model used across the app (display-only for UI and request payloads)
-export const DEFAULT_MODEL = 'gpt-5-mini-2025-08-07'
+export const DEFAULT_MODEL = 'gpt-5.1-2025-11-13'
 
 // Allowed selectable models for the user (must also be permitted server-side)
 export const ALLOWED_MODELS = [
