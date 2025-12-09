@@ -71,6 +71,8 @@ export default function HolidaySeasonalPage() {
   const [selectedSubject, setSelectedSubject] = useState<any | null>(null)
   const [selectedGrades, setSelectedGrades] = useState<string[]>([])
   const [lessonCount, setLessonCount] = useState<string>('12')
+  const [moreLessonCount, setMoreLessonCount] = useState<string>('6')
+  const [moreSubjectsCount, setMoreSubjectsCount] = useState<string>('5')
   const [lessons, setLessons] = useState<LessonItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,7 +110,7 @@ export default function HolidaySeasonalPage() {
 
   // Guided flow no longer includes a State Curriculum step
 
-  const generateSubjects = async () => {
+  const generateSubjects = async (append = false) => {
     if (!selectedCountry || !effectiveTheme) return
     if (subjects.length > 0) return
     setLoading(true); setError(null)
@@ -118,11 +120,15 @@ export default function HolidaySeasonalPage() {
         country: selectedCountry,
         context: `Generate subjects relevant to ${effectiveTheme} theme in ${selectedCountry}`,
         model: selectedModel,
-        subjectsCount: 10
+        subjectsCount: append ? parseInt(moreSubjectsCount) || 5 : 10
       })
       if (response.items) {
-        setSubjects(response.items)
-        setSuccess(`Generated ${response.items.length} subjects for ${selectedCountry}`)
+        setSubjects((prev) => {
+          const prevNames = new Set(prev.map((s: any) => s.name))
+          const deduped = response.items.filter((s: any) => !prevNames.has(s.name))
+          return append ? [...prev, ...deduped] : response.items
+        })
+        setSuccess(`${append ? 'Added' : 'Generated'} ${response.items.length} subjects for ${selectedCountry}`)
         setTimeout(() => setSuccess(null), 2500)
       }
     } catch (e: any) {
@@ -210,6 +216,45 @@ export default function HolidaySeasonalPage() {
       }
     } catch (e: any) {
       setError(String(e.message || 'Failed to generate lessons'))
+    } finally { setLoading(false) }
+  }
+
+  const handleGenerateMoreLessons = async () => {
+    if (!effectiveTheme || !selectedCountry || !selectedSubject || selectedGrades.length === 0) {
+      setError('Select Theme, Country, Subject, and at least one Grade first.')
+      return
+    }
+    setLoading(true); setError(null)
+    try {
+      const countNum = parseInt(moreLessonCount)
+      const finalCount = Number.isFinite(countNum) && countNum > 0 ? countNum : 6
+      const gradeList = selectedGrades.join(', ')
+      const response = await generateContent({
+        type: 'holiday-seasonal-lessons',
+        country: selectedCountry,
+        stateCurriculum: selectedCountry,
+        subject: selectedSubject.name,
+        grade: gradeList,
+        framework: selectedCountry,
+        theme: effectiveTheme,
+        lessonCount: finalCount,
+        model: selectedModel,
+        context: context + `\nGenerate additional lessons aligned to Theme and Subject.`
+      })
+      if (Array.isArray(response.items)) {
+        setLessons((prev) => {
+          const keys = new Set(prev.map((l: any) => (String(l.title || '').toLowerCase() + '|' + String(l.lesson_code || '').toLowerCase())))
+          const toAdd = (response.items as LessonItem[]).filter((l: any) => {
+            const k = (String(l.title || '').toLowerCase() + '|' + String(l.lesson_code || '').toLowerCase())
+            return !keys.has(k)
+          })
+          return [...prev, ...toAdd]
+        })
+        setSuccess(`Added ${response.items.length} more lesson(s)!`)
+        setTimeout(() => setSuccess(null), 3000)
+      }
+    } catch (e: any) {
+      setError(String(e.message || 'Failed to generate more lessons'))
     } finally { setLoading(false) }
   }
 
@@ -463,7 +508,7 @@ export default function HolidaySeasonalPage() {
               </div>
               <p className="text-sm text-gray-600 mb-4">Generate or select subjects for thematic lessons for <strong>{selectedCountry}</strong>.</p>
               {subjects.length === 0 && (
-                <Button variant="primary" disabled={!selectedCountry || !effectiveTheme || loading} onClick={generateSubjects}>
+                <Button variant="primary" disabled={!selectedCountry || !effectiveTheme || loading} onClick={() => generateSubjects(false)}>
                   {loading ? 'Generating…' : 'Generate Subjects'}
                 </Button>
               )}
@@ -478,6 +523,14 @@ export default function HolidaySeasonalPage() {
                       </Card>
                     )
                   })}
+                </div>
+              )}
+              {subjects.length > 0 && (
+                <div className="mt-6 flex items-center gap-3">
+                  <Input label="More Subjects Count" value={moreSubjectsCount} onChange={(e) => setMoreSubjectsCount(e.target.value)} placeholder="e.g., 5" />
+                  <Button variant="outline" disabled={loading} onClick={() => generateSubjects(true)}>
+                    {loading ? 'Adding…' : 'Generate More Subjects'}
+                  </Button>
                 </div>
               )}
               {selectedSubject && (
@@ -554,6 +607,12 @@ export default function HolidaySeasonalPage() {
               <div className="flex justify-end mt-4 gap-3">
                 <Button variant="outline" onClick={() => setCurrentStep(3)}>Back</Button>
                 <Button variant="primary" disabled={loading} onClick={handleGenerateLessons}>{loading ? 'Generating…' : 'Generate Lessons'}</Button>
+              </div>
+              <div className="mt-4 flex items-center gap-3 justify-end">
+                <Input label="More Lessons Count" value={moreLessonCount} onChange={(e) => setMoreLessonCount(e.target.value)} placeholder="e.g., 6" />
+                <Button variant="outline" disabled={loading} onClick={handleGenerateMoreLessons}>
+                  {loading ? 'Adding…' : 'Generate More Lessons'}
+                </Button>
               </div>
               {lessons.length > 0 && (
                 <div className="mt-8">
