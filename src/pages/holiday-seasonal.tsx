@@ -112,7 +112,8 @@ export default function HolidaySeasonalPage() {
 
   const generateSubjects = async (append = false) => {
     if (!selectedCountry || !effectiveTheme) return
-    if (subjects.length > 0) return
+    // Only skip if already loaded and not appending more
+    if (subjects.length > 0 && !append) return
     setLoading(true); setError(null)
     try {
       const response = await generateContent({
