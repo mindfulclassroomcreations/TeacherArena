@@ -761,7 +761,7 @@ REQUIREMENTS
             const resp: any = await (client as any).responses.create({
               model,
               input: opts.messages.map(m => ({ role: m.role, content: m.content })),
-              ...(opts.jsonObject ? { text: { format: 'json_object' } } : {}),
+              ...(opts.jsonObject ? { text: { format: { type: 'json_object' } } } : {}),
             })
             return String((resp?.output_text || ''))
           }
@@ -1000,7 +1000,7 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
         const resp: any = await (client as any).responses.create({
           model,
           input: opts.messages.map(m => ({ role: m.role, content: m.content })),
-          ...(opts.jsonObject ? { text: { format: 'json_object' } } : {}),
+          ...(opts.jsonObject ? { text: { format: { type: 'json_object' } } } : {}),
         })
         const txt = resp?.output_text || ''
         return String(txt || '')
