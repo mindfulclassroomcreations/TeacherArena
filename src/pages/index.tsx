@@ -2480,6 +2480,28 @@ export default function Home() {
               <ModelSelector />
             </div>
             <p className="text-gray-600 text-sm">Select curriculum units for your lesson plan</p>
+            
+            {/* Model Recommendations for Step 5 */}
+            <div className="mt-3 bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">💡</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">Recommended Models for Step 5</p>
+                  <p className="text-xs text-gray-700 mb-2">For optimal performance when generating curriculum standards in Step 5, we recommend using:</p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono bg-purple-100 text-purple-800 border border-purple-300">
+                      gpt-5-mini-2025-08-07
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono bg-blue-100 text-blue-800 border border-blue-300">
+                      gpt-5-nano-2025-08-07
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono bg-green-100 text-green-800 border border-green-300">
+                      gpt-4o-mini-search-preview-2025-03-11
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
             {/* Comprehensive Context Summary for Step 4 - All information from Steps 1-3 */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 space-y-3">
               {/* Step 1: Country & Subject */}
