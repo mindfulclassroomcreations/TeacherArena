@@ -751,20 +751,46 @@ REQUIREMENTS
         const useResponsesApi = /^gpt-5/i.test(model)
         const modelSupportsJsonFormat = (m: string) => !/(search-preview|gpt-5-mini|gpt-4o-mini-search)/i.test(m)
         const createJson = async (opts: { messages: { role: 'system'|'user', content: string }[], jsonObject?: boolean }) => {
+          // Try with structured/json options first when requested; on failure, retry without those options.
           if (!useResponsesApi) {
-            const resp = await client.chat.completions.create({
-              model,
-              messages: opts.messages,
-              ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { response_format: { type: 'json_object' as const } } : {}),
-            })
-            return resp?.choices?.[0]?.message?.content || ''
+            try {
+              const resp = await client.chat.completions.create({
+                model,
+                messages: opts.messages,
+                ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { response_format: { type: 'json_object' as const } } : {}),
+              })
+              return resp?.choices?.[0]?.message?.content || ''
+            } catch (e) {
+              console.warn('chat.completions.create with response_format failed, retrying without it:', e)
+              try {
+                const resp2 = await client.chat.completions.create({ model, messages: opts.messages })
+                return resp2?.choices?.[0]?.message?.content || ''
+              } catch (e2) {
+                console.error('chat.completions.create retry failed:', e2)
+                throw e2
+              }
+            }
           } else {
-            const resp: any = await (client as any).responses.create({
-              model,
-              input: opts.messages.map(m => ({ role: m.role, content: m.content })),
-              ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { text: { format: { type: 'json_object' } } } : {}),
-            })
-            return String((resp?.output_text || ''))
+            try {
+              const resp: any = await (client as any).responses.create({
+                model,
+                input: opts.messages.map(m => ({ role: m.role, content: m.content })),
+                ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { text: { format: { type: 'json_object' } } } : {}),
+              })
+              return String((resp?.output_text || ''))
+            } catch (e) {
+              console.warn('responses.create with text.format=json_object failed, retrying without text.format:', e)
+              try {
+                const resp2: any = await (client as any).responses.create({
+                  model,
+                  input: opts.messages.map(m => ({ role: m.role, content: m.content })),
+                })
+                return String((resp2?.output_text || ''))
+              } catch (e2) {
+                console.error('responses.create retry failed:', e2)
+                throw e2
+              }
+            }
           }
         }
 
@@ -991,22 +1017,46 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
     // Wrapper to support GPT-5 Responses API while preserving older chat.completions behavior
     const useResponsesApi = /^gpt-5/i.test(model)
     const createJson = async (opts: { messages: { role: 'system'|'user', content: string }[], temperature?: number, jsonObject?: boolean }) => {
+      // Attempt with JSON/structured options first; on failure retry without them to maximize compatibility.
       if (!useResponsesApi) {
-        const resp = await client.chat.completions.create({
-          model,
-          messages: opts.messages,
-          ...(typeof opts.temperature === 'number' && modelSupportsTemperature(model) ? { temperature: opts.temperature } : {}),
-          ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { response_format: { type: 'json_object' as const } } : {}),
-        })
-        return resp?.choices?.[0]?.message?.content || ''
+        try {
+          const resp = await client.chat.completions.create({
+            model,
+            messages: opts.messages,
+            ...(typeof opts.temperature === 'number' && modelSupportsTemperature(model) ? { temperature: opts.temperature } : {}),
+            ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { response_format: { type: 'json_object' as const } } : {}),
+          })
+          return resp?.choices?.[0]?.message?.content || ''
+        } catch (e) {
+          console.warn('chat.completions.create failed with structured response, retrying without response_format:', e)
+          try {
+            const resp2 = await client.chat.completions.create({ model, messages: opts.messages, ...(typeof opts.temperature === 'number' && modelSupportsTemperature(model) ? { temperature: opts.temperature } : {}) })
+            return resp2?.choices?.[0]?.message?.content || ''
+          } catch (e2) {
+            console.error('chat.completions.create retry failed:', e2)
+            throw e2
+          }
+        }
       } else {
-        const resp: any = await (client as any).responses.create({
-          model,
-          input: opts.messages.map(m => ({ role: m.role, content: m.content })),
-          ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { text: { format: { type: 'json_object' } } } : {}),
-        })
-        const txt = resp?.output_text || ''
-        return String(txt || '')
+        try {
+          const resp: any = await (client as any).responses.create({
+            model,
+            input: opts.messages.map(m => ({ role: m.role, content: m.content })),
+            ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { text: { format: { type: 'json_object' } } } : {}),
+          })
+          const txt = resp?.output_text || ''
+          return String(txt || '')
+        } catch (e) {
+          console.warn('responses.create failed with structured text.format, retrying without text.format:', e)
+          try {
+            const resp2: any = await (client as any).responses.create({ model, input: opts.messages.map(m => ({ role: m.role, content: m.content })) })
+            const txt2 = resp2?.output_text || ''
+            return String(txt2 || '')
+          } catch (e2) {
+            console.error('responses.create retry failed:', e2)
+            throw e2
+          }
+        }
       }
     }
 
