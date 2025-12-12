@@ -1079,13 +1079,8 @@ export default function Home() {
   }
 
   const handleSelectFramework = (framework: Item) => {
+    // Do not change the current tab state; open Step 5 in a new tab only
     setSelectedFramework(framework)
-    setCurrentStep(4)
-    setStrands([])
-    setLessons([])
-    setCurriculumSections([])
-    setSelectedCurriculumSection(null)
-    // Persist minimal context and open Step 5 in a new tab
     try {
       const ctx = {
         country: selectedCountry,
