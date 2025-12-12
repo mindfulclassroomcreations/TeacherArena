@@ -146,7 +146,7 @@ export default function Home() {
         subs,
         selectedSubject?.name || '',
         selectedFramework?.name || '',
-        selectedGrade?.name || ''
+        (selectedGrades.length > 0 ? selectedGrades.map(g => g.name).join(', ') : (selectedGrade?.name || ''))
       )
     } catch (e) {
       console.error('Export section lessons failed', e)
@@ -172,7 +172,7 @@ export default function Home() {
         sectionNamesByKey,
         selectedSubject?.name || '',
         selectedFramework?.name || '',
-        selectedGrade?.name || '',
+        (selectedGrades.length > 0 ? selectedGrades.map(g => g.name).join(', ') : (selectedGrade?.name || '')),
         sectionOrder
       )
     } catch (e) {
@@ -299,11 +299,11 @@ export default function Home() {
         sectionOrder: filteredSectionOrder,
         subject: selectedSubject?.name || '',
         framework: selectedFramework?.name || '',
-        grade: selectedGrade?.name || '',
+        grade: (selectedGrades.length > 0 ? selectedGrades.map(g => g.name).join(', ') : (selectedGrade?.name || '')),
         region: selectedRegion || '',
         // Explicit headers for Tables exports
         headerSubjectName: selectedFramework?.name || '', // Step 4: Framework/Units
-        headerGradeLevel: selectedGrade?.name || '',      // Step 3: Grade
+        headerGradeLevel: (selectedGrades.length > 0 ? selectedGrades.map(g => g.name).join(', ') : (selectedGrade?.name || '')),      // Step 3: Grade
         headerCurriculum: (selectedStateCurriculum?.curriculum_name || selectedSubject?.name || ''), // Step 2: Curriculum
         headerRegion: selectedRegion || '',
       }
@@ -370,7 +370,7 @@ export default function Home() {
         sectionLessons,
         selectedSubject?.name || '',
         selectedFramework?.name || '',
-        selectedGrade?.name || ''
+        (selectedGrades.length > 0 ? selectedGrades.map(g => g.name).join(', ') : (selectedGrade?.name || ''))
       )
     } catch (e) {
       console.error('Export sub-standard lessons failed', e)
@@ -419,7 +419,7 @@ export default function Home() {
         if (isNoSpecial && selectedStateStandardDetails?.standard_name) return selectedStateStandardDetails.standard_name
         return name
       })(),
-      grade: selectedGrade?.name,
+      grade: (selectedGrades.length > 0 ? selectedGrades.map(g => g.name).join(', ') : (selectedGrade?.name || '')),
       section: section.title || section.name,
       sub_standards: Array.from(new Set(selected.map((ls: any) => String(ls.standard_code || ls.code || '').trim()))).filter(Boolean)
     }
