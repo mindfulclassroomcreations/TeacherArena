@@ -569,6 +569,7 @@ export default function Home() {
       if (ctx && ctx.grade) setSelectedGrade(ctx.grade)
       if (ctx && Array.isArray(ctx.selectedGrades)) setSelectedGrades(ctx.selectedGrades)
       if (ctx && ctx.framework) setSelectedFramework(ctx.framework)
+      if (ctx && ctx.model) setSelectedModel(ctx.model)
       // Move directly to Step 5 view
       setCurrentStep(4)
     } catch {}
@@ -1094,6 +1095,7 @@ export default function Home() {
         grade: selectedGrade,
         selectedGrades,
         framework: framework,
+        model: selectedModel,
       }
       window.localStorage.setItem('ta_step5_context', JSON.stringify(ctx))
       const url = new URL(window.location.href)
