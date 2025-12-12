@@ -511,6 +511,17 @@ export default function Home() {
   const [selectedGrade, setSelectedGrade] = useState<Item | null>(null)
   // Step 3: support multi-grade visual selection (used by Select All buttons)
   const [selectedGrades, setSelectedGrades] = useState<Item[]>([])
+  // Helper: selected grade label supports multi-grade selection
+  const selectedGradeLabel = React.useMemo(() => {
+    if (selectedGrades && selectedGrades.length > 0) {
+      try {
+        return selectedGrades.map((g: any) => g?.name || '').filter(Boolean).join(', ')
+      } catch {
+        return undefined
+      }
+    }
+    return selectedGrade?.name
+  }, [selectedGrades, selectedGrade])
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
   const [selectedStrand, setSelectedStrand] = useState<Strand | null>(null)
   const [selectedStrands, setSelectedStrands] = useState<Strand[]>([])
@@ -580,11 +591,11 @@ export default function Home() {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     const goto = params.get('goto')
-    if (goto === 'step5' && selectedFramework && selectedSubject && selectedGrade && curriculumSections.length === 0 && !isLoading) {
+    if (goto === 'step5' && selectedFramework && selectedSubject && (selectedGrade || (selectedGrades && selectedGrades.length > 0)) && curriculumSections.length === 0 && !isLoading) {
       // Generate standards sections automatically for the restored framework
       handleGenerateCurriculumSections()
     }
-  }, [selectedFramework, selectedSubject, selectedGrade, curriculumSections.length, isLoading])
+  }, [selectedFramework, selectedSubject, selectedGrade, selectedGrades, curriculumSections.length, isLoading])
 
   // Country list
   const countries = [
@@ -1121,7 +1132,7 @@ export default function Home() {
   }
 
   const handleGenerateCurriculumSections = async () => {
-    if (!selectedFramework || !selectedSubject || !selectedGrade) return
+    if (!selectedFramework || !selectedSubject || !(selectedGrade || (selectedGrades && selectedGrades.length > 0))) return
     
     // Don't reload if already have data
     if (curriculumSections.length > 0) return
@@ -1129,23 +1140,47 @@ export default function Home() {
     setIsLoading(true)
     setError(null)
     try {
+      // Safety: auto-clear loading if request hangs
+      const loadingTimeout = setTimeout(() => {
+        setIsLoading(false)
+        setError('Generation timed out. Please try again or adjust selection.')
+      }, 25000)
       const response = await generateContent({
         type: 'frameworks',
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework.name,
-        grade: selectedGrade.name,
+        grade: selectedGradeLabel,
         region: selectedRegion || undefined,
         stateStandardName: selectedStateStandardDetails?.standard_name,
         context: context,
         model: selectedModel
       })
-      if (response.items) {
+      clearTimeout(loadingTimeout)
+      if (Array.isArray(response.items) && response.items.length > 0) {
         setCurriculumSections(response.items)
         // reset any previous sub-standards when regenerating sections
         setSubStandardsBySection({})
         setSuccess(`Generated ${response.items.length} curriculum sections!`)
         setTimeout(() => setSuccess(null), 3000)
+      } else {
+        // Fallback: retry without grade/region constraints to get general sections
+        const fallback = await generateContent({
+          type: 'frameworks',
+          country: selectedCountry || undefined,
+          subject: selectedSubject.name,
+          framework: selectedFramework.name,
+          context: context,
+          model: selectedModel
+        })
+        if (Array.isArray(fallback.items) && fallback.items.length > 0) {
+          setCurriculumSections(fallback.items)
+          setSubStandardsBySection({})
+          setSuccess(`Generated ${fallback.items.length} sections (general fallback).`)
+          setTimeout(() => setSuccess(null), 3000)
+        } else {
+          setError('No sections found for this selection. Try a different framework or grade.')
+        }
       }
     } catch (err) {
       setError('Failed to generate curriculum sections. Please try again.')
@@ -1156,7 +1191,7 @@ export default function Home() {
 
   // Step 5: Generate sub-standards for a given section
   const handleGenerateSubStandards = async (section: any) => {
-    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (!selectedSubject || !selectedFramework || !(selectedGrade || (selectedGrades && selectedGrades.length > 0))) return
     const key = String(section.id || section.name || section.title || '')
     if (!key) return
     setLoadingSectionKey(key)
@@ -1167,7 +1202,7 @@ export default function Home() {
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework.name,
-        grade: selectedGrade.name,
+        grade: selectedGradeLabel,
         region: selectedRegion || undefined,
         stateCurriculum: selectedStateCurriculum?.curriculum_name,
         section: section.title || section.name,
@@ -1189,7 +1224,7 @@ export default function Home() {
 
   // Step 5: Generate sub-standards for all curriculum sections (bulk)
   const handleGenerateSubStandardsForAll = async () => {
-    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (!selectedSubject || !selectedFramework || !(selectedGrade || (selectedGrades && selectedGrades.length > 0))) return
     if (curriculumSections.length === 0) {
       setError('No curriculum sections available. Generate sections first.')
       return
@@ -1207,7 +1242,7 @@ export default function Home() {
           country: selectedCountry || undefined,
           subject: selectedSubject.name,
           framework: selectedFramework.name,
-          grade: selectedGrade.name,
+          grade: selectedGradeLabel,
           region: selectedRegion || undefined,
           stateCurriculum: selectedStateCurriculum?.curriculum_name,
           section: section.title || section.name,
@@ -1234,7 +1269,7 @@ export default function Home() {
 
   // Step 5: Generate sub-standards for selected curriculum sections (bulk)
   const handleGenerateSubStandardsForSelected = async () => {
-    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (!selectedSubject || !selectedFramework || !(selectedGrade || (selectedGrades && selectedGrades.length > 0))) return
     if (selectedCurriculumSections.length === 0) {
       setError('Please select at least one section to generate sub-standards for.')
       return
@@ -1252,7 +1287,7 @@ export default function Home() {
           country: selectedCountry || undefined,
           subject: selectedSubject.name,
           framework: selectedFramework.name,
-          grade: selectedGrade.name,
+          grade: selectedGradeLabel,
           region: selectedRegion || undefined,
           stateCurriculum: selectedStateCurriculum?.curriculum_name,
           section: section.title || section.name,
@@ -1280,7 +1315,7 @@ export default function Home() {
   // Step 5: Generate lessons based on generated sub-standards for a section
   // Distributes total lessons across all sub-standards
   const handleGenerateLessonsFromSubStandards = async (section: any) => {
-    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (!selectedSubject || !selectedFramework || !(selectedGrade || (selectedGrades && selectedGrades.length > 0))) return
     const key = String(section.id || section.name || section.title || '')
     const subStandards = subStandardsBySection[key] || []
     if (!Array.isArray(subStandards) || subStandards.length === 0) {
@@ -1314,7 +1349,7 @@ export default function Home() {
         country: selectedCountry || undefined,
         subject: selectedSubject.name,
         framework: selectedFramework.name,
-        grade: selectedGrade.name,
+        grade: selectedGradeLabel,
         region: selectedRegion || undefined,
         stateCurriculum: selectedStateCurriculum?.curriculum_name,
         section: section.title || section.name,
@@ -1354,7 +1389,7 @@ export default function Home() {
 
   // Step 5: Generate lessons for all curriculum sections (bulk)
   const handleGenerateLessonsFromSubStandardsForAll = async () => {
-    if (!selectedSubject || !selectedFramework || !selectedGrade) return
+    if (!selectedSubject || !selectedFramework || !(selectedGrade || (selectedGrades && selectedGrades.length > 0))) return
     // Ensure user is authenticated (required for lesson generation endpoints)
     if (!(await ensureValidSession())) {
       return
@@ -1396,7 +1431,7 @@ export default function Home() {
           country: selectedCountry || undefined,
           subject: selectedSubject.name,
           framework: selectedFramework.name,
-          grade: selectedGrade.name,
+          grade: selectedGradeLabel,
           region: selectedRegion || undefined,
           stateCurriculum: selectedStateCurriculum?.curriculum_name,
           section: section.title || section.name,
