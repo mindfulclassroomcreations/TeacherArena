@@ -2490,6 +2490,16 @@ export default function Home() {
                   <p className="text-xs text-gray-700 mb-2">For optimal performance when generating curriculum standards in Step 5, we recommend using:</p>
                   <div className="flex flex-wrap gap-2">
                     <button
+                      onClick={() => setSelectedModel('gpt-5.2-2025-12-11')}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono border transition-all hover:scale-105 hover:shadow-md ${
+                        selectedModel === 'gpt-5.2-2025-12-11'
+                          ? 'bg-indigo-200 text-indigo-900 border-indigo-500 ring-2 ring-indigo-400'
+                          : 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                      }`}
+                    >
+                      {selectedModel === 'gpt-5.2-2025-12-11' && '✓ '}gpt-5.2-2025-12-11
+                    </button>
+                    <button
                       onClick={() => setSelectedModel('gpt-5-mini-2025-08-07')}
                       className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono border transition-all hover:scale-105 hover:shadow-md ${
                         selectedModel === 'gpt-5-mini-2025-08-07'
