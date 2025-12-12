@@ -749,19 +749,20 @@ REQUIREMENTS
 
         // Local wrapper for this flow to support GPT-5 Responses API
         const useResponsesApi = /^gpt-5/i.test(model)
+        const modelSupportsJsonFormat = (m: string) => !/(search-preview|gpt-5-mini|gpt-4o-mini-search)/i.test(m)
         const createJson = async (opts: { messages: { role: 'system'|'user', content: string }[], jsonObject?: boolean }) => {
           if (!useResponsesApi) {
             const resp = await client.chat.completions.create({
               model,
               messages: opts.messages,
-              ...(opts.jsonObject ? { response_format: { type: 'json_object' as const } } : {}),
+              ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { response_format: { type: 'json_object' as const } } : {}),
             })
             return resp?.choices?.[0]?.message?.content || ''
           } else {
             const resp: any = await (client as any).responses.create({
               model,
               input: opts.messages.map(m => ({ role: m.role, content: m.content })),
-              ...(opts.jsonObject ? { text: { format: { type: 'json_object' } } } : {}),
+              ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { text: { format: { type: 'json_object' } } } : {}),
             })
             return String((resp?.output_text || ''))
           }
@@ -973,6 +974,8 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
     // Some lightweight models only support default temperature; omit temperature for those.
     // Omit temperature for lightweight and search-preview models that reject this arg
     const modelSupportsTemperature = (m: string) => !/(mini|nano|search-preview)/i.test(m)
+    // Search-preview and mini models don't support json_object response format
+    const modelSupportsJsonFormat = (m: string) => !/(search-preview|gpt-5-mini|gpt-4o-mini-search)/i.test(m)
     const desiredTemp = (type === 'frameworks' || type === 'section-standards') ? 0.2 : 0.4
     const baseMessages = [
       {
@@ -993,14 +996,14 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
           model,
           messages: opts.messages,
           ...(typeof opts.temperature === 'number' && modelSupportsTemperature(model) ? { temperature: opts.temperature } : {}),
-          ...(opts.jsonObject ? { response_format: { type: 'json_object' as const } } : {}),
+          ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { response_format: { type: 'json_object' as const } } : {}),
         })
         return resp?.choices?.[0]?.message?.content || ''
       } else {
         const resp: any = await (client as any).responses.create({
           model,
           input: opts.messages.map(m => ({ role: m.role, content: m.content })),
-          ...(opts.jsonObject ? { text: { format: { type: 'json_object' } } } : {}),
+          ...(opts.jsonObject && modelSupportsJsonFormat(model) ? { text: { format: { type: 'json_object' } } } : {}),
         })
         const txt = resp?.output_text || ''
         return String(txt || '')
