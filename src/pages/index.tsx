@@ -571,16 +571,19 @@ export default function Home() {
       if (ctx && ctx.framework) setSelectedFramework(ctx.framework)
       // Move directly to Step 5 view
       setCurrentStep(4)
-      // Optional: generate sections automatically if framework/subject/grade present
-      setTimeout(() => {
-        try {
-          if (ctx && ctx.framework && ctx.subject && ctx.grade) {
-            handleGenerateCurriculumSections()
-          }
-        } catch {}
-      }, 50)
     } catch {}
   }, [])
+
+  // Auto-trigger section generation once state is restored in the new tab
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const goto = params.get('goto')
+    if (goto === 'step5' && selectedFramework && selectedSubject && selectedGrade && curriculumSections.length === 0 && !isLoading) {
+      // Generate standards sections automatically for the restored framework
+      handleGenerateCurriculumSections()
+    }
+  }, [selectedFramework, selectedSubject, selectedGrade, curriculumSections.length, isLoading])
 
   // Country list
   const countries = [
