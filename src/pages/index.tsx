@@ -13,7 +13,7 @@ import ProgressIndicator from '@/components/ProgressIndicator'
 import ExportButton from '@/components/ExportButton'
 import { downloadLessonsAsExcel, downloadCompleteCurriculumAsExcel, downloadStep5OrganizedExcel, downloadStep5SectionExcel, downloadSubStandardExcel } from '@/lib/excelExport'
 import { generateContent } from '@/lib/api'
-import { DEFAULT_MODEL, ALLOWED_MODELS } from '@/lib/ai-constants'
+import { DEFAULT_MODEL, ALLOWED_MODELS, MODEL_PRICING, TOKEN_ASSUMPTION } from '@/lib/ai-constants'
 import { supabase } from '@/lib/supabase'
 
 interface Item {
@@ -58,8 +58,36 @@ export default function Home() {
       <span className="hidden md:inline-flex items-center gap-1 rounded-full border border-purple-300 bg-purple-50 text-purple-800 text-[11px] font-mono px-2 py-1">
         Using: {selectedModel}
       </span>
+      {/* Pricing info button */}
+      <button
+        aria-label="Show model pricing"
+        title="Show model pricing"
+        onClick={() => setShowPricingModal(true)}
+        className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 ml-1"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8z" />
+        </svg>
+      </button>
     </div>
   )
+
+  // Pricing modal state
+  const [showPricingModal, setShowPricingModal] = useState(false)
+
+  const formatUsd = (n: number) => {
+    return `$${n.toFixed(2)}`
+  }
+
+  const computeCostPerLesson = (modelKey: string) => {
+    const meta = MODEL_PRICING[modelKey]
+    if (!meta) return 0
+    const inTokens = TOKEN_ASSUMPTION.inputPerLesson
+    const outTokens = TOKEN_ASSUMPTION.outputPerLesson
+    const inputCost = (inTokens / 1_000_000) * meta.inputPerMillion
+    const outputCost = (outTokens / 1_000_000) * meta.outputPerMillion
+    return inputCost + outputCost
+  }
   // Helper to ensure session is valid before API calls
   const ensureValidSession = async (): Promise<boolean> => {
     try {
@@ -218,7 +246,7 @@ export default function Home() {
         return
       }
 
-      // Compute only-new lessons (exclude any lessons already present in existing tables)
+        }
       const getLessonKey = (ls: any) => {
         const code = String(ls.standard_code || ls.code || '').toLowerCase().trim()
         const title = String(ls.title || ls.name || '').toLowerCase().trim()
@@ -1931,6 +1959,33 @@ export default function Home() {
       {/* Alerts */}
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}
+
+      {/* Pricing Modal for models */}
+      <Modal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} title="Model pricing (per 100 lessons)" size="md">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm table-auto">
+            <thead>
+              <tr className="text-left">
+                <th className="py-2 pr-4">Model</th>
+                <th className="py-2 text-right">Price per 100 Lessons (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ALLOWED_MODELS.map((m) => {
+                const costPerLesson = computeCostPerLesson(m)
+                const costPer100 = costPerLesson * 100
+                return (
+                  <tr key={m} className="border-t">
+                    <td className="py-2 pr-4 font-mono text-xs text-gray-800">{m}</td>
+                    <td className="py-2 text-right font-semibold">{formatUsd(costPer100)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <p className="text-xs text-gray-500 mt-3">Assumes 1,000 input tokens + 400 output tokens per lesson. Adjust token assumptions in <code>src/lib/ai-constants.ts</code> if needed.</p>
+        </div>
+      </Modal>
 
       {/* Progress Indicator */}
       <ProgressIndicator steps={steps} />
