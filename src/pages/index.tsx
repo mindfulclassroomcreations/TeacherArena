@@ -2489,15 +2489,36 @@ export default function Home() {
                   <p className="text-sm font-semibold text-gray-900 mb-2">Recommended Models for Step 5</p>
                   <p className="text-xs text-gray-700 mb-2">For optimal performance when generating curriculum standards in Step 5, we recommend using:</p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono bg-purple-100 text-purple-800 border border-purple-300">
-                      gpt-5-mini-2025-08-07
-                    </span>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono bg-blue-100 text-blue-800 border border-blue-300">
-                      gpt-5-nano-2025-08-07
-                    </span>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono bg-green-100 text-green-800 border border-green-300">
-                      gpt-4o-mini-search-preview-2025-03-11
-                    </span>
+                    <button
+                      onClick={() => setSelectedModel('gpt-5-mini-2025-08-07')}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono border transition-all hover:scale-105 hover:shadow-md ${
+                        selectedModel === 'gpt-5-mini-2025-08-07'
+                          ? 'bg-purple-200 text-purple-900 border-purple-500 ring-2 ring-purple-400'
+                          : 'bg-purple-100 text-purple-800 border-purple-300'
+                      }`}
+                    >
+                      {selectedModel === 'gpt-5-mini-2025-08-07' && '✓ '}gpt-5-mini-2025-08-07
+                    </button>
+                    <button
+                      onClick={() => setSelectedModel('gpt-5-nano-2025-08-07')}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono border transition-all hover:scale-105 hover:shadow-md ${
+                        selectedModel === 'gpt-5-nano-2025-08-07'
+                          ? 'bg-blue-200 text-blue-900 border-blue-500 ring-2 ring-blue-400'
+                          : 'bg-blue-100 text-blue-800 border-blue-300'
+                      }`}
+                    >
+                      {selectedModel === 'gpt-5-nano-2025-08-07' && '✓ '}gpt-5-nano-2025-08-07
+                    </button>
+                    <button
+                      onClick={() => setSelectedModel('gpt-4o-mini-search-preview-2025-03-11')}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono border transition-all hover:scale-105 hover:shadow-md ${
+                        selectedModel === 'gpt-4o-mini-search-preview-2025-03-11'
+                          ? 'bg-green-200 text-green-900 border-green-500 ring-2 ring-green-400'
+                          : 'bg-green-100 text-green-800 border-green-300'
+                      }`}
+                    >
+                      {selectedModel === 'gpt-4o-mini-search-preview-2025-03-11' && '✓ '}gpt-4o-mini-search-preview-2025-03-11
+                    </button>
                   </div>
                 </div>
               </div>
