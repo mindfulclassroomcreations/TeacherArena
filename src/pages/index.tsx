@@ -245,8 +245,6 @@ export default function Home() {
         window.open('/tables', '_blank')
         return
       }
-
-        }
       const getLessonKey = (ls: any) => {
         const code = String(ls.standard_code || ls.code || '').toLowerCase().trim()
         const title = String(ls.title || ls.name || '').toLowerCase().trim()
