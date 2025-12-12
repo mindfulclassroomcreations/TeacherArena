@@ -969,9 +969,25 @@ export default function Home() {
     setGrades([])
     setStrands([])
     setLessons([])
+    // Clear Step 5 related state to avoid stale loading/spinners
+    setCurriculumSections([])
+    setSelectedCurriculumSections([])
+    setSubStandardsBySection({})
+    setLessonsBySection({})
+    setSelectedLessonsBySection({})
+    setLessonsPerSubStandardBySection({})
+    setBulkLoadingSectionKeys(new Set())
+    setBulkLoadingLessonsSectionKeys(new Set())
+    setLoadingSectionKey(null)
+    setLoadingLessonsSectionKey(null)
+    setLoadingSelectedLessonsSecKey(null)
+    setCompletedLessonsBySection({})
+    setCompletedSelectedLessonsBySection({})
+    setCompletedSingleLessons({})
   setSelectedStateCurriculum(null)
     setSelectedFramework(null)
     setSelectedGrade(null)
+    setSelectedGrades([])
   }
 
   const handleSelectStateCurriculum = (curriculum: any) => {
@@ -2566,7 +2582,7 @@ export default function Home() {
       )}
 
       {/* NEW Step 5: Browse Curriculum Standards Sections */}
-      {currentStep >= 4 && selectedFramework && (
+      {currentStep >= 4 && selectedFramework && selectedSubject && (selectedGrade || selectedGrades.length > 0) && (
         <div id="step-5" className="mb-8">
           <div className="mb-6">
             <div className="flex items-center gap-2">
