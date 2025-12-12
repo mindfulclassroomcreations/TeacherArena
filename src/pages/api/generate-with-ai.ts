@@ -747,6 +747,26 @@ REQUIREMENTS
           model = DEFAULT_MODEL
         }
 
+        // Local wrapper for this flow to support GPT-5 Responses API
+        const useResponsesApi = /^gpt-5/i.test(model)
+        const createJson = async (opts: { messages: { role: 'system'|'user', content: string }[], jsonObject?: boolean }) => {
+          if (!useResponsesApi) {
+            const resp = await client.chat.completions.create({
+              model,
+              messages: opts.messages,
+              ...(opts.jsonObject ? { response_format: { type: 'json_object' as const } } : {}),
+            })
+            return resp?.choices?.[0]?.message?.content || ''
+          } else {
+            const resp: any = await (client as any).responses.create({
+              model,
+              input: opts.messages.map(m => ({ role: m.role, content: m.content })),
+              ...(opts.jsonObject ? { response_format: { type: 'json_object' as const } } : {}),
+            })
+            return String((resp?.output_text || ''))
+          }
+        }
+
         const familySS = detectCurriculumFamily(stateCurriculum || framework, region)
         const codeFamilyRules = (() => {
           switch (familySS) {
@@ -783,18 +803,12 @@ REQUIREMENTS
 - CODE FORMAT RULES: Preserve official punctuation (hyphens/dots). Do NOT invent formats.
 `
 
-        const codesResp = await client.chat.completions.create({
-          model,
-          messages: [
-            { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
-            { role: 'user', content: codesPrompt }
-          ],
-          response_format: { type: 'json_object' }
-        })
-
         let codesObj: any = null
         try {
-          const c = codesResp.choices?.[0]?.message?.content || ''
+          const c = await createJson({ messages: [
+            { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
+            { role: 'user', content: codesPrompt }
+          ], jsonObject: true })
           codesObj = JSON.parse(c)
         } catch {}
 
@@ -827,16 +841,14 @@ REQUIREMENTS
 - Include ONLY NGSS PE codes for THIS specific unit/section and grade band.
 - Preserve hyphens; do NOT convert to DCI dot notation.
 `
-            const peResp = await client.chat.completions.create({
-              model,
-              messages: [
+            let peObj: any = null
+            try {
+              const txt = await createJson({ messages: [
                 { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
                 { role: 'user', content: pePrompt }
-              ],
-              response_format: { type: 'json_object' }
-            })
-            let peObj: any = null
-            try { peObj = JSON.parse(peResp.choices?.[0]?.message?.content || '') } catch {}
+              ], jsonObject: true })
+              peObj = JSON.parse(txt)
+            } catch {}
             const peRaw: string[] = Array.isArray(peObj?.codes) ? peObj.codes : []
             const peAllowed = peRaw.map((x) => normalizeStandardCode(x)).filter((x) => isCodeAllowedByFamily(x, family, subject))
             uniqueCodes = Array.from(new Set([...uniqueCodes, ...peAllowed]))
@@ -866,18 +878,12 @@ REQUIREMENTS
 - CODE FAMILY: ${codeFamilyRules}
 - CODE FORMAT RULES: Preserve official punctuation (hyphens/dots). Do NOT alter the provided codes.
 `
-          const detResp = await client.chat.completions.create({
-            model,
-            messages: [
-              { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
-              { role: 'user', content: detailsPrompt }
-            ],
-            response_format: { type: 'json_object' }
-          })
-
           let detObj: any = null
           try {
-            const d = detResp.choices?.[0]?.message?.content || ''
+            const d = await createJson({ messages: [
+              { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
+              { role: 'user', content: detailsPrompt }
+            ], jsonObject: true })
             detObj = JSON.parse(d)
           } catch {}
 
@@ -979,24 +985,32 @@ Rules: One item per code; keep within unit; ${codeFamilyRules}`
       }
     ]
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: baseMessages,
-      ...(modelSupportsTemperature(model) ? { temperature: desiredTemp } : {}),
-      ...(needsJsonObject ? { response_format: { type: 'json_object' as const } } : {}),
-    })
-
-    let responseText = ''
-    if (response?.choices?.[0]?.message?.content) {
-      responseText = response.choices[0].message.content
+    // Wrapper to support GPT-5 Responses API while preserving older chat.completions behavior
+    const useResponsesApi = /^gpt-5/i.test(model)
+    const createJson = async (opts: { messages: { role: 'system'|'user', content: string }[], temperature?: number, jsonObject?: boolean }) => {
+      if (!useResponsesApi) {
+        const resp = await client.chat.completions.create({
+          model,
+          messages: opts.messages,
+          ...(typeof opts.temperature === 'number' && modelSupportsTemperature(model) ? { temperature: opts.temperature } : {}),
+          ...(opts.jsonObject ? { response_format: { type: 'json_object' as const } } : {}),
+        })
+        return resp?.choices?.[0]?.message?.content || ''
+      } else {
+        const resp: any = await (client as any).responses.create({
+          model,
+          input: opts.messages.map(m => ({ role: m.role, content: m.content })),
+          ...(opts.jsonObject ? { response_format: { type: 'json_object' as const } } : {}),
+        })
+        const txt = resp?.output_text || ''
+        return String(txt || '')
+      }
     }
 
+    const responseText = await createJson({ messages: baseMessages, temperature: desiredTemp, jsonObject: needsJsonObject })
+
     if (!responseText) {
-      const meta = {
-        finish_reason: response?.choices?.[0]?.finish_reason,
-        usage: response?.usage || undefined,
-      }
-      console.error('Empty AI response meta:', meta)
+      console.error('Empty AI response from model:', model)
       return res.status(500).json({
         error: 'AI response was empty or unreadable. Please try again.',
       })
@@ -1060,18 +1074,12 @@ REQUIREMENTS
 - Output object shape ONLY: { "items": [ { "name": string, "description": string } ] }
 `
         try {
-          const fb = await client.chat.completions.create({
-            model,
-            messages: [
-              { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
-              { role: 'user', content: fallbackPrompt }
-            ],
-            ...(modelSupportsTemperature(model) ? { temperature: 0.2 } : {}),
-            response_format: { type: 'json_object' }
-          })
           let fbObj: any = null
           try {
-            const txt = fb.choices?.[0]?.message?.content || ''
+            const txt = await createJson({ messages: [
+              { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON that matches the requested shape. No text outside JSON.' },
+              { role: 'user', content: fallbackPrompt }
+            ], temperature: 0.2, jsonObject: true })
             fbObj = JSON.parse(txt)
           } catch {}
           const arr = ensureArray(fbObj) || []
@@ -1207,16 +1215,14 @@ REQUIREMENTS
       const attemptFallback = async () => {
         try {
           const fallbackPrompt = `${sharedRules}\nTASK: Provide 3–6 best-fit sub-standards inside the section "${section}" for ${subject} at ${grade}.\nCURRICULUM CONTEXT: ${stateCurriculum || framework || country || ''}\n\nRULES\n- Return ONLY JSON: { "items": [ { "code": string, "name": string, "description": string } ] }.\n- Use locally plausible short codes. If official codes are unknown, you MAY use simple teacher codes like SEC1, SEC2, SEC3.\n- Each name concise (≤ 7 words). Description 1 sentence.\n- Avoid cross-unit references.\n- Avoid returning an empty list unless absolutely no reasonable sub-standards can be inferred.\nOUTPUT EXAMPLE\n{ "items": [ { "code": "SEC1", "name": "Matter and Its Properties", "description": "Explore states of matter and observable physical changes." } ] }`
-          const fbResp = await client.chat.completions.create({
-            model,
-            messages: [
+          let fbObj: any = null
+          try {
+            const txt = await createJson({ messages: [
               { role: 'system', content: 'You are an expert curriculum designer. Return ONLY valid JSON.' },
               { role: 'user', content: fallbackPrompt }
-            ],
-            response_format: { type: 'json_object' }
-          })
-          let fbObj: any = null
-          try { fbObj = JSON.parse(fbResp.choices?.[0]?.message?.content || '') } catch {}
+            ], jsonObject: true })
+            fbObj = JSON.parse(txt)
+          } catch {}
           const fbItemsArr: any[] = Array.isArray(fbObj?.items) ? fbObj.items : []
           const mapped = fbItemsArr.map((it: any, idx: number) => {
             const code = normalizeStandardCode(it.code || it.standard_code || `SEC${idx + 1}`)
