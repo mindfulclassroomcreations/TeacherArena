@@ -1959,23 +1959,29 @@ export default function Home() {
       {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}
 
       {/* Pricing Modal for models */}
-      <Modal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} title="Model pricing (per 100 lessons)" size="md">
+      <Modal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} title="Model pricing" size="md">
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-auto">
             <thead>
               <tr className="text-left">
                 <th className="py-2 pr-4">Model</th>
                 <th className="py-2 text-right">Price per 100 Lessons (USD)</th>
+                <th className="py-2 text-right">Price per 1,000 Lessons (USD)</th>
+                <th className="py-2 text-right">Price per 10,000 Lessons (USD)</th>
               </tr>
             </thead>
             <tbody>
               {ALLOWED_MODELS.map((m) => {
                 const costPerLesson = computeCostPerLesson(m)
                 const costPer100 = costPerLesson * 100
+                const costPer1000 = costPerLesson * 1000
+                const costPer10000 = costPerLesson * 10000
                 return (
                   <tr key={m} className="border-t">
                     <td className="py-2 pr-4 font-mono text-xs text-gray-800">{m}</td>
                     <td className="py-2 text-right font-semibold">{formatUsd(costPer100)}</td>
+                    <td className="py-2 text-right font-semibold">{formatUsd(costPer1000)}</td>
+                    <td className="py-2 text-right font-semibold">{formatUsd(costPer10000)}</td>
                   </tr>
                 )
               })}
