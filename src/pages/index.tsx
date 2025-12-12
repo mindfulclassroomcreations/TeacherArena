@@ -551,6 +551,36 @@ export default function Home() {
   const [customGroupName, setCustomGroupName] = useState('Custom Curriculum Group')
   const [customGroupDescription, setCustomGroupDescription] = useState('Custom grouping created by user')
   const [customGroupSelectedStates, setCustomGroupSelectedStates] = useState<string[]>([])
+  // Restore Step 5 in a new tab if requested
+  React.useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      const params = new URLSearchParams(window.location.search)
+      const goto = params.get('goto')
+      if (goto !== 'step5') return
+      const raw = window.localStorage.getItem('ta_step5_context')
+      if (!raw) return
+      const ctx = JSON.parse(raw || '{}')
+      if (ctx && ctx.subject) setSelectedSubject(ctx.subject)
+      if (ctx && ctx.country) setSelectedCountry(ctx.country)
+      if (ctx && ctx.region) setSelectedRegion(ctx.region)
+      if (ctx && ctx.stateCurriculum) setSelectedStateCurriculum(ctx.stateCurriculum)
+      if (ctx && ctx.stateStandardDetails) setSelectedStateStandardDetails(ctx.stateStandardDetails)
+      if (ctx && ctx.grade) setSelectedGrade(ctx.grade)
+      if (ctx && Array.isArray(ctx.selectedGrades)) setSelectedGrades(ctx.selectedGrades)
+      if (ctx && ctx.framework) setSelectedFramework(ctx.framework)
+      // Move directly to Step 5 view
+      setCurrentStep(4)
+      // Optional: generate sections automatically if framework/subject/grade present
+      setTimeout(() => {
+        try {
+          if (ctx && ctx.framework && ctx.subject && ctx.grade) {
+            handleGenerateCurriculumSections()
+          }
+        } catch {}
+      }, 50)
+    } catch {}
+  }, [])
 
   // Country list
   const countries = [
@@ -1055,6 +1085,23 @@ export default function Home() {
     setLessons([])
     setCurriculumSections([])
     setSelectedCurriculumSection(null)
+    // Persist minimal context and open Step 5 in a new tab
+    try {
+      const ctx = {
+        country: selectedCountry,
+        subject: selectedSubject,
+        region: selectedRegion,
+        stateCurriculum: selectedStateCurriculum,
+        stateStandardDetails: selectedStateStandardDetails,
+        grade: selectedGrade,
+        selectedGrades,
+        framework: framework,
+      }
+      window.localStorage.setItem('ta_step5_context', JSON.stringify(ctx))
+      const url = new URL(window.location.href)
+      url.searchParams.set('goto', 'step5')
+      window.open(url.toString(), '_blank')
+    } catch {}
   }
 
   const handleGenerateCurriculumSections = async () => {
